@@ -1,0 +1,225 @@
+- generic [ref=f1e4]:
+  - banner [ref=f1e5]:
+    - generic [ref=f1e6]:
+      - generic [ref=f1e7]: Squook
+      - generic [ref=f1e11]:
+        - generic [ref=f1e12]: Deep Learning Explained in 30 Seconds
+        - generic [ref=f1e13]: Draft 1 · autosave failed
+    - generic [ref=f1e14]:
+      - button "DEV" [ref=f1e282] [cursor=pointer]
+      - generic [ref=f1e16]:
+        - button "Undo" [ref=f1e17] [cursor=pointer]
+        - button "Redo" [ref=f1e21] [cursor=pointer]
+      - button "Re-render" [ref=f1e25] [cursor=pointer]
+      - button "Export" [ref=f1e26] [cursor=pointer]
+      - generic [ref=f1e27]: "Y"
+  - generic [ref=f1e28]:
+    - complementary [ref=f1e29]:
+      - generic [ref=f1e30]:
+        - button "Layers" [ref=f1e31] [cursor=pointer]
+        - button "Media" [ref=f1e32] [cursor=pointer]
+      - generic [ref=f1e284]:
+        - button "scene_1.mp4 S1 · Scene 1 5.0s" [ref=f1e285] [cursor=pointer]:
+          - generic [ref=f1e287]:
+            - generic [ref=f1e288]: scene_1.mp4
+            - generic [ref=f1e289]: S1 · Scene 1
+          - generic [ref=f1e290]: 5.0s
+        - button "Node graph S2 · Scene 2 7.5s" [ref=f1e291] [cursor=pointer]:
+          - generic [ref=f1e293]:
+            - generic [ref=f1e294]: Node graph
+            - generic [ref=f1e295]: S2 · Scene 2
+          - generic [ref=f1e296]: 7.5s
+        - button "Annotate S3 · Scene 3 9.0s" [ref=f1e297] [cursor=pointer]:
+          - generic [ref=f1e299]:
+            - generic [ref=f1e300]: Annotate
+            - generic [ref=f1e301]: S3 · Scene 3
+          - generic [ref=f1e302]: 9.0s
+        - button "Icon row S4 · Scene 4 7.0s" [ref=f1e303] [cursor=pointer]:
+          - generic [ref=f1e305]:
+            - generic [ref=f1e306]: Icon row
+            - generic [ref=f1e307]: S4 · Scene 4
+          - generic [ref=f1e308]: 7.0s
+        - button "scene_5.mp4 S5 · Scene 5 9.0s" [ref=f1e309] [cursor=pointer]:
+          - generic [ref=f1e311]:
+            - generic [ref=f1e312]: scene_5.mp4
+            - generic [ref=f1e313]: S5 · Scene 5
+          - generic [ref=f1e314]: 9.0s
+        - button "Captions · 7 words CAPTIONS · 0:00 5.0s" [ref=f1e315] [cursor=pointer]:
+          - generic [ref=f1e317]:
+            - generic [ref=f1e318]: Captions · 7 words
+            - generic [ref=f1e319]: CAPTIONS · 0:00
+          - generic [ref=f1e320]: 5.0s
+        - button "Node graph GRAPHIC · 0:05 7.5s" [ref=f1e321] [cursor=pointer]:
+          - generic [ref=f1e323]:
+            - generic [ref=f1e324]: Node graph
+            - generic [ref=f1e325]: GRAPHIC · 0:05
+          - generic [ref=f1e326]: 7.5s
+        - button "Captions · 16 words CAPTIONS · 0:05 7.5s" [ref=f1e327] [cursor=pointer]:
+          - generic [ref=f1e329]:
+            - generic [ref=f1e330]: Captions · 16 words
+            - generic [ref=f1e331]: CAPTIONS · 0:05
+          - generic [ref=f1e332]: 7.5s
+        - button "Annotate GRAPHIC · 0:12 9.0s" [ref=f1e333] [cursor=pointer]:
+          - generic [ref=f1e335]:
+            - generic [ref=f1e336]: Annotate
+            - generic [ref=f1e337]: GRAPHIC · 0:12
+          - generic [ref=f1e338]: 9.0s
+        - button "Captions · 19 words CAPTIONS · 0:12 9.0s" [ref=f1e339] [cursor=pointer]:
+          - generic [ref=f1e341]:
+            - generic [ref=f1e342]: Captions · 19 words
+            - generic [ref=f1e343]: CAPTIONS · 0:12
+          - generic [ref=f1e344]: 9.0s
+        - button "Icon row GRAPHIC · 0:21 7.0s" [ref=f1e345] [cursor=pointer]:
+          - generic [ref=f1e347]:
+            - generic [ref=f1e348]: Icon row
+            - generic [ref=f1e349]: GRAPHIC · 0:21
+          - generic [ref=f1e350]: 7.0s
+        - button "Captions · 16 words CAPTIONS · 0:21 7.0s" [ref=f1e351] [cursor=pointer]:
+          - generic [ref=f1e353]:
+            - generic [ref=f1e354]: Captions · 16 words
+            - generic [ref=f1e355]: CAPTIONS · 0:21
+          - generic [ref=f1e356]: 7.0s
+        - button "Captions · 22 words CAPTIONS · 0:28 9.0s" [ref=f1e357] [cursor=pointer]:
+          - generic [ref=f1e359]:
+            - generic [ref=f1e360]: Captions · 22 words
+            - generic [ref=f1e361]: CAPTIONS · 0:28
+          - generic [ref=f1e362]: 9.0s
+        - button "Narration — scene 1 VOICEOVER · 100%" [ref=f1e363] [cursor=pointer]:
+          - generic [ref=f1e365]:
+            - generic [ref=f1e366]: Narration — scene 1
+            - generic [ref=f1e367]: VOICEOVER · 100%
+        - button "Narration — scene 2 VOICEOVER · 100%" [ref=f1e368] [cursor=pointer]:
+          - generic [ref=f1e370]:
+            - generic [ref=f1e371]: Narration — scene 2
+            - generic [ref=f1e372]: VOICEOVER · 100%
+        - button "Narration — scene 3 VOICEOVER · 100%" [ref=f1e373] [cursor=pointer]:
+          - generic [ref=f1e375]:
+            - generic [ref=f1e376]: Narration — scene 3
+            - generic [ref=f1e377]: VOICEOVER · 100%
+        - button "Narration — scene 4 VOICEOVER · 100%" [ref=f1e378] [cursor=pointer]:
+          - generic [ref=f1e380]:
+            - generic [ref=f1e381]: Narration — scene 4
+            - generic [ref=f1e382]: VOICEOVER · 100%
+        - button "Narration — scene 5 VOICEOVER · 100%" [ref=f1e383] [cursor=pointer]:
+          - generic [ref=f1e385]:
+            - generic [ref=f1e386]: Narration — scene 5
+            - generic [ref=f1e387]: VOICEOVER · 100%
+    - main [ref=f1e138]:
+      - generic [ref=f1e140]:
+        - generic [ref=f1e142]: S3 · Annotate
+        - button "1" [ref=f1e145] [cursor=pointer]
+        - button "2" [ref=f1e146] [cursor=pointer]
+        - generic [ref=f1e147]:
+          - button "Select" [ref=f1e148] [cursor=pointer]
+          - button "Pin comment" [ref=f1e150] [cursor=pointer]
+          - button "Draw" [ref=f1e152] [cursor=pointer]
+        - generic [ref=f1e154]: 1920×1080 · 30fps
+        - generic [ref=f1e155]:
+          - button [ref=f1e156] [cursor=pointer]
+          - generic [ref=f1e158]: 0:20
+          - slider [ref=f1e159]: "20.1"
+          - generic [ref=f1e160]: 0:37
+      - generic [ref=f1e161]:
+        - generic [ref=f1e162]:
+          - generic [ref=f1e163]: TIMELINE
+          - generic [ref=f1e164]:
+            - button "✂ Split" [ref=f1e165]
+            - button "⧉ Duplicate" [ref=f1e166]
+            - button "← Move" [ref=f1e167]
+            - button "Move →" [ref=f1e168]
+            - button "＋ Text" [ref=f1e169] [cursor=pointer]
+        - generic [ref=f1e171]:
+          - generic [ref=f1e172]:
+            - generic [ref=f1e173]: 0:00
+            - generic [ref=f1e174]: 0:03
+            - generic [ref=f1e175]: 0:06
+            - generic [ref=f1e176]: 0:09
+            - generic [ref=f1e177]: 0:12
+            - generic [ref=f1e178]: 0:15
+            - generic [ref=f1e179]: 0:18
+            - generic [ref=f1e180]: 0:21
+            - generic [ref=f1e181]: 0:24
+            - generic [ref=f1e182]: 0:27
+            - generic [ref=f1e183]: 0:30
+            - generic [ref=f1e184]: 0:33
+            - generic [ref=f1e185]: 0:36
+          - generic [ref=f1e186]:
+            - generic [ref=f1e187]:
+              - generic [ref=f1e188]: VID
+              - generic [ref=f1e190]:
+                - button "scene_1.mp4" [ref=f1e191] [cursor=pointer]
+                - button "Node graph" [ref=f1e193] [cursor=pointer]
+                - button "Annotate" [ref=f1e195] [cursor=pointer]
+                - button "Icon row" [ref=f1e197] [cursor=pointer]
+                - button "scene_5.mp4" [ref=f1e199] [cursor=pointer]
+            - generic [ref=f1e201]:
+              - generic [ref=f1e202]: TXT
+              - generic [ref=f1e204]:
+                - button "Captions · 7 words" [ref=f1e205] [cursor=pointer]
+                - button "Node graph" [ref=f1e207] [cursor=pointer]
+                - button "Captions · 16 words" [ref=f1e390] [cursor=pointer]
+                - button "Annotate" [ref=f1e211] [cursor=pointer]
+                - button "Captions · 19 words" [ref=f1e392] [cursor=pointer]
+                - button "Icon row" [ref=f1e215] [cursor=pointer]
+                - button "Captions · 16 words" [ref=f1e394] [cursor=pointer]
+                - button "Captions · 22 words" [ref=f1e396] [cursor=pointer]
+            - generic [ref=f1e221]:
+              - generic [ref=f1e222]: AUD
+              - generic [ref=f1e224]:
+                - button "Narration — scene 1" [ref=f1e225] [cursor=pointer]
+                - button "Narration — scene 2" [ref=f1e398] [cursor=pointer]
+                - button "Narration — scene 3" [ref=f1e400] [cursor=pointer]
+                - button "Narration — scene 4" [ref=f1e402] [cursor=pointer]
+                - button "Narration — scene 5" [ref=f1e404] [cursor=pointer]
+    - complementary [ref=f1e235]:
+      - generic [ref=f1e236]:
+        - button "Director" [ref=f1e237] [cursor=pointer]
+        - button "Inspect" [ref=f1e238] [cursor=pointer]
+        - button "Comments4" [ref=f1e239] [cursor=pointer]
+      - generic [ref=f1e406]:
+        - generic [ref=f1e407]:
+          - generic [ref=f1e408]:
+            - generic [ref=f1e409]: DIRECTOR
+            - paragraph [ref=f1e412]: I directed “Deep Learning Explained in 30 Seconds” — 5 scenes over 38s. Ask me anything about the cut or tell me what to change; everything autosaves, and Re-render bakes changes into the video.
+          - paragraph [ref=f1e414]: What do you think of the pacing of this video? Anything you would improve?
+          - generic [ref=f1e415]:
+            - generic [ref=f1e416]: DIRECTOR
+            - paragraph [ref=f1e419]: The video feels brisk and keeps the viewer’s attention, but a few pacing tweaks could tighten the flow. Scene 2 (7.5 s) and Scene 5 (9 s) are on the longer side for a 30‑second explainer; shaving 0.5–1 s off each would keep the overall momentum higher. Also, the crossfade transitions (0.4 s) add a nice polish, but you might experiment with a quicker cut (0.2 s) into the final scene to give a punchier ending. Finally, consider syncing the voice‑over cadence more tightly with the visual changes—if any scene feels like the narration lags behind the graphics, a slight trim of the scene duration will help keep the rhythm tight.
+          - paragraph [ref=f1e421]: Give the captions a typewriter feel
+          - generic [ref=f1e422]:
+            - generic [ref=f1e423]: DIRECTOR
+            - paragraph [ref=f1e426]: The caption layers only allow style edits—they don’t support entrance animations like a typewriter effect. To get that effect we’d need to replace each caption with a text layer (which can animate) and manually re‑type the words, but the timed‑word data isn’t editable, so we can’t preserve the exact syncing. Unfortunately, I can’t add a typewriter animation directly to the existing caption layers.
+          - paragraph [ref=f1e428]: ok then just switch the captions to a monospace font
+          - generic [ref=f1e429]:
+            - generic [ref=f1e430]: DIRECTOR
+            - paragraph [ref=f1e433]: Switch captions in scene 2 to a monospace font
+            - generic [ref=f1e435]:
+              - generic [ref=f1e436]: PROPOSED CHANGES
+              - generic [ref=f1e437]:
+                - generic [ref=f1e438]: ›
+                - text: Switch captions in scene 2 to a monospace font
+          - paragraph [ref=f1e454]: Go ahead and make the pacing tweaks you suggested earlier
+          - generic [ref=f1e457]:
+            - generic [ref=f1e458]: DIRECTOR
+            - paragraph [ref=f1e461]: Trim scene 2 to 6.8 s and scene 5 to 8.2 s, and shorten the final crossfade to 0.2 s for tighter pacing.
+            - generic [ref=f1e462]: ✕ Discarded
+            - generic [ref=f1e467]:
+              - generic [ref=f1e468]: DEV · INSTRUCTION SENT
+              - generic [ref=f1e469]: "Go ahead and make the pacing tweaks you suggested earlier [selection: scene 1 (scene_1.mp4)] [agent: invalid → propose]"
+              - generic [ref=f1e470]: DEV · IR CHANGES (3)
+              - generic [ref=f1e471]: "scenes[1].duration_s: 7.5 → 6.8 scenes[4].duration_s: 9 → 8.2 scenes[4].transition_out.duration_s: 0.4 → 0.2"
+          - paragraph [ref=f1e477]: When you talk about a Simple Photo, Show a Photo in the Video
+          - generic [ref=f1e478]:
+            - generic [ref=f1e479]: DIRECTOR
+            - paragraph [ref=f1e482]: Which image file should I use for the “simple photo” that appears during scene 3?
+            - generic [ref=f1e483]:
+              - generic [ref=f1e484]: DEV · INSTRUCTION SENT
+              - generic [ref=f1e485]: "When you talk about a Simple Photo, Show a Photo in the Video [agent: reply]"
+        - generic [ref=f1e442]:
+          - textbox "Tell the director what to change…" [ref=f1e443]
+          - generic [ref=f1e444]:
+            - generic [ref=f1e445]:
+              - button "Punchier captions" [ref=f1e446] [cursor=pointer]
+              - button "Tighten the pace" [ref=f1e447] [cursor=pointer]
+              - button "Brand the colors" [ref=f1e448] [cursor=pointer]
+            - button [ref=f1e449] [cursor=pointer]

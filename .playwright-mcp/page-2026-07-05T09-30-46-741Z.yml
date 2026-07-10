@@ -1,0 +1,170 @@
+- generic [ref=f11e2]:
+  - generic [ref=f11e7]:
+    - banner [ref=f11e8]:
+      - generic [ref=f11e9]:
+        - generic [ref=f11e10]:
+          - generic [ref=f11e13]: Squook
+          - button "← New video" [ref=f11e14] [cursor=pointer]
+          - generic [ref=f11e15]: Create a Demo SaaS Video
+        - generic [ref=f11e16]:
+          - generic [ref=f11e17]: DRAFT 1
+          - button "Saved" [ref=f11e18] [cursor=pointer]
+          - button "Re-render" [ref=f11e19] [cursor=pointer]
+          - generic [ref=f11e20]:
+            - generic [ref=f11e21]: S
+            - button "Sign out" [ref=f11e22] [cursor=pointer]
+          - button "Download" [ref=f11e23] [cursor=pointer]
+    - main [ref=f11e24]:
+      - generic [ref=f11e25]:
+        - generic [ref=f11e27]:
+          - generic [ref=f11e40]:
+            - generic [ref=f11e41]:
+              - button "Play video" [ref=f11e42] [cursor=pointer]:
+                - img [ref=f11e43]
+              - button "Mute sound" [ref=f11e46] [cursor=pointer]:
+                - img [ref=f11e47]
+              - generic [ref=f11e49]: 0:00 / 1:00
+            - button "Enter Fullscreen" [ref=f11e51] [cursor=pointer]:
+              - img [ref=f11e52]
+          - generic [ref=f11e63]:
+            - generic [ref=f11e64]: S1 · Captions
+            - textbox "Tell it what to change — “bigger, serif, yellow”" [active] [ref=f11e65]
+            - button "Apply command" [disabled] [ref=f11e66]: ↑
+            - button "Deselect" [ref=f11e67] [cursor=pointer]: ✕
+        - generic [ref=f11e68]:
+          - generic [ref=f11e69]:
+            - generic [ref=f11e70]: TIMELINE
+            - generic [ref=f11e71]: 0:00 / 1:00 · drag to reorder · edges to trim
+          - generic [ref=f11e72] [cursor=pointer]:
+            - generic [ref=f11e73]: 0s
+            - generic [ref=f11e74]: 5s
+            - generic [ref=f11e75]: 10s
+            - generic [ref=f11e76]: 15s
+            - generic [ref=f11e77]: 20s
+            - generic [ref=f11e78]: 25s
+            - generic [ref=f11e79]: 30s
+            - generic [ref=f11e80]: 35s
+            - generic [ref=f11e81]: 40s
+            - generic [ref=f11e82]: 45s
+            - generic [ref=f11e83]: 50s
+            - generic [ref=f11e84]: 55s
+            - generic [ref=f11e85]: 60s
+          - generic [ref=f11e86]:
+            - generic [ref=f11e87]:
+              - generic [ref=f11e88]: 1 · VIDEO
+              - generic [ref=f11e89]: 6.0s
+              - button "Delete scene 1" [ref=f11e90] [cursor=pointer]: ✕
+            - generic [ref=f11e93]:
+              - generic [ref=f11e94]: 2 · VIDEO
+              - generic [ref=f11e95]: 5.0s
+              - button "Delete scene 2" [ref=f11e96] [cursor=pointer]: ✕
+            - generic [ref=f11e99]:
+              - generic [ref=f11e100]: 3 · VIDEO
+              - generic [ref=f11e101]: 11.0s
+              - button "Delete scene 3" [ref=f11e102] [cursor=pointer]: ✕
+            - generic [ref=f11e105]:
+              - generic [ref=f11e106]: 4 · SHADER
+              - generic [ref=f11e107]: 5.0s
+              - button "Delete scene 4" [ref=f11e108] [cursor=pointer]: ✕
+            - generic [ref=f11e111]:
+              - generic [ref=f11e112]: 5 · VIDEO
+              - generic [ref=f11e113]: 12.0s
+              - button "Delete scene 5" [ref=f11e114] [cursor=pointer]: ✕
+            - generic [ref=f11e117]:
+              - generic [ref=f11e118]: 6 · VIDEO
+              - generic [ref=f11e119]: 7.0s
+              - button "Delete scene 6" [ref=f11e120] [cursor=pointer]: ✕
+            - generic [ref=f11e123]:
+              - generic [ref=f11e124]: 7 · SHADER
+              - generic [ref=f11e125]: 7.0s
+              - button "Delete scene 7" [ref=f11e126] [cursor=pointer]: ✕
+            - generic [ref=f11e129]:
+              - generic [ref=f11e130]: 8 · SOLID
+              - generic [ref=f11e131]: 7.0s
+              - button "Delete scene 8" [ref=f11e132] [cursor=pointer]: ✕
+      - generic [ref=f11e135]:
+        - generic [ref=f11e136]:
+          - generic [ref=f11e137]:
+            - generic [ref=f11e138]: SCENE 1 · CAPTIONS
+            - button "REMOVE" [ref=f11e139] [cursor=pointer]
+          - generic [ref=f11e140]:
+            - generic [ref=f11e141]: Typography
+            - generic [ref=f11e142]:
+              - generic [ref=f11e143]: Font
+              - combobox [ref=f11e145] [cursor=pointer]:
+                - option "Theme default" [selected]
+                - option "Grotesk"
+                - option "Clean sans"
+                - option "Display"
+                - option "Serif"
+                - option "Elegant serif"
+                - option "Typewriter"
+                - option "Rounded sans"
+            - generic [ref=f11e146]:
+              - generic [ref=f11e147]: Size
+              - spinbutton "theme" [ref=f11e149]
+            - generic [ref=f11e150]:
+              - generic [ref=f11e151]: Weight
+              - generic [ref=f11e152]:
+                - combobox [ref=f11e153] [cursor=pointer]:
+                  - option "Default" [selected]
+                  - option "Regular"
+                  - option "Medium"
+                  - option "Semibold"
+                  - option "Bold"
+                  - option "Extrabold"
+                  - option "Black"
+                - button "italic" [ref=f11e154] [cursor=pointer]
+            - generic [ref=f11e155]:
+              - generic [ref=f11e156]: Spacing
+              - generic [ref=f11e157]:
+                - slider [ref=f11e158]: "0"
+                - generic [ref=f11e159]: "0"
+            - generic [ref=f11e160]:
+              - generic [ref=f11e161]: Color
+              - generic [ref=f11e163]:
+                - textbox [ref=f11e164] [cursor=pointer]: "#ffffff"
+                - textbox "#rrggbb" [ref=f11e165]
+            - generic [ref=f11e166]:
+              - generic [ref=f11e167]: Background
+              - textbox "rgba(0,0,0,0.55)" [ref=f11e170]
+          - paragraph [ref=f11e171]: Word timings come from the voiceover — edit the wording with an AI command.
+          - generic [ref=f11e172]:
+            - generic [ref=f11e173]: Transform
+            - generic [ref=f11e174]:
+              - generic [ref=f11e175]: X position
+              - generic [ref=f11e176]:
+                - slider [ref=f11e177]: "0"
+                - generic [ref=f11e178]: "0"
+            - generic [ref=f11e179]:
+              - generic [ref=f11e180]: Y position
+              - generic [ref=f11e181]:
+                - slider [ref=f11e182]: "0"
+                - generic [ref=f11e183]: "0"
+            - generic [ref=f11e184]:
+              - generic [ref=f11e185]: Scale
+              - generic [ref=f11e186]:
+                - slider [ref=f11e187]: "1"
+                - generic [ref=f11e188]: "1"
+            - generic [ref=f11e189]:
+              - generic [ref=f11e190]: Rotation
+              - generic [ref=f11e191]:
+                - slider [ref=f11e192]: "0"
+                - generic [ref=f11e193]: "0"
+            - generic [ref=f11e194]:
+              - generic [ref=f11e195]: Opacity
+              - generic [ref=f11e196]:
+                - slider [ref=f11e197]: "1"
+                - generic [ref=f11e198]: "1"
+        - generic [ref=f11e199]:
+          - generic [ref=f11e200]: EDIT THE WHOLE VIDEO
+          - textbox "Describe a change — “make scene 2 shorter”, “warmer colors”, “swap scenes 3 and 4”…" [ref=f11e201]
+          - button "Apply change" [disabled] [ref=f11e202]
+          - paragraph [ref=f11e203]: "Tip: select an element in the preview and use the command bar that appears to edit just that element."
+        - group [ref=f11e204]:
+          - generic "▸ REGENERATE FROM SCRATCH" [ref=f11e205] [cursor=pointer]:
+            - generic [ref=f11e206]: ▸
+            - text: REGENERATE FROM SCRATCH
+  - generic [ref=f11e4]:
+    - button "← site" [ref=f11e5] [cursor=pointer]
+    - button "↺ restart flow" [ref=f11e6] [cursor=pointer]

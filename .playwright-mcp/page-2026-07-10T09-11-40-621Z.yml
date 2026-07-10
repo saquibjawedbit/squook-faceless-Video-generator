@@ -1,0 +1,124 @@
+- generic [ref=f2e319]:
+  - banner [ref=f2e320]:
+    - generic [ref=f2e321]:
+      - generic [ref=f2e322]:
+        - link "Squook" [ref=f2e323] [cursor=pointer]:
+          - /url: "#/"
+        - navigation [ref=f2e326]:
+          - generic [ref=f2e327]: Home
+          - link "Gallery" [ref=f2e328] [cursor=pointer]:
+            - /url: "#/#gallery"
+          - link "Pricing" [ref=f2e329] [cursor=pointer]:
+            - /url: "#/pricing"
+      - generic [ref=f2e330]:
+        - generic [ref=f2e331]: Pro · 24 renders left
+        - generic [ref=f2e333]: A
+  - main [ref=f2e334]:
+    - generic [ref=f2e335]:
+      - generic [ref=f2e336]:
+        - generic [ref=f2e337]: WELCOME BACK
+        - heading "Good to see you, Alex. What are we making today?" [level=1] [ref=f2e338]: Good to see you, Alex.What are we making today?
+      - generic [ref=f2e339]:
+        - textbox "Describe the video you want — the audience, the mood, the length. Like briefing a director…" [ref=f2e340]
+        - generic [ref=f2e341]:
+          - generic [ref=f2e342]:
+            - button "Footage" [ref=f2e343] [cursor=pointer]
+            - button "Image" [ref=f2e346] [cursor=pointer]
+            - button "Brand kit" [ref=f2e349] [cursor=pointer]
+            - button "Reference" [ref=f2e352] [cursor=pointer]
+          - generic [ref=f2e355]:
+            - generic [ref=f2e356]:
+              - button "16:9" [ref=f2e357] [cursor=pointer]
+              - button "9:16" [ref=f2e358] [cursor=pointer]
+              - button "1:1" [ref=f2e359] [cursor=pointer]
+            - generic [ref=f2e360]:
+              - slider [ref=f2e364]: "30"
+              - generic [ref=f2e365]: 30s
+        - generic [ref=f2e366]:
+          - generic [ref=f2e367]:
+            - generic [ref=f2e368]: ⌘ ⏎
+            - text: to generate · paste a link or image
+          - button "Generate video" [ref=f2e369] [cursor=pointer]
+      - generic [ref=f2e372]:
+        - generic [ref=f2e373]: START FROM
+        - button "Product launch film" [ref=f2e374] [cursor=pointer]
+        - button "Instagram ad" [ref=f2e375] [cursor=pointer]
+        - button "Explainer" [ref=f2e376] [cursor=pointer]
+        - button "Feature teaser" [ref=f2e377] [cursor=pointer]
+        - button "Founder announcement" [ref=f2e378] [cursor=pointer]
+        - button "Demo from recordings" [ref=f2e379] [cursor=pointer]
+    - generic [ref=f2e380]:
+      - generic [ref=f2e382]:
+        - generic [ref=f2e383]: PICK UP WHERE YOU LEFT OFF
+        - heading "Your drafts" [level=2] [ref=f2e384]
+      - generic [ref=f2e385]: Loading your projects…
+    - generic [ref=f2e386]:
+      - generic [ref=f2e387]:
+        - generic [ref=f2e388]:
+          - generic [ref=f2e389]: RENDERED & READY
+          - heading "Your videos" [level=2] [ref=f2e390]
+        - link "View all →" [ref=f2e391] [cursor=pointer]:
+          - /url: "#/#gallery"
+      - generic [ref=f2e392]: Loading…
+    - generic [ref=f2e393]:
+      - generic [ref=f2e394]:
+        - generic [ref=f2e395]:
+          - generic [ref=f2e396]: MADE ON SQUOOK THIS WEEK
+          - heading "Trending" [level=2] [ref=f2e397]
+        - link "Explore →" [ref=f2e398] [cursor=pointer]:
+          - /url: "#/#gallery"
+      - generic [ref=f2e399]:
+        - generic [ref=f2e400] [cursor=pointer]:
+          - generic: 0:22 · 16:9
+          - generic:
+            - generic: “Launch film for a project-management app — bold type, fast cuts”
+            - generic:
+              - generic:
+                - generic: M
+                - text: "@maya.builds"
+              - button "Remix" [ref=f2e402]
+        - generic [ref=f2e408] [cursor=pointer]:
+          - generic: 0:15 · 1:1
+          - generic:
+            - generic: “Instagram ad for a single-origin coffee brand, warm and tactile”
+            - generic:
+              - generic:
+                - generic: S
+                - text: "@sofiareyes.mkt"
+              - button "Remix" [ref=f2e410]
+        - generic [ref=f2e416] [cursor=pointer]:
+          - generic: 0:30 · 16:9
+          - generic:
+            - generic: “30-second explainer of how our API pricing works”
+            - generic:
+              - generic:
+                - generic: D
+                - text: "@DevShipsDaily"
+              - button "Remix" [ref=f2e418]
+        - generic [ref=f2e424] [cursor=pointer]:
+          - generic: 0:18 · 9:16
+          - generic:
+            - generic: “Night city run teaser for a fitness app, beat-synced”
+            - generic:
+              - generic:
+                - generic: L
+                - text: "@liam.launches"
+              - button "Remix" [ref=f2e426]
+        - generic [ref=f2e432] [cursor=pointer]:
+          - generic: 0:12 · 1:1
+          - generic:
+            - generic: “Abstract product loop with kinetic typography”
+            - generic:
+              - generic:
+                - generic: A
+                - text: "@amara.creates"
+              - button "Remix" [ref=f2e434]
+        - generic [ref=f2e440] [cursor=pointer]:
+          - generic: 0:20 · 16:9
+          - generic:
+            - generic: “Founder update — warm, direct, serif overlays”
+            - generic:
+              - generic:
+                - generic: J
+                - text: "@JonasExplains"
+              - button "Remix" [ref=f2e442]

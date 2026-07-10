@@ -1,0 +1,132 @@
+research_task:
+  description: >
+    Research the topic "{prompt}" using your own knowledge. Identify the key
+    facts, core concepts, definitions, surprising details, common
+    misconceptions, and hooks that would make this topic engaging to a
+    general audience.
+  expected_output: >
+    A structured research brief with roughly 10 bullet points covering the
+    most relevant facts, concepts, hooks, and misconceptions about "{prompt}".
+  agent: researcher
+
+writing_task:
+  description: >
+    Using the research brief from the previous task, write engaging,
+    narration-ready content about "{prompt}". Write in short paragraphs with
+    a natural spoken rhythm, use concrete examples, open with a hook, and
+    end with a memorable takeaway. Avoid jargon unless you explain it.
+    Keep the total length to roughly {word_count} words — this narration
+    must fit the video's target runtime of {runtime}.
+    CRITICAL — write ONLY the words the narrator will speak aloud to the
+    viewer, about the SUBJECT itself. Do NOT write section labels or headings
+    (no "Hook:", "Problem:", "Solution:", "Call to Action:"), no bullet points,
+    no stage or camera directions, and never describe the video, its scenes,
+    screen recordings, on-screen text, captions, transitions, or music. If a
+    sentence talks about how the video is made rather than the subject, rewrite
+    it as something the viewer would actually be told.
+    Note on supplied footage: {uploads} Where these clips or images naturally
+    fit a beat of the narration, write toward them so they earn their place
+    on screen. The intended music mood for this video is: {music}.
+  expected_output: >
+    Narration-ready markdown content of roughly {word_count} words about
+    "{prompt}", suitable for reading aloud as a video voiceover.
+  agent: writer
+
+directing_task:
+  description: >
+    Take the written content from the previous task and turn it into a
+    scene-by-scene motion-graphics direction script for a short video about
+    "{prompt}". Break the narration into numbered scenes. For each scene
+    specify: the scene index, the duration in seconds, a description of the
+    visuals and motion-graphics ideas, the on-screen text (empty string if
+    none), and the exact narration line for that scene. Keep the total
+    runtime around {runtime} and make sure every narration line from
+    the content is covered. Also produce metadata: a title for the video,
+    the original prompt, the total duration in seconds, and the number of
+    scenes.
+    REAL PEOPLE AND COMPANIES: the pipeline can fetch real, licensed photos
+    of public figures and company logos. When the story is about a specific
+    person, at least the scenes that introduce or center on them should SHOW
+    them — write the visual as e.g. "photo of Jensen Huang on stage" (name
+    them explicitly; never a generic 'a CEO'). When a scene centers on a
+    specific company, its logo may appear as an accent. Use real faces where
+    they carry the story; use motion graphics for concepts and numbers.
+    Also decide the background MUSIC as a "music" object: "needed" (true/false —
+    some videos are stronger with only voice and ambient silence, so choose
+    honestly), "mood" (one word: uplifting, calm, tense, energetic, warm,
+    playful, cinematic…), and "description" (a short, search-friendly phrase
+    naming the instrumentation, tempo and energy, e.g. "upbeat corporate synth
+    with light percussion" or "slow ambient piano"). The music must be
+    INSTRUMENTAL — it plays under a spoken voice-over.
+    STRICT RULE for the "narration" field: it must contain ONLY the exact
+    words the voice-over artist speaks — nothing else. Never put a scene or
+    section label in it ("Hook", "Problem", "Solution", "CTA",
+    "Show-and-Tell"), never put camera/production/motion directions in it,
+    and never mention the video, screen capture, footage, on-screen text,
+    callouts, captions, transitions, or music. ALL of that belongs in the
+    "visual" field. If the written content prefixed a line with a label,
+    drop the label from "narration".
+    Example A — WRONG narration: "Show-and-Tell – walk the viewer through the
+    steps using crisp 1080p screen capture and callout boxes." RIGHT split:
+    visual = "Screen recording of the app; callout boxes slide in over each
+    step"; narration = "Here's how it works in three quick steps."
+    Example B (most common mistake) — NEVER quote or announce the on-screen
+    text inside the narration. WRONG narration: "The big caption flashes
+    'Track. Celebrate. Grow', and the bar fills." The caption words go ONLY in
+    on_screen_text; the voice-over talks about the subject. RIGHT split:
+    on_screen_text = "Track. Celebrate. Grow"; narration = "Your streak fills
+    the instant you tap the plus button." Phrases like "the caption reads…",
+    "the screen shows…", "text appears saying…", "a title card displays…" must
+    NEVER be in narration.
+  expected_output: >
+    A JSON object with a "metadata" object (title, prompt, total_duration_seconds,
+    scene_count), a "scenes" array where each scene has: index,
+    duration_seconds, visual, on_screen_text, and narration, and a "music"
+    object with: needed (boolean), mood (one word), description (short phrase).
+  agent: director
+  output_file: output/direction_script.json
+
+asset_task:
+  description: >
+    For EVERY scene in the direction script from the previous task, plan the
+    visual source. For each scene output the scene index, a media_type, and
+    a query.
+    IMPORTANT — the user supplied their own footage: {uploads} Whenever one of
+    those uploaded files fits a scene, you MUST prefer it: set
+    media_type "upload" and set the query to the EXACT uploaded filename
+    (e.g. "demo-screen.mp4"). Only use the media_type rules below for scenes
+    that no uploaded file fits.
+    media_type rules: "graphic" when the visual describes a diagram,
+    chart, network, counter, animated number, title card, or annotation —
+    these are rendered as data-driven motion graphics; "lottie" when the
+    scene wants a playful animated illustration, character, mascot, or object
+    metaphor (a thinking robot, a lightbulb turning on, a rocket launching) —
+    these are fetched as vector cartoon animations; "video" when the visual
+    describes real-world motion or live action that stock footage CAN show;
+    "photo" when a static real-world image fits. For photo/video the query
+    must be a concise 2-5 word English stock search using generic, concrete,
+    filmable keywords (real people, places, objects, actions — never abstract
+    jargon). Stock libraries match words literally, so ALWAYS include the
+    subject class and disambiguate names that are also common words: a query
+    about the Falcon 9 must say "spacex rocket launch" (a "falcon" query
+    returns the bird), Jaguar the car maker needs "luxury sports car" (not
+    the cat), Python the language needs "programmer writing code" (not the
+    snake). Never use a bare brand, product, or person name as the query.
+    Two special photo intents ARE the exception and use the name directly:
+    when a scene's visual NAMES a specific public figure, the person IS the
+    subject — use media_type "photo" with the query "portrait of <full name>"
+    ("portrait of Elon Musk"), even when the visual also describes a setting
+    or backdrop ("Musk in a cramped garage" → "portrait of Elon Musk", NOT
+    "cramped garage" — the setting is conveyed by the narration and design);
+    when a scene discusses a specific company and its brand mark would help,
+    use media_type "photo" with the query "logo of <company>"
+    ("logo of Nvidia") — only for scenes about that company.
+    For lottie the query is 1-3 simple words naming the character,
+    object, or action ("robot thinking", "rocket launch", "brain"). For
+    graphic the query is a 2-5 word summary of what the graphic shows.
+    Cover all scenes, one entry per scene, in order.
+  expected_output: >
+    A JSON object with an "assets" array where each entry has: scene_index,
+    media_type ("photo", "video", "graphic", "lottie" or "upload"), and query
+    (the exact uploaded filename when media_type is "upload").
+  agent: asset_curator

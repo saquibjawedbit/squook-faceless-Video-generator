@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Gochi+Hand&family=Shantell+Sans:wght@400;600&display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#f0eee9;font-family:'Shantell Sans',system-ui,sans-serif}
+.dv-turn{padding:40px 44px 32px;border-bottom:1px solid rgba(0,0,0,.08);scroll-margin-top:16px}
+.dv-thd{display:flex;align-items:baseline;gap:10px;margin:0 0 20px}
+.dv-tid{font:600 10px ui-monospace,Menlo,monospace;padding:3px 7px;background:#1a1a1a;color:#fff;border-radius:4px;text-decoration:none}
+.dv-tname{font:600 13px/1.2 system-ui,sans-serif;color:#1a1a1a}
+.dv-opts{display:flex;flex-wrap:wrap;gap:28px;align-items:flex-start}
+.dv-opt{flex:none;display:flex;flex-direction:column;gap:9px;scroll-margin-top:16px}
+.dv-oid{font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(0,0,0,.08);color:#1a1a1a;border-radius:5px;text-decoration:none}
+.dv-olabel{display:flex;align-items:baseline;gap:8px;font:400 11px/1.3 system-ui,sans-serif;color:rgba(0,0,0,.55)}
+.dv-card{max-width:100%;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.06);overflow:hidden}
+.dv-opt:target .dv-oid{background:#2a78d6;color:#fff}
+.dv-next{margin:22px 0 0;font:12px/1.5 system-ui,sans-serif;color:rgba(0,0,0,.5)}
+/* wireframe helpers */
+.wf{padding:14px;display:flex;flex-direction:column;gap:10px;font-family:'Gochi Hand',cursive;color:#333}
+.wf-nav{display:flex;align-items:center;justify-content:space-between;border:1.5px solid #444;border-radius:6px;padding:7px 10px;font-size:13px}
+.wf-box{border:1.5px solid #444;border-radius:6px;padding:10px;position:relative}
+.wf-dash{border:1.5px dashed #999;border-radius:6px;padding:10px;position:relative}
+.wf-dark{background:#3a3a3a;color:#eee;border-color:#222}
+.wf-vid{background:repeating-linear-gradient(45deg,#e6e3dc,#e6e3dc 8px,#f2f0ea 8px,#f2f0ea 16px);border:1.5px solid #444;border-radius:6px;display:flex;align-items:center;justify-content:center;position:relative}
+.wf-vid.dk{background:repeating-linear-gradient(45deg,#4a4a4a,#4a4a4a 8px,#565656 8px,#565656 16px);border-color:#222}
+.wf-play{width:0;height:0;border-left:14px solid #333;border-top:9px solid transparent;border-bottom:9px solid transparent;opacity:.75}
+.wf-vid.dk .wf-play{border-left-color:#eee}
+.wf-h1{font-size:22px;line-height:1.15;font-weight:400}
+.wf-sub{font-size:12.5px;color:#777;line-height:1.35}
+.wf-dark .wf-sub{color:#bbb}
+.wf-cta{display:inline-block;background:#e8642c;color:#fff;border-radius:6px;padding:6px 14px;font-size:13px;align-self:flex-start}
+.wf-ghost{display:inline-block;border:1.5px solid #444;border-radius:6px;padding:5px 12px;font-size:12px}
+.wf-note{font-size:11px;color:#e8642c;line-height:1.3}
+.wf-sec{font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#999;font-family:system-ui,sans-serif;font-weight:600}
+.wf-row{display:flex;gap:8px}
+.wf-col{display:flex;flex-direction:column;gap:6px;flex:1}
+.wf-line{height:7px;background:#ddd;border-radius:4px}
+.wf-pill{border:1.5px solid #444;border-radius:99px;padding:3px 10px;font-size:11px}
+.wf-arrow{font-size:18px;color:#e8642c;align-self:center}
+.wf-logo{border:1.5px dashed #bbb;border-radius:4px;height:22px;flex:1;display:flex;align-items:center;justify-content:center;font-size:9px;color:#aaa;font-family:system-ui,sans-serif}
+.wf-foot{display:flex;justify-content:space-between;font-size:11px;color:#999;border-top:1.5px solid #ddd;padding-top:8px}
+</style>
+</helmet>
+
+<section class="dv-turn" id="t2">
+<div class="dv-thd"><a class="dv-tid" href="#t2">2</a><span class="dv-tname">Onboarding flow — signup → ≤2 steps → composer · all steps skippable except signup · stacks single-column on mobile</span></div>
+<div class="dv-opts">
+
+<!-- ============ 2a Stepper ============ -->
+<div class="dv-opt" id="2a">
+<div class="dv-olabel"><a class="dv-oid" href="#2a">2a</a>Classic stepper — one question between signup and composer</div>
+<div class="dv-card" style="width:640px">
+<div class="wf" style="flex-direction:row;align-items:stretch">
+  <div class="wf-col" style="width:180px;flex:none">
+    <div class="wf-box" style="height:196px;display:flex;flex-direction:column;gap:7px;justify-content:center">
+      <div style="font-size:13px;text-align:center">◆ Create your account</div>
+      <div class="wf-ghost" style="text-align:center;font-size:11px">G · Continue with Google</div>
+      <div class="wf-dash" style="padding:5px;font-size:10px;color:#999">email</div>
+      <div class="wf-cta" style="align-self:stretch;text-align:center;padding:5px;font-size:11px">Start free</div>
+    </div>
+    <div class="wf-sub" style="font-size:10px;text-align:center">1 · Signup (required)</div>
+  </div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-col" style="width:180px;flex:none">
+    <div class="wf-box" style="height:196px;display:flex;flex-direction:column;gap:7px">
+      <div style="display:flex;justify-content:space-between;font-size:10px"><span>● ○</span><span style="color:#999">Skip ›</span></div>
+      <div style="font-size:12.5px">What will you make first?</div>
+      <div class="wf-row" style="flex-wrap:wrap;gap:5px">
+        <span class="wf-pill" style="font-size:9.5px;padding:2px 8px">Ads</span>
+        <span class="wf-pill" style="font-size:9.5px;padding:2px 8px">Explainers</span>
+        <span class="wf-pill" style="font-size:9.5px;padding:2px 8px">Social posts</span>
+        <span class="wf-pill" style="font-size:9.5px;padding:2px 8px;border-color:#e8642c;color:#e8642c">Product demos ✓</span>
+      </div>
+      <div class="wf-cta" style="align-self:stretch;text-align:center;padding:5px;font-size:11px;margin-top:auto">Continue</div>
+    </div>
+    <div class="wf-sub" style="font-size:10px;text-align:center">2 · Use case (skippable)</div>
+  </div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-col" style="width:180px;flex:none">
+    <div class="wf-box" style="height:196px;display:flex;flex-direction:column;gap:7px">
+      <div style="font-size:10px;color:#999">◆ Squook · dashboard</div>
+      <div class="wf-dash" style="padding:6px;font-size:9.5px;color:#999">"A 20s demo of your product…" <span style="color:#e8642c">▸</span></div>
+      <div class="wf-note" style="font-size:9px">prompt pre-seeded from their pick</div>
+      <div class="wf-row">
+        <div class="wf-vid" style="flex:1;height:52px"><div class="wf-play" style="border-left-width:8px;border-top-width:5px;border-bottom-width:5px"></div></div>
+        <div class="wf-vid" style="flex:1;height:52px"><div class="wf-play" style="border-left-width:8px;border-top-width:5px;border-bottom-width:5px"></div></div>
+      </div>
+      <div class="wf-sub" style="font-size:9px">examples for their use case</div>
+    </div>
+    <div class="wf-sub" style="font-size:10px;text-align:center">3 · Composer, personalized</div>
+  </div>
+</div>
+</div>
+</div>
+
+<!-- ============ 2b One screen ============ -->
+<div class="dv-opt" id="2b">
+<div class="dv-olabel"><a class="dv-oid" href="#2b">2b</a>Zero extra steps — use case asked inside signup</div>
+<div class="dv-card" style="width:450px">
+<div class="wf" style="flex-direction:row;align-items:stretch">
+  <div class="wf-col" style="width:190px;flex:none">
+    <div class="wf-box" style="height:210px;display:flex;flex-direction:column;gap:7px;justify-content:center">
+      <div style="font-size:13px;text-align:center">◆ Start free</div>
+      <div class="wf-ghost" style="text-align:center;font-size:11px">G · Continue with Google</div>
+      <div class="wf-dash" style="padding:5px;font-size:10px;color:#999">email</div>
+      <div style="font-size:10px;color:#999;margin-top:4px">I'm making <span style="font-size:9px">(optional)</span>:</div>
+      <div class="wf-row" style="flex-wrap:wrap;gap:4px">
+        <span class="wf-pill" style="font-size:9px;padding:2px 7px">Ads</span>
+        <span class="wf-pill" style="font-size:9px;padding:2px 7px">Explainers</span>
+        <span class="wf-pill" style="font-size:9px;padding:2px 7px">Social</span>
+      </div>
+      <div class="wf-cta" style="align-self:stretch;text-align:center;padding:5px;font-size:11px">Create account</div>
+    </div>
+    <div class="wf-sub" style="font-size:10px;text-align:center">1 · Signup + use case, one card</div>
+  </div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-col" style="width:170px;flex:none">
+    <div class="wf-box" style="height:210px;display:flex;flex-direction:column;gap:7px">
+      <div style="font-size:10px;color:#999">◆ Squook · dashboard</div>
+      <div class="wf-dash" style="padding:6px;font-size:9.5px;color:#999">Describe your video… <span style="color:#e8642c">▸</span></div>
+      <div class="wf-row">
+        <div class="wf-vid" style="flex:1;height:52px"><div class="wf-play" style="border-left-width:8px;border-top-width:5px;border-bottom-width:5px"></div></div>
+        <div class="wf-vid" style="flex:1;height:52px"><div class="wf-play" style="border-left-width:8px;border-top-width:5px;border-bottom-width:5px"></div></div>
+      </div>
+      <div class="wf-sub" style="font-size:9px">gallery filtered by pick, generic if skipped</div>
+    </div>
+    <div class="wf-sub" style="font-size:10px;text-align:center">2 · Straight to composer</div>
+  </div>
+</div>
+<div class="wf-note" style="padding:0 14px 12px;font-size:10.5px">fastest path — onboarding never feels like onboarding; risk: busier signup card</div>
+</div>
+</div>
+
+<!-- ============ 2c Empty state as onboarding ============ -->
+<div class="dv-opt" id="2c">
+<div class="dv-olabel"><a class="dv-oid" href="#2c">2c</a>Composer-first — the empty state IS the onboarding</div>
+<div class="dv-card" style="width:450px">
+<div class="wf" style="flex-direction:row;align-items:stretch">
+  <div class="wf-col" style="width:170px;flex:none">
+    <div class="wf-box" style="height:210px;display:flex;flex-direction:column;gap:7px;justify-content:center">
+      <div style="font-size:13px;text-align:center">◆ Create your account</div>
+      <div class="wf-ghost" style="text-align:center;font-size:11px">G · Continue with Google</div>
+      <div class="wf-dash" style="padding:5px;font-size:10px;color:#999">email</div>
+      <div class="wf-cta" style="align-self:stretch;text-align:center;padding:5px;font-size:11px">Start free</div>
+    </div>
+    <div class="wf-sub" style="font-size:10px;text-align:center">1 · Signup (required)</div>
+  </div>
+  <div class="wf-arrow">→</div>
+  <div class="wf-col" style="width:190px;flex:none">
+    <div class="wf-box" style="height:210px;display:flex;flex-direction:column;gap:7px">
+      <div style="font-size:10px;color:#999">◆ Squook · dashboard</div>
+      <div style="font-size:12px">What should Squook make you first?</div>
+      <div class="wf-dash" style="padding:6px;font-size:9.5px;color:#999">Describe your video… <span style="color:#e8642c">▸</span></div>
+      <div class="wf-col" style="gap:4px">
+        <span class="wf-pill" style="font-size:9px;padding:2px 7px;align-self:flex-start">▸ "15s ad for my product, fast cuts"</span>
+        <span class="wf-pill" style="font-size:9px;padding:2px 7px;align-self:flex-start">▸ "30s explainer of how we work"</span>
+        <span class="wf-pill" style="font-size:9px;padding:2px 7px;align-self:flex-start">▸ "launch teaser, big type"</span>
+      </div>
+      <div class="wf-sub" style="font-size:9px">tap a prompt to prefill · dismisses forever after first video</div>
+    </div>
+    <div class="wf-sub" style="font-size:10px;text-align:center">2 · Composer w/ example prompts</div>
+  </div>
+</div>
+<div class="wf-note" style="padding:0 14px 12px;font-size:10.5px">zero questions asked — use case inferred from the prompt they pick; most on-brand ("prompt in, video out")</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "go hi-fi on <a class="dv-oid" href="#2c">2c</a> as a clickable prototype" · "combine <a class="dv-oid" href="#2a">2a</a>'s use-case step with <a class="dv-oid" href="#2c">2c</a>'s example prompts" · "show the mobile version"</p>
+</section>
+
+<section class="dv-turn" id="t1">
+<div class="dv-thd"><a class="dv-tid" href="#t1">1</a><span class="dv-tname">Squook landing page — four structural directions</span></div>
+<div class="dv-opts">
+
+<!-- ============ 1a Cinema hero ============ -->
+<div class="dv-opt" id="1a">
+<div class="dv-olabel"><a class="dv-oid" href="#1a">1a</a>Cinema hero — full-bleed reel, copy overlaid</div>
+<div class="dv-card" style="width:380px">
+<div class="wf">
+<div class="wf-nav"><span>◆ Squook</span><span style="display:flex;gap:10px;align-items:center"><span>Pricing</span><span class="wf-ghost" style="padding:3px 9px">Start free</span></span></div>
+<div class="wf-vid dk" style="height:190px;flex-direction:column;gap:8px">
+<div style="font-size:24px;color:#fff;text-align:center;line-height:1.1">Type it. Watch it.<br>Ship it.</div>
+<div style="font-size:11.5px;color:#ccc">One prompt → a finished, designed video</div>
+<div class="wf-cta" style="align-self:center">Try Squook</div>
+<div style="position:absolute;bottom:6px;right:8px;font-size:9px;color:#aaa;font-family:system-ui">▶ hero reel autoplays, muted loop</div>
+</div>
+<div class="wf-note">↑ video IS the hero background; copy floats on top</div>
+<div class="wf-sec">How it works</div>
+<div class="wf-row">
+<div class="wf-dash" style="flex:1;font-size:11px">"A 15s launch video for our app, upbeat"</div>
+<div class="wf-arrow">→</div>
+<div class="wf-vid" style="flex:1;height:52px"><div class="wf-play"></div></div>
+</div>
+<div class="wf-row" style="font-size:10.5px;text-align:center">
+<div class="wf-col"><div class="wf-box" style="padding:6px">1. Describe</div></div>
+<div class="wf-col"><div class="wf-box" style="padding:6px">2. AI directs</div></div>
+<div class="wf-col"><div class="wf-box" style="padding:6px">3. Download</div></div>
+</div>
+<div class="wf-sub" style="font-size:10.5px;text-align:center">or upload your own footage ↑</div>
+<div class="wf-sec">Gallery</div>
+<div class="wf-row">
+<div class="wf-vid" style="flex:1;height:70px"><div class="wf-play"></div></div>
+<div class="wf-vid" style="flex:1;height:70px"><div class="wf-play"></div></div>
+<div class="wf-vid" style="flex:1;height:70px"><div class="wf-play"></div></div>
+</div>
+<div class="wf-row">
+<div class="wf-vid" style="flex:1;height:70px"><div class="wf-play"></div></div>
+<div class="wf-vid" style="flex:1;height:70px"><div class="wf-play"></div></div>
+<div class="wf-vid" style="flex:1;height:70px"><div class="wf-play"></div></div>
+</div>
+<div class="wf-note">grid tiles autoplay on hover · caption = the prompt used</div>
+<div class="wf-sec">Why different</div>
+<div class="wf-row" style="flex-wrap:wrap">
+<span class="wf-pill">Looks designed</span><span class="wf-pill">No editing skills</span><span class="wf-pill">Your footage</span><span class="wf-pill">Ready to post</span>
+</div>
+<div class="wf-row"><div class="wf-logo">logo</div><div class="wf-logo">logo</div><div class="wf-logo">logo</div><div class="wf-logo">logo</div></div>
+<div class="wf-box wf-dark" style="text-align:center;padding:16px">
+<div style="font-size:16px">Make your first video</div>
+<div class="wf-cta" style="align-self:center;display:inline-block;margin-top:6px">Start free</div>
+</div>
+<div class="wf-foot"><span>About · Contact</span><span>Terms · Privacy</span></div>
+</div>
+</div>
+</div>
+
+<!-- ============ 1b Split transformation ============ -->
+<div class="dv-opt" id="1b">
+<div class="dv-olabel"><a class="dv-oid" href="#1b">1b</a>Split hero — prompt left, result right</div>
+<div class="dv-card" style="width:380px">
+<div class="wf">
+<div class="wf-nav"><span>◆ Squook</span><span style="display:flex;gap:10px;align-items:center"><span>Pricing</span><span class="wf-ghost" style="padding:3px 9px">Start free</span></span></div>
+<div class="wf-row">
+<div class="wf-col" style="justify-content:center">
+<div class="wf-h1">From prompt to production-grade video</div>
+<div class="wf-sub">Describe it. Squook directs, edits & renders it.</div>
+<div class="wf-cta">Try Squook</div>
+</div>
+<div class="wf-col">
+<div class="wf-dash" style="font-size:10.5px">"30s explainer for our API, dark, techy"</div>
+<div style="text-align:center;color:#e8642c;font-size:14px">↓</div>
+<div class="wf-vid dk" style="height:90px"><div class="wf-play"></div></div>
+</div>
+</div>
+<div class="wf-note">↑ right side cycles: prompt types itself → video fades in</div>
+<div class="wf-sec">How it works</div>
+<div class="wf-row" style="font-size:10.5px;text-align:center">
+<div class="wf-col"><div class="wf-box" style="padding:6px">Describe<br><span style="color:#999;font-size:9px">plain words</span></div></div>
+<div class="wf-col"><div class="wf-box" style="padding:6px">AI directs<br><span style="color:#999;font-size:9px">stock or yours</span></div></div>
+<div class="wf-col"><div class="wf-box" style="padding:6px">Share<br><span style="color:#999;font-size:9px">Reels/Shorts</span></div></div>
+</div>
+<div class="wf-sec">Gallery — horizontal carousel</div>
+<div class="wf-row" style="overflow:hidden">
+<div class="wf-vid" style="flex:none;width:110px;height:150px"><div class="wf-play"></div></div>
+<div class="wf-vid" style="flex:none;width:110px;height:150px"><div class="wf-play"></div></div>
+<div class="wf-vid" style="flex:none;width:110px;height:150px"><div class="wf-play"></div></div>
+<div class="wf-vid" style="flex:none;width:60px;height:150px;border-right:none;border-radius:6px 0 0 6px"></div>
+</div>
+<div class="wf-note">9:16 portrait tiles (native short-form) · drag / arrows · hover = play</div>
+<div class="wf-sec">Why different — 2×2</div>
+<div class="wf-row">
+<div class="wf-box wf-col" style="font-size:11px">Looks designed<div class="wf-line" style="width:70%"></div></div>
+<div class="wf-box wf-col" style="font-size:11px">No editing skills<div class="wf-line" style="width:70%"></div></div>
+</div>
+<div class="wf-row">
+<div class="wf-box wf-col" style="font-size:11px">Your footage<div class="wf-line" style="width:70%"></div></div>
+<div class="wf-box wf-col" style="font-size:11px">Ready to post<div class="wf-line" style="width:70%"></div></div>
+</div>
+<div class="wf-dash" style="text-align:center;font-size:11px;color:#999">"Squook replaced our freelancer" — testimonial strip</div>
+<div class="wf-box wf-dark" style="text-align:center;padding:14px">Make your first video <span class="wf-cta" style="padding:4px 10px;margin-left:6px">Start free</span></div>
+<div class="wf-foot"><span>About · Contact</span><span>Terms · Privacy</span></div>
+</div>
+</div>
+</div>
+
+<!-- ============ 1c Gallery wall ============ -->
+<div class="dv-opt" id="1c">
+<div class="dv-olabel"><a class="dv-oid" href="#1c">1c</a>Gallery wall — the work is the hero</div>
+<div class="dv-card" style="width:380px">
+<div class="wf">
+<div class="wf-nav" style="border-style:dashed;border-color:#bbb"><span>◆ Squook</span><span>Pricing · Start free</span></div>
+<div style="text-align:center;padding:6px 0 2px">
+<div class="wf-h1" style="font-size:24px">Videos that look designed.<br>Made from a sentence.</div>
+</div>
+<div class="wf-row">
+<div class="wf-col">
+<div class="wf-vid dk" style="height:95px"><div class="wf-play"></div></div>
+<div class="wf-vid dk" style="height:60px"><div class="wf-play"></div></div>
+</div>
+<div class="wf-col">
+<div class="wf-vid dk" style="height:60px"><div class="wf-play"></div></div>
+<div class="wf-vid dk" style="height:95px"><div class="wf-play"></div></div>
+</div>
+<div class="wf-col">
+<div class="wf-vid dk" style="height:80px"><div class="wf-play"></div></div>
+<div class="wf-vid dk" style="height:75px"><div class="wf-play"></div></div>
+</div>
+</div>
+<div class="wf-note">↑ masonry wall right under headline — auto-playing, muted; each tile shows its prompt on hover</div>
+<div style="text-align:center"><span class="wf-cta" style="align-self:center">Try Squook — it's free</span></div>
+<div class="wf-sec">How it works — one line</div>
+<div class="wf-row" style="align-items:center;justify-content:center;font-size:11.5px">
+<span class="wf-pill">Describe</span><span class="wf-arrow">→</span><span class="wf-pill">AI directs</span><span class="wf-arrow">→</span><span class="wf-pill">Post</span>
+</div>
+<div class="wf-sub" style="text-align:center;font-size:10.5px">stock library or your own uploads</div>
+<div class="wf-sec">Why different — editorial rows</div>
+<div class="wf-box" style="display:flex;justify-content:space-between;font-size:11.5px">Actually looks designed <span style="color:#999">motion graphics, not slop</span></div>
+<div class="wf-box" style="display:flex;justify-content:space-between;font-size:11.5px">No editing skills <span style="color:#999">plain words in</span></div>
+<div class="wf-box" style="display:flex;justify-content:space-between;font-size:11.5px">Bring your footage <span style="color:#999">or use stock</span></div>
+<div class="wf-box" style="display:flex;justify-content:space-between;font-size:11.5px">Ready to post <span style="color:#999">Reels · Shorts · ads</span></div>
+<div class="wf-row"><div class="wf-logo">logo</div><div class="wf-logo">logo</div><div class="wf-logo">logo</div><div class="wf-logo">logo</div><div class="wf-logo">logo</div></div>
+<div class="wf-box wf-dark" style="text-align:center;padding:16px"><div style="font-size:15px">Your first video is one sentence away</div><div class="wf-cta" style="display:inline-block;margin-top:6px">Start free</div></div>
+<div class="wf-foot"><span>About · Contact</span><span>Terms · Privacy</span></div>
+</div>
+</div>
+</div>
+
+<!-- ============ 1d Prompt-first ============ -->
+<div class="dv-opt" id="1d">
+<div class="dv-olabel"><a class="dv-oid" href="#1d">1d</a>Prompt-first — the input box is the hero</div>
+<div class="dv-card" style="width:380px">
+<div class="wf">
+<div class="wf-nav"><span>◆ Squook</span><span style="display:flex;gap:10px;align-items:center"><span>Pricing</span><span class="wf-ghost" style="padding:3px 9px">Sign in</span></span></div>
+<div style="text-align:center;padding-top:4px">
+<div class="wf-h1">Describe your video.<br>Squook makes it.</div>
+</div>
+<div class="wf-box" style="display:flex;align-items:center;gap:8px;padding:12px">
+<span style="font-size:12px;color:#999;flex:1">"A punchy 20s ad for my coffee brand…"</span>
+<span class="wf-cta" style="padding:5px 12px">Generate ▸</span>
+</div>
+<div class="wf-note">↑ hero = giant prompt field; placeholder text rotates through example prompts (typewriter)</div>
+<div style="text-align:center;color:#e8642c;font-size:14px">↓ 40 seconds later</div>
+<div class="wf-vid dk" style="height:140px"><div class="wf-play"></div><div style="position:absolute;bottom:6px;left:8px;font-size:9px;color:#aaa;font-family:system-ui">the finished video, from that exact prompt</div></div>
+<div class="wf-row" style="justify-content:center;font-size:10.5px;color:#999">
+<span>① describe</span><span>② AI directs & renders</span><span>③ download & share</span>
+</div>
+<div class="wf-sec">Gallery — prompt shown under every video</div>
+<div class="wf-row">
+<div class="wf-col"><div class="wf-vid" style="height:75px"><div class="wf-play"></div></div><div class="wf-line" style="width:85%"></div></div>
+<div class="wf-col"><div class="wf-vid" style="height:75px"><div class="wf-play"></div></div><div class="wf-line" style="width:70%"></div></div>
+</div>
+<div class="wf-row">
+<div class="wf-col"><div class="wf-vid" style="height:75px"><div class="wf-play"></div></div><div class="wf-line" style="width:75%"></div></div>
+<div class="wf-col"><div class="wf-vid" style="height:75px"><div class="wf-play"></div></div><div class="wf-line" style="width:80%"></div></div>
+</div>
+<div class="wf-note">"Try this prompt" button on hover — feeds it into the hero box</div>
+<div class="wf-sec">Why different</div>
+<div class="wf-row" style="flex-wrap:wrap">
+<span class="wf-pill">Looks designed</span><span class="wf-pill">No skills needed</span><span class="wf-pill">Your footage</span><span class="wf-pill">Post-ready</span>
+</div>
+<div class="wf-dash" style="text-align:center;font-size:11px;color:#999">logos / testimonials strip (populatable)</div>
+<div class="wf-box wf-dark" style="text-align:center;padding:14px">Type your first prompt <span class="wf-cta" style="padding:4px 10px;margin-left:6px">Start free</span></div>
+<div class="wf-foot"><span>About · Contact</span><span>Terms · Privacy</span></div>
+</div>
+</div>
+</div>
+
+</div>
+<p class="dv-next">Try next: "go hi-fi on <a class="dv-oid" href="#1a">1a</a>" · "merge <a class="dv-oid" href="#1c">1c</a>'s gallery wall into <a class="dv-oid" href="#1b">1b</a>" · "wireframe the pricing page too"</p>
+</section>
+
+</x-dc>
+</body>
+</html>

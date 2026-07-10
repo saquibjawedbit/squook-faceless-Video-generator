@@ -1,0 +1,25 @@
+.env
+__pycache__/
+lib/
+.venv/
+.DS_Store
+
+# Generated pipeline output (scripts, IR, fetched media, TTS audio)
+output/
+
+# Video files
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+*.m4v
+
+# Audio files
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.ogg
+*.flac
+*.opus

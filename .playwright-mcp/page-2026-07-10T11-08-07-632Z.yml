@@ -1,0 +1,231 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: Squook
+      - generic [ref=e11]:
+        - generic [ref=e12]: Deep Learning Explained in 30 Seconds
+        - generic [ref=e13]: Draft 4 · autosaved
+    - generic [ref=e14]:
+      - generic [ref=e718]:
+        - button "Undo" [ref=e719] [cursor=pointer]
+        - button "Redo" [ref=e723] [cursor=pointer]
+      - button "Re-render" [ref=e727] [cursor=pointer]
+      - button "Export" [ref=e728] [cursor=pointer]
+      - generic [ref=e729]: "Y"
+  - generic [ref=e27]:
+    - complementary [ref=e28]:
+      - generic [ref=e29]:
+        - button "Layers" [ref=e30] [cursor=pointer]
+        - button "Media" [ref=e31] [cursor=pointer]
+      - generic [ref=e33]:
+        - button "scene_1.mp4 S1 · Scene 1 5.0s" [ref=e190] [cursor=pointer]:
+          - generic [ref=e192]:
+            - generic [ref=e193]: scene_1.mp4
+            - generic [ref=e194]: S1 · Scene 1
+          - generic [ref=e195]: 5.0s
+        - button "Node graph S2 · Scene 2 7.5s" [ref=e394] [cursor=pointer]:
+          - generic [ref=e198]:
+            - generic [ref=e199]: Node graph
+            - generic [ref=e200]: S2 · Scene 2
+          - generic [ref=e201]: 7.5s
+        - button "Annotate S3 · Scene 3 9.0s" [ref=e202] [cursor=pointer]:
+          - generic [ref=e204]:
+            - generic [ref=e205]: Annotate
+            - generic [ref=e206]: S3 · Scene 3
+          - generic [ref=e207]: 9.0s
+        - button "Icon row S4 · Scene 4 7.0s" [ref=e208] [cursor=pointer]:
+          - generic [ref=e210]:
+            - generic [ref=e211]: Icon row
+            - generic [ref=e212]: S4 · Scene 4
+          - generic [ref=e213]: 7.0s
+        - button "scene_5.mp4 S5 · Scene 5 9.0s" [ref=e214] [cursor=pointer]:
+          - generic [ref=e216]:
+            - generic [ref=e217]: scene_5.mp4
+            - generic [ref=e218]: S5 · Scene 5
+          - generic [ref=e219]: 9.0s
+        - button "Captions · 7 words CAPTIONS · 0:00 5.0s" [ref=e220] [cursor=pointer]:
+          - generic [ref=e222]:
+            - generic [ref=e223]: Captions · 7 words
+            - generic [ref=e224]: CAPTIONS · 0:00
+          - generic [ref=e225]: 5.0s
+        - button "Node graph GRAPHIC · 0:05 7.5s" [ref=e395] [cursor=pointer]:
+          - generic [ref=e228]:
+            - generic [ref=e229]: Node graph
+            - generic [ref=e230]: GRAPHIC · 0:05
+          - generic [ref=e231]: 7.5s
+        - button "Captions · 16 words CAPTIONS · 0:05 7.5s" [ref=e396] [cursor=pointer]:
+          - generic [ref=e234]:
+            - generic [ref=e235]: Captions · 16 words
+            - generic [ref=e236]: CAPTIONS · 0:05
+          - generic [ref=e237]: 7.5s
+        - button "Annotate GRAPHIC · 0:12 9.0s" [ref=e397] [cursor=pointer]:
+          - generic [ref=e240]:
+            - generic [ref=e241]: Annotate
+            - generic [ref=e242]: GRAPHIC · 0:12
+          - generic [ref=e243]: 9.0s
+        - button "Captions · 19 words CAPTIONS · 0:12 9.0s" [ref=e398] [cursor=pointer]:
+          - generic [ref=e246]:
+            - generic [ref=e247]: Captions · 19 words
+            - generic [ref=e248]: CAPTIONS · 0:12
+          - generic [ref=e249]: 9.0s
+        - button "Icon row GRAPHIC · 0:21 7.0s" [ref=e399] [cursor=pointer]:
+          - generic [ref=e252]:
+            - generic [ref=e253]: Icon row
+            - generic [ref=e254]: GRAPHIC · 0:21
+          - generic [ref=e255]: 7.0s
+        - button "Captions · 16 words CAPTIONS · 0:21 7.0s" [ref=e400] [cursor=pointer]:
+          - generic [ref=e258]:
+            - generic [ref=e259]: Captions · 16 words
+            - generic [ref=e260]: CAPTIONS · 0:21
+          - generic [ref=e261]: 7.0s
+        - button "Captions · 22 words CAPTIONS · 0:28 9.0s" [ref=e401] [cursor=pointer]:
+          - generic [ref=e264]:
+            - generic [ref=e265]: Captions · 22 words
+            - generic [ref=e266]: CAPTIONS · 0:28
+          - generic [ref=e267]: 9.0s
+        - button "Narration — scene 1 VOICEOVER · 100%" [ref=e268] [cursor=pointer]:
+          - generic [ref=e270]:
+            - generic [ref=e271]: Narration — scene 1
+            - generic [ref=e272]: VOICEOVER · 100%
+        - button "Narration — scene 2 VOICEOVER · 100%" [ref=e273] [cursor=pointer]:
+          - generic [ref=e275]:
+            - generic [ref=e276]: Narration — scene 2
+            - generic [ref=e277]: VOICEOVER · 100%
+        - button "Narration — scene 3 VOICEOVER · 100%" [ref=e278] [cursor=pointer]:
+          - generic [ref=e280]:
+            - generic [ref=e281]: Narration — scene 3
+            - generic [ref=e282]: VOICEOVER · 100%
+        - button "Narration — scene 4 VOICEOVER · 100%" [ref=e283] [cursor=pointer]:
+          - generic [ref=e285]:
+            - generic [ref=e286]: Narration — scene 4
+            - generic [ref=e287]: VOICEOVER · 100%
+        - button "Narration — scene 5 VOICEOVER · 100%" [ref=e288] [cursor=pointer]:
+          - generic [ref=e290]:
+            - generic [ref=e291]: Narration — scene 5
+            - generic [ref=e292]: VOICEOVER · 100%
+    - main [ref=e92]:
+      - generic [ref=e94]:
+        - generic [ref=e294]: S1 · scene_1.mp4
+        - generic: scene_1.mp4
+        - button "1" [ref=e474] [cursor=pointer]
+        - button "2" [ref=e475] [cursor=pointer]
+        - generic [ref=e105]:
+          - button "Select" [ref=e476] [cursor=pointer]
+          - button "Pin comment" [ref=e478] [cursor=pointer]
+          - button "Draw" [ref=e480] [cursor=pointer]
+        - generic [ref=e482]: 1920×1080 · 30fps
+        - generic [ref=e483]:
+          - button [ref=e484] [cursor=pointer]
+          - generic [ref=e486]: 0:00
+          - slider [ref=e487]: "0"
+          - generic [ref=e488]: 0:37
+      - generic [ref=e111]:
+        - generic [ref=e112]:
+          - generic [ref=e113]: TIMELINE
+          - generic [ref=e114]:
+            - button "✂ Split" [ref=e115] [cursor=pointer]
+            - button "⧉ Duplicate" [ref=e116] [cursor=pointer]
+            - button "← Move" [ref=e117] [cursor=pointer]
+            - button "Move →" [ref=e118] [cursor=pointer]
+            - button "＋ Text" [ref=e119] [cursor=pointer]
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e123]: 0:00
+            - generic [ref=e124]: 0:03
+            - generic [ref=e125]: 0:06
+            - generic [ref=e126]: 0:09
+            - generic [ref=e127]: 0:12
+            - generic [ref=e128]: 0:15
+            - generic [ref=e129]: 0:18
+            - generic [ref=e130]: 0:21
+            - generic [ref=e295]: 0:24
+            - generic [ref=e296]: 0:27
+            - generic [ref=e297]: 0:30
+            - generic [ref=e298]: 0:33
+            - generic [ref=e299]: 0:36
+          - generic [ref=e131]:
+            - generic [ref=e132]:
+              - generic [ref=e133]: VID
+              - generic [ref=e135]:
+                - button "scene_1.mp4" [ref=e300] [cursor=pointer]
+                - button "Node graph" [ref=e302] [cursor=pointer]
+                - button "Annotate" [ref=e304] [cursor=pointer]
+                - button "Icon row" [ref=e306] [cursor=pointer]
+                - button "scene_5.mp4" [ref=e308] [cursor=pointer]
+            - generic [ref=e146]:
+              - generic [ref=e147]: TXT
+              - generic [ref=e149]:
+                - button "Captions · 7 words" [ref=e310] [cursor=pointer]
+                - button "Node graph" [ref=e312] [cursor=pointer]
+                - button "Captions · 16 words" [ref=e314] [cursor=pointer]
+                - button "Annotate" [ref=e316] [cursor=pointer]
+                - button "Captions · 19 words" [ref=e318] [cursor=pointer]
+                - button "Icon row" [ref=e320] [cursor=pointer]
+                - button "Captions · 16 words" [ref=e322] [cursor=pointer]
+                - button "Captions · 22 words" [ref=e324] [cursor=pointer]
+            - generic [ref=e156]:
+              - generic [ref=e157]: AUD
+              - generic [ref=e159]:
+                - button "Narration — scene 1" [ref=e326] [cursor=pointer]
+                - button "Narration — scene 2" [ref=e328] [cursor=pointer]
+                - button "Narration — scene 3" [ref=e330] [cursor=pointer]
+                - button "Narration — scene 4" [ref=e332] [cursor=pointer]
+                - button "Narration — scene 5" [ref=e334] [cursor=pointer]
+    - complementary [ref=e164]:
+      - generic [ref=e165]:
+        - button "Director" [ref=e166] [cursor=pointer]
+        - button "Inspect" [ref=e167] [cursor=pointer]
+        - button "Comments4" [ref=e561] [cursor=pointer]
+      - generic [ref=e733]:
+        - generic [ref=e734]:
+          - generic [ref=e735]:
+            - generic [ref=e736]: SCENE 1
+            - generic [ref=e737]: scene_1.mp4
+          - generic [ref=e738]: 0:00 · 5.0s
+        - generic [ref=e739]:
+          - generic [ref=e740]: TRANSFORM
+          - generic [ref=e741]:
+            - generic [ref=e742]:
+              - generic [ref=e743]: Scale
+              - generic [ref=e744]: 100%
+            - slider [ref=e745]: "100"
+          - generic [ref=e746]:
+            - generic [ref=e747]:
+              - generic [ref=e748]: Position X
+              - generic [ref=e749]: "0"
+            - slider [ref=e750]: "0"
+          - generic [ref=e751]:
+            - generic [ref=e752]:
+              - generic [ref=e753]: Position Y
+              - generic [ref=e754]: "0"
+            - slider [ref=e755]: "0"
+          - generic [ref=e756]:
+            - generic [ref=e757]:
+              - generic [ref=e758]: Rotate
+              - generic [ref=e759]: 0°
+            - slider [ref=e760]: "0"
+          - generic [ref=e761]:
+            - generic [ref=e762]:
+              - generic [ref=e763]: Opacity
+              - generic [ref=e764]: 100%
+            - slider [ref=e765]: "100"
+          - generic [ref=e766]:
+            - button "◲ Crop" [ref=e767] [cursor=pointer]
+            - button "Reset" [ref=e768] [cursor=pointer]
+          - generic [ref=e769]: Transforms save to the edit — Re-render to see them in the video.
+        - generic [ref=e770]:
+          - generic [ref=e771]: TIMING
+          - generic [ref=e772]:
+            - button "⇥ Trim in" [ref=e773] [cursor=pointer]
+            - button "⇤ Trim out" [ref=e774] [cursor=pointer]
+            - button "✂ Split at playhead" [ref=e775] [cursor=pointer]
+            - button "⧉ Duplicate" [ref=e776] [cursor=pointer]
+        - generic [ref=e777]:
+          - generic [ref=e778]: SOURCE & ORDER
+          - button "◲ Reframe shot fit" [ref=e779] [cursor=pointer]:
+            - generic [ref=e780]: ◲ Reframe shot
+            - generic [ref=e781]: fit
+          - generic [ref=e782]:
+            - button "← Move" [ref=e783] [cursor=pointer]
+            - button "Move →" [ref=e784] [cursor=pointer]
+        - button "Delete layer" [ref=e785] [cursor=pointer]

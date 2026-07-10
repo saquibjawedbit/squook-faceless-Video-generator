@@ -1,0 +1,24 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e106]:
+    - generic [ref=f1e107]:
+      - generic [ref=f1e108]: DIRECTING
+      - paragraph [ref=f1e109]: “Your video brief”
+    - generic [ref=f1e112]:
+      - generic [ref=f1e113]:
+        - generic [ref=f1e114]: ●
+        - generic [ref=f1e115]: Reading your brief
+      - generic [ref=f1e116]:
+        - generic [ref=f1e117]: ○
+        - generic [ref=f1e118]: Writing the concept
+      - generic [ref=f1e119]:
+        - generic [ref=f1e120]: ○
+        - generic [ref=f1e121]: Casting footage & music
+      - generic [ref=f1e122]:
+        - generic [ref=f1e123]: ○
+        - generic [ref=f1e124]: Setting type & motion
+      - generic [ref=f1e125]:
+        - generic [ref=f1e126]: ○
+        - generic [ref=f1e127]: Rendering the cut
+  - generic [ref=f1e25]:
+    - button "← site" [ref=f1e26] [cursor=pointer]
+    - button "↺ restart flow" [ref=f1e27] [cursor=pointer]

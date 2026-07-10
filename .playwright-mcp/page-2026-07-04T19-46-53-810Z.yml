@@ -1,0 +1,24 @@
+- generic [ref=e2]:
+  - generic [ref=e84]:
+    - generic [ref=e85]:
+      - generic [ref=e86]: DIRECTING
+      - paragraph [ref=e87]: “Create a Demo SAAS Video”
+    - generic [ref=e90]:
+      - generic [ref=e91]:
+        - generic [ref=e92]: ●
+        - generic [ref=e93]: Reading your brief
+      - generic [ref=e94]:
+        - generic [ref=e95]: ○
+        - generic [ref=e96]: Writing the concept
+      - generic [ref=e97]:
+        - generic [ref=e98]: ○
+        - generic [ref=e99]: Casting footage & music
+      - generic [ref=e100]:
+        - generic [ref=e101]: ○
+        - generic [ref=e102]: Setting type & motion
+      - generic [ref=e103]:
+        - generic [ref=e104]: ○
+        - generic [ref=e105]: Rendering the cut
+  - generic [ref=e66]:
+    - button "← site" [ref=e67] [cursor=pointer]
+    - button "↺ restart flow" [ref=e68] [cursor=pointer]

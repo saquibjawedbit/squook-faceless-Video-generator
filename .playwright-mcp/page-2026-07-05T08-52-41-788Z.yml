@@ -1,0 +1,137 @@
+- generic [ref=f6e2]:
+  - generic [ref=f6e7]:
+    - banner [ref=f6e8]:
+      - generic [ref=f6e9]:
+        - generic [ref=f6e10]:
+          - generic [ref=f6e13]: Squook
+          - button "← New video" [ref=f6e14] [cursor=pointer]
+          - generic [ref=f6e15]: Create a Demo SaaS Video
+        - generic [ref=f6e16]:
+          - generic [ref=f6e17]: DRAFT 3
+          - button "Saved" [ref=f6e18] [cursor=pointer]
+          - button "Re-render" [ref=f6e19] [cursor=pointer]
+          - generic [ref=f6e20]:
+            - generic [ref=f6e21]: "Y"
+            - button "Sign out" [ref=f6e22] [cursor=pointer]
+          - button "Download" [ref=f6e23] [cursor=pointer]
+    - main [ref=f6e24]:
+      - generic [ref=f6e25]:
+        - generic [ref=f6e39]:
+          - generic [ref=f6e40]:
+            - button "Play video" [ref=f6e41] [cursor=pointer]:
+              - img [ref=f6e42]
+            - button "Mute sound" [ref=f6e45] [cursor=pointer]:
+              - img [ref=f6e46]
+            - generic [ref=f6e48]: 0:00 / 0:59
+          - button "Enter Fullscreen" [ref=f6e50] [cursor=pointer]:
+            - img [ref=f6e51]
+        - generic [ref=f6e61]:
+          - generic [ref=f6e62]:
+            - generic [ref=f6e63]: TIMELINE
+            - generic [ref=f6e64]: 0:00 / 0:59 · drag to reorder · edges to trim
+          - generic [ref=f6e65] [cursor=pointer]:
+            - generic [ref=f6e66]: 0s
+            - generic [ref=f6e67]: 5s
+            - generic [ref=f6e68]: 10s
+            - generic [ref=f6e69]: 15s
+            - generic [ref=f6e70]: 20s
+            - generic [ref=f6e71]: 25s
+            - generic [ref=f6e72]: 30s
+            - generic [ref=f6e73]: 35s
+            - generic [ref=f6e74]: 40s
+            - generic [ref=f6e75]: 45s
+            - generic [ref=f6e76]: 50s
+            - generic [ref=f6e77]: 55s
+          - generic [ref=f6e78]:
+            - generic [ref=f6e79]:
+              - generic [ref=f6e80]: 1 · VIDEO
+              - generic [ref=f6e81]: 5.0s
+              - button "Delete scene 1" [ref=f6e82] [cursor=pointer]: ✕
+            - generic [ref=f6e85]:
+              - generic [ref=f6e86]: 2 · VIDEO
+              - generic [ref=f6e87]: 5.0s
+              - button "Delete scene 2" [ref=f6e88] [cursor=pointer]: ✕
+            - generic [ref=f6e91]:
+              - generic [ref=f6e92]: 3 · VIDEO
+              - generic [ref=f6e93]: 11.0s
+              - button "Delete scene 3" [ref=f6e94] [cursor=pointer]: ✕
+            - generic [ref=f6e97]:
+              - generic [ref=f6e98]: 4 · SHADER
+              - generic [ref=f6e99]: 5.0s
+              - button "Delete scene 4" [ref=f6e100] [cursor=pointer]: ✕
+            - generic [ref=f6e103]:
+              - generic [ref=f6e104]: 5 · VIDEO
+              - generic [ref=f6e105]: 12.0s
+              - button "Delete scene 5" [ref=f6e106] [cursor=pointer]: ✕
+            - generic [ref=f6e109]:
+              - generic [ref=f6e110]: 6 · VIDEO
+              - generic [ref=f6e111]: 7.0s
+              - button "Delete scene 6" [ref=f6e112] [cursor=pointer]: ✕
+            - generic [ref=f6e115]:
+              - generic [ref=f6e116]: 7 · SHADER
+              - generic [ref=f6e117]: 7.0s
+              - button "Delete scene 7" [ref=f6e118] [cursor=pointer]: ✕
+            - generic [ref=f6e121]:
+              - generic [ref=f6e122]: 8 · SOLID
+              - generic [ref=f6e123]: 7.0s
+              - button "Delete scene 8" [ref=f6e124] [cursor=pointer]: ✕
+      - generic [ref=f6e127]:
+        - generic [ref=f6e128]:
+          - generic [ref=f6e182]:
+            - generic [ref=f6e183]: SCENE 1 · CAPTIONS
+            - button "REMOVE" [ref=f6e184] [cursor=pointer]
+          - generic [ref=f6e185]:
+            - generic [ref=f6e186]: Captions
+            - generic [ref=f6e187]:
+              - generic [ref=f6e188]: Font size
+              - spinbutton "theme" [ref=f6e190]
+            - generic [ref=f6e191]:
+              - generic [ref=f6e192]: Color
+              - generic [ref=f6e194]:
+                - textbox [ref=f6e195] [cursor=pointer]: "#ffffff"
+                - textbox "#rrggbb" [ref=f6e196]
+            - generic [ref=f6e197]:
+              - generic [ref=f6e198]: Background
+              - textbox "rgba(0,0,0,0.6)" [ref=f6e201]
+            - paragraph [ref=f6e202]: Word timings come from the voiceover — edit the wording with an AI edit.
+          - generic [ref=f6e203]:
+            - generic [ref=f6e204]: Transform
+            - generic [ref=f6e205]:
+              - generic [ref=f6e206]: X position
+              - generic [ref=f6e207]:
+                - slider [ref=f6e208]: "0"
+                - generic [ref=f6e209]: "0"
+            - generic [ref=f6e210]:
+              - generic [ref=f6e211]: Y position
+              - generic [ref=f6e212]:
+                - slider [ref=f6e213]: "0"
+                - generic [ref=f6e214]: "0"
+            - generic [ref=f6e215]:
+              - generic [ref=f6e216]: Scale
+              - generic [ref=f6e217]:
+                - slider [ref=f6e218]: "1"
+                - generic [ref=f6e219]: "1"
+            - generic [ref=f6e220]:
+              - generic [ref=f6e221]: Rotation
+              - generic [ref=f6e222]:
+                - slider [ref=f6e223]: "0"
+                - generic [ref=f6e224]: "0"
+            - generic [ref=f6e225]:
+              - generic [ref=f6e226]: Opacity
+              - generic [ref=f6e227]:
+                - slider [ref=f6e228]: "1"
+                - generic [ref=f6e229]: "1"
+        - generic [ref=f6e174]:
+          - generic [ref=f6e175]: AI EDIT
+          - generic [ref=f6e230]:
+            - text: "editing: Scene 1 · Captions"
+            - button "Edit the whole video instead" [ref=f6e231] [cursor=pointer]: ✕
+          - textbox "What should change about this element? — “make it bigger and yellow”" [ref=f6e232]
+          - button "Apply change" [disabled] [ref=f6e177]
+        - group [ref=f6e178]:
+          - generic "▸ REGENERATE FROM SCRATCH" [ref=f6e179] [cursor=pointer]:
+            - generic [ref=f6e180]: ▸
+            - text: REGENERATE FROM SCRATCH
+  - generic [ref=f6e4]:
+    - button "← site" [ref=f6e5] [cursor=pointer]
+    - button "↺ restart flow" [ref=f6e6] [cursor=pointer]

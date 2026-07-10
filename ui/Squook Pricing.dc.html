@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800;900&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+html{color-scheme:dark}
+body{margin:0;background:#0B0B0E;color:#F4F3F0;font-family:'Instrument Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;--accent:#FF5A2D;--grain-o:0.05;--vig-o:1}
+::selection{background:var(--accent);color:#0B0B0E}
+a{color:inherit}
+button{font-family:inherit}
+</style>
+</helmet>
+
+<!-- atmosphere -->
+<div style="position:fixed;inset:0;pointer-events:none;z-index:40;opacity:var(--vig-o);background:radial-gradient(120% 100% at 50% 30%, transparent 55%, rgba(0,0,0,0.5) 100%)"></div>
+<div style="position:fixed;inset:0;pointer-events:none;z-index:41;opacity:var(--grain-o);background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/%3E%3C/filter%3E%3Crect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22/%3E%3C/svg%3E')"></div>
+
+<!-- nav -->
+<header style="position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,11,14,0.72);border-bottom:1px solid rgba(255,255,255,0.06)">
+  <div style="max-width:1120px;margin:0 auto;padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between">
+    <a href="Squook Landing.dc.html" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+      <span style="width:14px;height:14px;background:var(--accent);border-radius:3px;transform:rotate(45deg);display:inline-block"></span>
+      <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:19px;letter-spacing:-0.02em">Squook</span>
+    </a>
+    <nav style="display:flex;align-items:center;gap:28px">
+      <a href="Squook Landing.dc.html#gallery" style="text-decoration:none;font-size:14.5px;color:rgba(244,243,240,0.7)" style-hover="color:#F4F3F0">Gallery</a>
+      <a href="#" style="text-decoration:none;font-size:14.5px;color:#F4F3F0">Pricing</a>
+      <a href="#" style="text-decoration:none;font-size:14.5px;font-weight:600;background:var(--accent);color:#0B0B0E;padding:9px 18px;border-radius:9px;transition:filter .15s" style-hover="filter:brightness(1.12)">Start free</a>
+    </nav>
+  </div>
+</header>
+
+<!-- hero -->
+<section data-screen-label="Pricing hero" style="position:relative;overflow:hidden">
+  <div style="position:absolute;top:-280px;left:50%;transform:translateX(-50%);width:1000px;height:560px;pointer-events:none;background:radial-gradient(50% 50% at 50% 50%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%)"></div>
+  <div style="position:relative;max-width:1120px;margin:0 auto;padding:96px 32px 0;text-align:center;display:flex;flex-direction:column;align-items:center;gap:22px">
+    <h1 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(44px,5.5vw,68px);line-height:1.03;letter-spacing:-0.03em;text-wrap:balance">Simple pricing.<br><span style="color:rgba(244,243,240,0.55)">Serious videos.</span></h1>
+    <p style="margin:0;max-width:460px;font-size:18px;line-height:1.55;color:rgba(244,243,240,0.66)">Start free. Upgrade when you're ready to ship more.</p>
+    <div style="display:flex;align-items:center;gap:4px;border:1px solid rgba(255,255,255,0.12);border-radius:12px;padding:4px;background:rgba(255,255,255,0.03)">
+      <button onClick="{{ setMonthly }}" style="border:none;cursor:pointer;border-radius:9px;padding:9px 20px;font-size:14px;font-weight:600;transition:background .15s;background:{{ mBg }};color:{{ mColor }}">Monthly</button>
+      <button onClick="{{ setYearly }}" style="border:none;cursor:pointer;border-radius:9px;padding:9px 20px;font-size:14px;font-weight:600;transition:background .15s;background:{{ yBg }};color:{{ yColor }}">Yearly <span style="opacity:0.75;font-weight:500">−20%</span></button>
+    </div>
+  </div>
+</section>
+
+<!-- tiers -->
+<section data-screen-label="Pricing tiers" style="max-width:1120px;margin:0 auto;padding:56px 32px 0">
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:stretch">
+
+    <div style="border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:32px 28px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:20px">Starter</h3>
+        <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:44px;letter-spacing:-0.03em">$0</span></div>
+        <span style="font-size:13.5px;color:rgba(244,243,240,0.5)">For trying Squook out</span>
+      </div>
+      <a href="#" style="text-decoration:none;text-align:center;font-weight:600;font-size:15px;padding:13px 0;border-radius:11px;border:1px solid rgba(255,255,255,0.16);color:#F4F3F0;transition:border-color .15s" style-hover="border-color:rgba(255,255,255,0.4)">Start free</a>
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:14.5px;line-height:1.4;color:rgba(244,243,240,0.75)">
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>3 videos per month</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>720p, with watermark</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>Full stock footage &amp; music library</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>Reels &amp; Shorts formats</div>
+      </div>
+    </div>
+
+    <div style="position:relative;border:1px solid color-mix(in oklab, var(--accent) 55%, transparent);border-radius:18px;padding:32px 28px;background:linear-gradient(180deg, color-mix(in oklab, var(--accent) 7%, transparent), rgba(255,255,255,0.02) 45%);display:flex;flex-direction:column;gap:24px;box-shadow:0 0 60px color-mix(in oklab, var(--accent) 12%, transparent)">
+      <span style="position:absolute;top:-11px;left:28px;font-family:'JetBrains Mono',monospace;font-size:10.5px;letter-spacing:0.12em;background:var(--accent);color:#0B0B0E;font-weight:500;padding:4px 10px;border-radius:99px">MOST POPULAR</span>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:20px">Pro</h3>
+        <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:44px;letter-spacing:-0.03em">{{ proPrice }}</span><span style="font-size:14px;color:rgba(244,243,240,0.5)">{{ billNote }}</span></div>
+        <span style="font-size:13.5px;color:rgba(244,243,240,0.5)">For founders &amp; creators shipping weekly</span>
+      </div>
+      <a href="#" style="text-decoration:none;text-align:center;font-weight:600;font-size:15px;padding:13px 0;border-radius:11px;background:var(--accent);color:#0B0B0E;transition:filter .15s" style-hover="filter:brightness(1.12)">Start with Pro</a>
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:14.5px;line-height:1.4;color:rgba(244,243,240,0.75)">
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>30 videos per month</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>1080p &amp; 4K, no watermark</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>Upload your own footage</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>Every platform format, incl. ad specs</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>Full commercial license</div>
+      </div>
+    </div>
+
+    <div style="border:1px solid rgba(255,255,255,0.09);border-radius:18px;padding:32px 28px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:24px">
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:20px">Studio</h3>
+        <div style="display:flex;align-items:baseline;gap:8px"><span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:44px;letter-spacing:-0.03em">{{ studioPrice }}</span><span style="font-size:14px;color:rgba(244,243,240,0.5)">{{ billNote }}</span></div>
+        <span style="font-size:13.5px;color:rgba(244,243,240,0.5)">For teams that run on video</span>
+      </div>
+      <a href="#" style="text-decoration:none;text-align:center;font-weight:600;font-size:15px;padding:13px 0;border-radius:11px;border:1px solid rgba(255,255,255,0.16);color:#F4F3F0;transition:border-color .15s" style-hover="border-color:rgba(255,255,255,0.4)">Start with Studio</a>
+      <div style="display:flex;flex-direction:column;gap:12px;font-size:14.5px;line-height:1.4;color:rgba(244,243,240,0.75)">
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>Everything in Pro</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>150 videos per month, 5 seats</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>Brand kit — your fonts, colors, logo</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>Priority renders</div>
+        <div style="display:flex;gap:10px"><span style="color:var(--accent)">✓</span>Dedicated support</div>
+      </div>
+    </div>
+
+  </div>
+  <p style="margin:20px 0 0;text-align:center;font-size:13.5px;color:rgba(244,243,240,0.45)">Every plan includes the AI director, licensed music, and motion graphics. Cancel anytime.</p>
+</section>
+
+<!-- FAQ -->
+<section data-screen-label="FAQ" style="max-width:1120px;margin:0 auto;padding:120px 32px 0">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;color:var(--accent)">QUESTIONS</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:40px 60px;margin-top:28px">
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px">Who owns the videos I make?</h3>
+      <p style="margin:0;font-size:15px;line-height:1.6;color:rgba(244,243,240,0.6)">You do. On paid plans every render comes with a full commercial license — use it in ads, on your site, anywhere.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px">Is the footage and music licensed?</h3>
+      <p style="margin:0;font-size:15px;line-height:1.6;color:rgba(244,243,240,0.6)">Yes. Everything Squook composes from — stock footage, music, motion graphics — is licensed for commercial use. No takedown surprises.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px">Can I use my own footage?</h3>
+      <p style="margin:0;font-size:15px;line-height:1.6;color:rgba(244,243,240,0.6)">On Pro and Studio, upload product shots or b-roll and Squook edits them into the cut alongside — or instead of — stock.</p>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:18px">What counts as a video?</h3>
+      <p style="margin:0;font-size:15px;line-height:1.6;color:rgba(244,243,240,0.6)">One finished render. Re-prompting or tweaking a draft before you export doesn't count — only the final download does.</p>
+    </div>
+  </div>
+</section>
+
+<!-- closing CTA -->
+<section data-screen-label="Closing CTA" style="position:relative;overflow:hidden;margin-top:130px;border-top:1px solid rgba(255,255,255,0.06)">
+  <div style="position:absolute;bottom:-300px;left:50%;transform:translateX(-50%);width:1000px;height:560px;pointer-events:none;background:radial-gradient(50% 50% at 50% 50%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%)"></div>
+  <div style="position:relative;max-width:1120px;margin:0 auto;padding:110px 32px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:26px">
+    <h2 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(36px,4.5vw,56px);letter-spacing:-0.03em;line-height:1.05;text-wrap:balance">Try it free.<br>Keep it if it's beautiful.</h2>
+    <a href="#" style="display:inline-block;text-decoration:none;background:var(--accent);color:#0B0B0E;font-weight:600;font-size:17px;padding:16px 36px;border-radius:12px;transition:filter .15s, transform .15s" style-hover="filter:brightness(1.12);transform:translateY(-1px)">Make your first video</a>
+  </div>
+</section>
+
+<!-- footer -->
+<footer style="border-top:1px solid rgba(255,255,255,0.06)">
+  <div style="max-width:1120px;margin:0 auto;padding:32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+    <div style="display:flex;align-items:center;gap:9px;color:rgba(244,243,240,0.45);font-size:13.5px">
+      <span style="width:10px;height:10px;background:var(--accent);border-radius:2px;transform:rotate(45deg);display:inline-block"></span>
+      © 2026 Squook
+    </div>
+    <nav style="display:flex;gap:24px;font-size:13.5px">
+      <a href="#" style="text-decoration:none;color:rgba(244,243,240,0.45)" style-hover="color:#F4F3F0">About</a>
+      <a href="#" style="text-decoration:none;color:rgba(244,243,240,0.45)" style-hover="color:#F4F3F0">Contact</a>
+      <a href="#" style="text-decoration:none;color:rgba(244,243,240,0.45)" style-hover="color:#F4F3F0">Terms</a>
+      <a href="#" style="text-decoration:none;color:rgba(244,243,240,0.45)" style-hover="color:#F4F3F0">Privacy</a>
+    </nav>
+  </div>
+</footer>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;accent&quot;: {&quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#FF5A2D&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;options&quot;: [&quot;#FF5A2D&quot;, &quot;#5B7CFF&quot;, &quot;#00C2A8&quot;, &quot;#E8B44A&quot;], &quot;section&quot;: &quot;Theme&quot;},
+  &quot;grain&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Atmosphere&quot;},
+  &quot;vignette&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Atmosphere&quot;}
+}">
+class Component extends DCLogic {
+  state = { yearly: true };
+  applyVars() {
+    const b = document.body.style;
+    b.setProperty('--accent', this.props.accent ?? '#FF5A2D');
+    b.setProperty('--grain-o', (this.props.grain ?? true) ? '0.05' : '0');
+    b.setProperty('--vig-o', (this.props.vignette ?? true) ? '1' : '0');
+  }
+  componentDidMount() { this.applyVars(); }
+  componentDidUpdate() { this.applyVars(); }
+  renderVals() {
+    const yearly = this.state.yearly;
+    const on = '#F4F3F0', off = 'transparent';
+    return {
+      setMonthly: () => this.setState({ yearly: false }),
+      setYearly: () => this.setState({ yearly: true }),
+      mBg: yearly ? off : on,
+      mColor: yearly ? 'rgba(244,243,240,0.6)' : '#0B0B0E',
+      yBg: yearly ? on : off,
+      yColor: yearly ? '#0B0B0E' : 'rgba(244,243,240,0.6)',
+      proPrice: yearly ? '$25' : '$32',
+      studioPrice: yearly ? '$96' : '$120',
+      billNote: yearly ? '/mo, billed yearly' : '/mo, billed monthly'
+    };
+  }
+}
+</script>
+</body>
+</html>

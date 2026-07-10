@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet data-dc-atomics>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800;900&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="image-slot.js"></script>
+<style>
+html{color-scheme:dark}
+body{margin:0;background:#0B0B0E;color:#F4F3F0;font-family:'Instrument Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;--accent:#FF5A2D;--grain-o:0.05;--vig-o:1}
+::selection{background:var(--accent);color:#0B0B0E}
+a{color:inherit}
+</style>
+</helmet>
+
+<!-- atmosphere -->
+<div style="position:fixed;inset:0;pointer-events:none;z-index:40;opacity:var(--vig-o);background:radial-gradient(120% 100% at 50% 30%, transparent 55%, rgba(0,0,0,0.5) 100%)"></div>
+<div style="position:fixed;inset:0;pointer-events:none;z-index:41;opacity:var(--grain-o);background-image:url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22160%22 height=%22160%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22/%3E%3C/filter%3E%3Crect width=%22160%22 height=%22160%22 filter=%22url(%23n)%22/%3E%3C/svg%3E')"></div>
+
+<!-- nav -->
+<header style="position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:rgba(11,11,14,0.72);border-bottom:1px solid rgba(255,255,255,0.06)">
+  <div style="max-width:1120px;margin:0 auto;padding:0 32px;height:64px;display:flex;align-items:center;justify-content:space-between">
+    <a href="#" style="display:flex;align-items:center;gap:10px;text-decoration:none">
+      <span style="width:14px;height:14px;background:var(--accent);border-radius:3px;transform:rotate(45deg);display:inline-block"></span>
+      <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:19px;letter-spacing:-0.02em">Squook</span>
+    </a>
+    <nav style="display:flex;align-items:center;gap:28px">
+      <a href="#gallery" style="text-decoration:none;font-size:14.5px;color:rgba(244,243,240,0.7)" style-hover="color:#F4F3F0">Gallery</a>
+      <a href="Squook Pricing.dc.html" style="text-decoration:none;font-size:14.5px;color:rgba(244,243,240,0.7)" style-hover="color:#F4F3F0">Pricing</a>
+      <a href="#" style="text-decoration:none;font-size:14.5px;font-weight:600;background:var(--accent);color:#0B0B0E;padding:9px 18px;border-radius:9px;transition:filter .15s" style-hover="filter:brightness(1.12)">Start free</a>
+    </nav>
+  </div>
+</header>
+
+<!-- hero -->
+<section data-screen-label="Hero" style="position:relative;overflow:hidden">
+  <div style="position:absolute;top:-260px;left:50%;transform:translateX(-50%);width:1100px;height:620px;pointer-events:none;background:radial-gradient(50% 50% at 50% 50%, color-mix(in oklab, var(--accent) 16%, transparent), transparent 70%)"></div>
+  <div style="position:relative;max-width:1120px;margin:0 auto;padding:96px 32px 0;text-align:center">
+    <h1 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(52px,6.5vw,84px);line-height:1.02;letter-spacing:-0.035em;text-wrap:balance">Videos that look designed.<br><span style="color:rgba(244,243,240,0.55)">Made from a sentence.</span></h1>
+    <p style="margin:24px auto 0;max-width:560px;font-size:19px;line-height:1.55;color:rgba(244,243,240,0.66);text-wrap:pretty">Describe the video you want. Squook directs it — real footage, clean typography, motion graphics, cut to the beat — and renders it ready to post.</p>
+  </div>
+
+  <!-- gallery wall -->
+  <div id="gallery" style="max-width:1120px;margin:56px auto 0;padding:0 32px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <dc-import name="VideoTile" hint-size="100%,430px" style="height:430px" slot-id="wall-1" prompt="Launch film for a project-management app — bold type, fast cuts" meta="0:22 · 16:9"></dc-import>
+      <dc-import name="VideoTile" hint-size="100%,250px" style="height:250px" slot-id="wall-2" prompt="Instagram ad for a single-origin coffee brand, warm and tactile" meta="0:15 · 1:1"></dc-import>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px;padding-top:44px">
+      <dc-import name="VideoTile" hint-size="100%,250px" style="height:250px" slot-id="wall-3" prompt="30-second explainer of how our API pricing works" meta="0:30 · 16:9"></dc-import>
+      <dc-import name="VideoTile" hint-size="100%,430px" style="height:430px" slot-id="wall-4" prompt="Vertical teaser for a fitness app — night city run, beat-synced" meta="0:18 · 9:16"></dc-import>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:20px;padding-top:20px">
+      <dc-import name="VideoTile" hint-size="100%,340px" style="height:340px" slot-id="wall-5" prompt="Funding announcement — quiet confidence, serif overlays" meta="0:20 · 16:9"></dc-import>
+      <dc-import name="VideoTile" hint-size="100%,340px" style="height:340px" slot-id="wall-6" prompt="Product demo of our analytics dashboard from screen recordings" meta="0:35 · 16:9"></dc-import>
+    </div>
+  </div>
+  <p style="margin:18px auto 0;text-align:center;font-family:'JetBrains Mono',monospace;font-size:12px;color:rgba(244,243,240,0.38)">Every video above was made from the prompt on its card. Nothing else.</p>
+
+  <div style="text-align:center;padding:44px 32px 0;display:flex;flex-direction:column;align-items:center;gap:14px">
+    <a href="#" style="display:inline-block;text-decoration:none;background:var(--accent);color:#0B0B0E;font-weight:600;font-size:17px;padding:16px 36px;border-radius:12px;transition:filter .15s, transform .15s" style-hover="filter:brightness(1.12);transform:translateY(-1px)">Try Squook — it's free</a>
+    <span style="font-size:13.5px;color:rgba(244,243,240,0.45)">No editing skills. No credit card.</span>
+  </div>
+</section>
+
+<!-- how it works -->
+<section data-screen-label="How it works" style="max-width:1120px;margin:0 auto;padding:128px 32px 0">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;color:var(--accent)">HOW IT WORKS</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:28px">
+    <div style="border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;background:rgba(255,255,255,0.02)">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(244,243,240,0.4)">01</div>
+      <h3 style="margin:14px 0 8px;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:21px;letter-spacing:-0.01em">Describe your video</h3>
+      <p style="margin:0;font-size:15px;line-height:1.55;color:rgba(244,243,240,0.6)">Plain words. The audience, the mood, the length — like briefing a director.</p>
+    </div>
+    <div style="border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;background:rgba(255,255,255,0.02)">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(244,243,240,0.4)">02</div>
+      <h3 style="margin:14px 0 8px;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:21px;letter-spacing:-0.01em">Squook directs &amp; renders</h3>
+      <p style="margin:0;font-size:15px;line-height:1.55;color:rgba(244,243,240,0.6)">It writes the concept, picks footage and music, sets the type, and cuts it to the beat.</p>
+    </div>
+    <div style="border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:28px;background:rgba(255,255,255,0.02)">
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;color:rgba(244,243,240,0.4)">03</div>
+      <h3 style="margin:14px 0 8px;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:21px;letter-spacing:-0.01em">Download &amp; post</h3>
+      <p style="margin:0;font-size:15px;line-height:1.55;color:rgba(244,243,240,0.6)">Rendered in the right format for Reels, Shorts, or ads. Ready to ship.</p>
+    </div>
+  </div>
+  <p style="margin:20px 0 0;font-size:14.5px;color:rgba(244,243,240,0.5)">Squook composes from licensed stock footage, music, and motion graphics — <span style="color:#F4F3F0">or footage you upload yourself.</span></p>
+</section>
+
+<!-- why different -->
+<section data-screen-label="Why different" style="max-width:1120px;margin:0 auto;padding:128px 32px 0">
+  <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;color:var(--accent)">WHY SQUOOK</div>
+  <div style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.1)">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:baseline;padding:30px 0;border-bottom:1px solid rgba(255,255,255,0.1)">
+      <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:clamp(26px,3vw,36px);letter-spacing:-0.02em">Actually looks designed</h3>
+      <p style="margin:0;font-size:16px;line-height:1.55;color:rgba(244,243,240,0.6)">Real footage, clean typography, motion graphics synced to the music — not templated slop you have to fix.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:baseline;padding:30px 0;border-bottom:1px solid rgba(255,255,255,0.1)">
+      <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:clamp(26px,3vw,36px);letter-spacing:-0.02em">No editing skills needed</h3>
+      <p style="margin:0;font-size:16px;line-height:1.55;color:rgba(244,243,240,0.6)">If you can describe it, you can make it. No timeline, no keyframes, no software to learn.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:baseline;padding:30px 0;border-bottom:1px solid rgba(255,255,255,0.1)">
+      <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:clamp(26px,3vw,36px);letter-spacing:-0.02em">Bring your own footage</h3>
+      <p style="margin:0;font-size:16px;line-height:1.55;color:rgba(244,243,240,0.6)">Drop in product shots or b-roll and Squook edits them in — or works entirely from its licensed library.</p>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;align-items:baseline;padding:30px 0;border-bottom:1px solid rgba(255,255,255,0.1)">
+      <h3 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:clamp(26px,3vw,36px);letter-spacing:-0.02em">Ready to post</h3>
+      <p style="margin:0;font-size:16px;line-height:1.55;color:rgba(244,243,240,0.6)">Delivered in the exact format the platform wants — Reels, Shorts, TikTok, or ad specs.</p>
+    </div>
+  </div>
+</section>
+
+<!-- social proof -->
+<section data-screen-label="Social proof" style="max-width:1120px;margin:0 auto;padding:112px 32px 0;text-align:center">
+  <p style="margin:0 0 28px;font-size:13.5px;letter-spacing:0.06em;color:rgba(244,243,240,0.4)">Trusted by teams shipping video every week</p>
+  <div style="display:flex;justify-content:center;align-items:center;gap:52px;flex-wrap:wrap;opacity:0.5">
+    <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:19px;letter-spacing:-0.02em;color:#F4F3F0">fathom</span>
+    <span style="font-family:'JetBrains Mono',monospace;font-weight:500;font-size:15px;letter-spacing:0.2em;color:#F4F3F0">LOOPWORK</span>
+    <span style="font-family:Georgia,serif;font-style:italic;font-size:19px;color:#F4F3F0">Brightline</span>
+    <span style="font-family:'Instrument Sans',sans-serif;font-weight:600;font-size:17px;letter-spacing:0.08em;color:#F4F3F0">NORTHWIND</span>
+    <span style="font-family:'Schibsted Grotesk',sans-serif;font-weight:500;font-size:18px;letter-spacing:0.02em;color:#F4F3F0">atlas&amp;co</span>
+  </div>
+
+  <!-- review wall -->
+  <div style="margin-top:96px;text-align:left">
+    <div style="font-family:'JetBrains Mono',monospace;font-size:12px;letter-spacing:0.14em;color:var(--accent)">REVIEW WALL</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:20px;margin-top:28px;align-items:start">
+
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:18px">
+          <p style="margin:0;font-size:15.5px;line-height:1.6;color:rgba(244,243,240,0.85)">"I typed two sentences and got a launch video that looked like we hired an agency. Our whole feed is Squook now."</p>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:15px;color:rgba(244,243,240,0.8)">M</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:600">Maya Chen</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(244,243,240,0.5)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg>@maya.builds</span>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:18px">
+          <p style="margin:0;font-size:15.5px;line-height:1.6;color:rgba(244,243,240,0.85)">"My Shorts intro used to take a day in After Effects. Now it's a prompt."</p>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:15px;color:rgba(244,243,240,0.8)">J</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:600">Jonas Weber</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(244,243,240,0.5)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23 12c0-2.8-.3-4.6-.7-5.6-.4-1-1.2-1.6-2.2-1.8C18.2 4.2 12 4.2 12 4.2s-6.2 0-8.1.4c-1 .2-1.8.8-2.2 1.8C1.3 7.4 1 9.2 1 12s.3 4.6.7 5.6c.4 1 1.2 1.6 2.2 1.8 1.9.4 8.1.4 8.1.4s6.2 0 8.1-.4c1-.2 1.8-.8 2.2-1.8.4-1 .7-2.8.7-5.6z" opacity="0.9"></path><path d="M10 8.8v6.4l5.5-3.2L10 8.8z" fill="#0B0B0E"></path></svg>@JonasExplains</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:18px">
+          <p style="margin:0;font-size:15.5px;line-height:1.6;color:rgba(244,243,240,0.85)">"I've tried every AI video tool. This is the first one where I didn't open an editor afterward."</p>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:15px;color:rgba(244,243,240,0.8)">D</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:600">Dev Patel</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(244,243,240,0.5)"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M23 12c0-2.8-.3-4.6-.7-5.6-.4-1-1.2-1.6-2.2-1.8C18.2 4.2 12 4.2 12 4.2s-6.2 0-8.1.4c-1 .2-1.8.8-2.2 1.8C1.3 7.4 1 9.2 1 12s.3 4.6.7 5.6c.4 1 1.2 1.6 2.2 1.8 1.9.4 8.1.4 8.1.4s6.2 0 8.1-.4c1-.2 1.8-.8 2.2-1.8.4-1 .7-2.8.7-5.6z" opacity="0.9"></path><path d="M10 8.8v6.4l5.5-3.2L10 8.8z" fill="#0B0B0E"></path></svg>@DevShipsDaily</span>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:18px">
+          <p style="margin:0;font-size:15.5px;line-height:1.6;color:rgba(244,243,240,0.85)">"We shipped 12 ad variants in an afternoon. Every single one looked designed."</p>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:15px;color:rgba(244,243,240,0.8)">L</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:600">Liam O'Connor</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(244,243,240,0.5)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg>@liam.launches</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:18px">
+          <p style="margin:0;font-size:15.5px;line-height:1.6;color:rgba(244,243,240,0.85)">"Product ads in the right specs, cut to the beat. It replaced a week of back-and-forth with freelancers."</p>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:15px;color:rgba(244,243,240,0.8)">S</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:600">Sofia Reyes</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(244,243,240,0.5)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg>@sofiareyes.mkt</span>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid rgba(255,255,255,0.08);border-radius:16px;padding:24px;background:rgba(255,255,255,0.02);display:flex;flex-direction:column;gap:18px">
+          <p style="margin:0;font-size:15.5px;line-height:1.6;color:rgba(244,243,240,0.85)">"Uploaded my own b-roll and it cut it like a pro editor. The typography is actually clean."</p>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span style="width:38px;height:38px;border-radius:50%;background:rgba(255,255,255,0.08);display:flex;align-items:center;justify-content:center;font-family:'Schibsted Grotesk',sans-serif;font-weight:700;font-size:15px;color:rgba(244,243,240,0.8)">A</span>
+            <div style="display:flex;flex-direction:column;gap:2px">
+              <span style="font-size:14px;font-weight:600">Amara Osei</span>
+              <span style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:rgba(244,243,240,0.5)"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="5"></rect><circle cx="12" cy="12" r="4"></circle><circle cx="17.5" cy="6.5" r="1" fill="currentColor" stroke="none"></circle></svg>@amara.creates</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- closing CTA -->
+<section data-screen-label="Closing CTA" style="position:relative;overflow:hidden;margin-top:140px;border-top:1px solid rgba(255,255,255,0.06)">
+  <div style="position:absolute;bottom:-300px;left:50%;transform:translateX(-50%);width:1000px;height:560px;pointer-events:none;background:radial-gradient(50% 50% at 50% 50%, color-mix(in oklab, var(--accent) 14%, transparent), transparent 70%)"></div>
+  <div style="position:relative;max-width:1120px;margin:0 auto;padding:120px 32px;text-align:center;display:flex;flex-direction:column;align-items:center;gap:26px">
+    <h2 style="margin:0;font-family:'Schibsted Grotesk',sans-serif;font-weight:800;font-size:clamp(38px,4.5vw,60px);letter-spacing:-0.03em;line-height:1.05;text-wrap:balance">Your first video is<br>one sentence away.</h2>
+    <a href="#" style="display:inline-block;text-decoration:none;background:var(--accent);color:#0B0B0E;font-weight:600;font-size:17px;padding:16px 36px;border-radius:12px;transition:filter .15s, transform .15s" style-hover="filter:brightness(1.12);transform:translateY(-1px)">Start free</a>
+  </div>
+</section>
+
+<!-- footer -->
+<footer style="border-top:1px solid rgba(255,255,255,0.06)">
+  <div style="max-width:1120px;margin:0 auto;padding:32px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px">
+    <div style="display:flex;align-items:center;gap:9px;color:rgba(244,243,240,0.45);font-size:13.5px">
+      <span style="width:10px;height:10px;background:var(--accent);border-radius:2px;transform:rotate(45deg);display:inline-block"></span>
+      © 2026 Squook
+    </div>
+    <nav style="display:flex;gap:24px;font-size:13.5px">
+      <a href="#" style="text-decoration:none;color:rgba(244,243,240,0.45)" style-hover="color:#F4F3F0">About</a>
+      <a href="#" style="text-decoration:none;color:rgba(244,243,240,0.45)" style-hover="color:#F4F3F0">Contact</a>
+      <a href="#" style="text-decoration:none;color:rgba(244,243,240,0.45)" style-hover="color:#F4F3F0">Terms</a>
+      <a href="#" style="text-decoration:none;color:rgba(244,243,240,0.45)" style-hover="color:#F4F3F0">Privacy</a>
+    </nav>
+  </div>
+</footer>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;accent&quot;: {&quot;editor&quot;: &quot;color&quot;, &quot;default&quot;: &quot;#FF5A2D&quot;, &quot;tsType&quot;: &quot;string&quot;, &quot;options&quot;: [&quot;#FF5A2D&quot;, &quot;#5B7CFF&quot;, &quot;#00C2A8&quot;, &quot;#E8B44A&quot;], &quot;section&quot;: &quot;Theme&quot;},
+  &quot;grain&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Atmosphere&quot;},
+  &quot;vignette&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Atmosphere&quot;}
+}">
+class Component extends DCLogic {
+  applyVars() {
+    const b = document.body.style;
+    b.setProperty('--accent', this.props.accent ?? '#FF5A2D');
+    b.setProperty('--grain-o', (this.props.grain ?? true) ? '0.05' : '0');
+    b.setProperty('--vig-o', (this.props.vignette ?? true) ? '1' : '0');
+  }
+  componentDidMount() { this.applyVars(); }
+  componentDidUpdate() { this.applyVars(); }
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

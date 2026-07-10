@@ -1,0 +1,128 @@
+- generic [ref=e2]:
+  - banner [ref=e164]:
+    - generic [ref=e165]:
+      - link "Squook" [ref=e166] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=e168]: Squook
+      - navigation [ref=e169]:
+        - link "Gallery" [ref=e170] [cursor=pointer]:
+          - /url: "#/#gallery"
+        - link "Pricing" [ref=e171] [cursor=pointer]:
+          - /url: "#/pricing"
+        - link "Start free" [ref=e172] [cursor=pointer]:
+          - /url: "#/app"
+  - generic [ref=e174]:
+    - heading "Simple pricing. Serious videos." [level=1] [ref=e175]:
+      - text: Simple pricing.
+      - text: Serious videos.
+    - paragraph [ref=e176]: Start free. Upgrade when you're ready to ship more.
+    - generic [ref=e177]:
+      - button "Monthly" [ref=e178] [cursor=pointer]
+      - button "Yearly −20%" [ref=e179] [cursor=pointer]
+  - generic [ref=e180]:
+    - generic [ref=e181]:
+      - generic [ref=e182]:
+        - generic [ref=e183]:
+          - heading "Starter" [level=3] [ref=e184]
+          - generic [ref=e186]: $0
+          - generic [ref=e187]: For trying Squook out
+        - link "Start free" [ref=e188] [cursor=pointer]:
+          - /url: "#/app"
+        - generic [ref=e189]:
+          - generic [ref=e190]:
+            - generic [ref=e191]: ✓
+            - text: 3 videos per month
+          - generic [ref=e192]:
+            - generic [ref=e193]: ✓
+            - text: 720p, with watermark
+          - generic [ref=e194]:
+            - generic [ref=e195]: ✓
+            - text: Full stock footage & music library
+          - generic [ref=e196]:
+            - generic [ref=e197]: ✓
+            - text: Reels & Shorts formats
+      - generic [ref=e198]:
+        - generic [ref=e199]: MOST POPULAR
+        - generic [ref=e200]:
+          - heading "Pro" [level=3] [ref=e201]
+          - generic [ref=e202]:
+            - generic [ref=e203]: $25
+            - generic [ref=e204]: /mo, billed yearly
+          - generic [ref=e205]: For founders & creators shipping weekly
+        - link "Start with Pro" [ref=e206] [cursor=pointer]:
+          - /url: "#/app"
+        - generic [ref=e207]:
+          - generic [ref=e208]:
+            - generic [ref=e209]: ✓
+            - text: 30 videos per month
+          - generic [ref=e210]:
+            - generic [ref=e211]: ✓
+            - text: 1080p & 4K, no watermark
+          - generic [ref=e212]:
+            - generic [ref=e213]: ✓
+            - text: Upload your own footage
+          - generic [ref=e214]:
+            - generic [ref=e215]: ✓
+            - text: Every platform format, incl. ad specs
+          - generic [ref=e216]:
+            - generic [ref=e217]: ✓
+            - text: Full commercial license
+      - generic [ref=e218]:
+        - generic [ref=e219]:
+          - heading "Studio" [level=3] [ref=e220]
+          - generic [ref=e221]:
+            - generic [ref=e222]: $96
+            - generic [ref=e223]: /mo, billed yearly
+          - generic [ref=e224]: For teams that run on video
+        - link "Start with Studio" [ref=e225] [cursor=pointer]:
+          - /url: "#/app"
+        - generic [ref=e226]:
+          - generic [ref=e227]:
+            - generic [ref=e228]: ✓
+            - text: Everything in Pro
+          - generic [ref=e229]:
+            - generic [ref=e230]: ✓
+            - text: 150 videos per month, 5 seats
+          - generic [ref=e231]:
+            - generic [ref=e232]: ✓
+            - text: Brand kit — your fonts, colors, logo
+          - generic [ref=e233]:
+            - generic [ref=e234]: ✓
+            - text: Priority renders
+          - generic [ref=e235]:
+            - generic [ref=e236]: ✓
+            - text: Dedicated support
+    - paragraph [ref=e237]: Every plan includes the AI director, licensed music, and motion graphics. Cancel anytime.
+  - generic [ref=e238]:
+    - generic [ref=e239]: QUESTIONS
+    - generic [ref=e240]:
+      - generic [ref=e241]:
+        - heading "Who owns the videos I make?" [level=3] [ref=e242]
+        - paragraph [ref=e243]: You do. On paid plans every render comes with a full commercial license — use it in ads, on your site, anywhere.
+      - generic [ref=e244]:
+        - heading "Is the footage and music licensed?" [level=3] [ref=e245]
+        - paragraph [ref=e246]: Yes. Everything Squook composes from — stock footage, music, motion graphics — is licensed for commercial use. No takedown surprises.
+      - generic [ref=e247]:
+        - heading "Can I use my own footage?" [level=3] [ref=e248]
+        - paragraph [ref=e249]: On Pro and Studio, upload product shots or b-roll and Squook edits them into the cut alongside — or instead of — stock.
+      - generic [ref=e250]:
+        - heading "What counts as a video?" [level=3] [ref=e251]
+        - paragraph [ref=e252]: One finished render. Re-prompting or tweaking a draft before you export doesn't count — only the final download does.
+  - generic [ref=e254]:
+    - heading "Try it free. Keep it if it's beautiful." [level=2] [ref=e255]:
+      - text: Try it free.
+      - text: Keep it if it's beautiful.
+    - link "Make your first video" [ref=e256] [cursor=pointer]:
+      - /url: "#/app"
+  - contentinfo [ref=e257]:
+    - generic [ref=e258]:
+      - generic [ref=e259]: © 2026 Squook
+      - navigation [ref=e261]:
+        - link "About" [ref=e262] [cursor=pointer]:
+          - /url: "#"
+        - link "Contact" [ref=e263] [cursor=pointer]:
+          - /url: "#"
+        - link "Terms" [ref=e264] [cursor=pointer]:
+          - /url: "#"
+        - link "Privacy" [ref=e265] [cursor=pointer]:
+          - /url: "#"

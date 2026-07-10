@@ -1,0 +1,131 @@
+- generic [ref=f7e2]:
+  - generic [ref=f7e3]:
+    - banner [ref=f7e4]:
+      - generic [ref=f7e5]:
+        - generic [ref=f7e6]:
+          - generic [ref=f7e9]: Squook
+          - button "← New video" [ref=f7e10] [cursor=pointer]
+          - generic [ref=f7e11]: Create a Demo SaaS Video
+        - generic [ref=f7e12]:
+          - generic [ref=f7e13]: DRAFT 4
+          - button "Save" [ref=f7e252] [cursor=pointer]
+          - button "Re-render" [ref=f7e15] [cursor=pointer]
+          - generic [ref=f7e16]:
+            - generic [ref=f7e17]: "Y"
+            - button "Sign out" [ref=f7e18] [cursor=pointer]
+          - button "Download" [ref=f7e19] [cursor=pointer]
+    - main [ref=f7e20]:
+      - generic [ref=f7e21]:
+        - generic [ref=f7e24]:
+          - generic [ref=f7e361] [cursor=pointer]:
+            - generic [ref=f7e362]: Ever
+            - generic [ref=f7e363]: spent
+            - generic [ref=f7e364]: "30"
+            - generic [ref=f7e365]: minutes
+            - generic [ref=f7e366]: every
+          - generic [ref=f7e35]:
+            - generic [ref=f7e36]:
+              - button "Play video" [ref=f7e37] [cursor=pointer]:
+                - img [ref=f7e368]
+              - button "Mute sound" [ref=f7e41] [cursor=pointer]:
+                - img [ref=f7e42]
+              - generic [ref=f7e44]: 0:00 / 0:52
+            - button "Enter Fullscreen" [ref=f7e46] [cursor=pointer]:
+              - img [ref=f7e47]
+        - generic [ref=f7e57]:
+          - generic [ref=f7e58]:
+            - generic [ref=f7e59]: TIMELINE
+            - generic [ref=f7e60]: 0:00 / 0:52 · drag to reorder · edges to trim
+          - generic [ref=f7e61] [cursor=pointer]:
+            - generic [ref=f7e62]: 0s
+            - generic [ref=f7e63]: 5s
+            - generic [ref=f7e64]: 10s
+            - generic [ref=f7e65]: 15s
+            - generic [ref=f7e66]: 20s
+            - generic [ref=f7e67]: 25s
+            - generic [ref=f7e68]: 30s
+            - generic [ref=f7e69]: 35s
+            - generic [ref=f7e70]: 40s
+            - generic [ref=f7e71]: 45s
+            - generic [ref=f7e72]: 50s
+          - generic [ref=f7e74]:
+            - generic [ref=f7e75]:
+              - generic [ref=f7e76]: 1 · VIDEO
+              - generic [ref=f7e77]: 5.0s
+              - button "Delete scene 1" [ref=f7e78] [cursor=pointer]: ✕
+            - generic [ref=f7e81]:
+              - generic [ref=f7e82]: 2 · VIDEO
+              - generic [ref=f7e83]: 11.0s
+              - button "Delete scene 2" [ref=f7e84] [cursor=pointer]: ✕
+            - generic [ref=f7e87]:
+              - generic [ref=f7e88]: 3 · SHADER
+              - generic [ref=f7e89]: 5.0s
+              - button "Delete scene 3" [ref=f7e90] [cursor=pointer]: ✕
+            - generic [ref=f7e93]:
+              - generic [ref=f7e94]: 4 · VIDEO
+              - generic [ref=f7e95]: 12.0s
+              - button "Delete scene 4" [ref=f7e96] [cursor=pointer]: ✕
+            - generic [ref=f7e99]:
+              - generic [ref=f7e100]: 5 · VIDEO
+              - generic [ref=f7e101]: 5.0s
+              - button "Delete scene 5" [ref=f7e102] [cursor=pointer]: ✕
+            - generic [ref=f7e105]:
+              - generic [ref=f7e106]: 6 · VIDEO
+              - generic [ref=f7e107]: 7.0s
+              - button "Delete scene 6" [ref=f7e108] [cursor=pointer]: ✕
+            - generic [ref=f7e111]:
+              - generic [ref=f7e112]: 7 · SHADER
+              - generic [ref=f7e113]: 7.0s
+              - button "Delete scene 7" [ref=f7e114] [cursor=pointer]: ✕
+      - generic [ref=f7e123]:
+        - generic [ref=f7e124]:
+          - generic [ref=f7e420]: DESIGN
+          - generic [ref=f7e421]:
+            - generic [ref=f7e422]: Theme colors
+            - generic [ref=f7e423]:
+              - generic [ref=f7e424]: Background
+              - generic [ref=f7e426]:
+                - textbox [ref=f7e427] [cursor=pointer]: "#180a0a"
+                - textbox "#rrggbb" [ref=f7e428]: "#180a0a"
+            - generic [ref=f7e429]:
+              - generic [ref=f7e430]: Accent
+              - generic [ref=f7e432]:
+                - textbox [ref=f7e433] [cursor=pointer]: "#00e5ff"
+                - textbox "#rrggbb" [ref=f7e434]: "#00e5ff"
+            - generic [ref=f7e435]:
+              - generic [ref=f7e436]: Accent 2
+              - generic [ref=f7e438]:
+                - textbox [ref=f7e439] [cursor=pointer]: "#ffb703"
+                - textbox "#rrggbb" [ref=f7e440]: "#ffb703"
+            - generic [ref=f7e441]:
+              - generic [ref=f7e442]: Text
+              - generic [ref=f7e444]:
+                - textbox [ref=f7e445] [cursor=pointer]: "#ffffff"
+                - textbox "#rrggbb" [ref=f7e446]: "#ffffff"
+          - generic [ref=f7e447]:
+            - generic [ref=f7e448]: Type
+            - generic [ref=f7e449]:
+              - generic [ref=f7e450]: Caption size
+              - spinbutton [ref=f7e452]: "41"
+            - generic [ref=f7e453]:
+              - generic [ref=f7e454]: Title size
+              - spinbutton [ref=f7e456]: "83"
+          - generic [ref=f7e457]:
+            - generic [ref=f7e458]: Music
+            - generic [ref=f7e459]:
+              - generic [ref=f7e460]: Volume
+              - generic [ref=f7e461]:
+                - slider [ref=f7e462]: "0.3"
+                - generic [ref=f7e463]: "0.3"
+          - paragraph [ref=f7e464]: Click any element in the preview to edit it — click again to select the layer underneath.
+        - generic [ref=f7e170]:
+          - generic [ref=f7e171]: AI EDIT
+          - textbox "Describe a change — “make scene 2 shorter”, “warmer colors”…" [ref=f7e465]
+          - button "Apply change" [disabled] [ref=f7e173]
+        - group [ref=f7e174]:
+          - generic "▸ REGENERATE FROM SCRATCH" [ref=f7e175] [cursor=pointer]:
+            - generic [ref=f7e176]: ▸
+            - text: REGENERATE FROM SCRATCH
+  - generic [ref=f7e177]:
+    - button "← site" [ref=f7e178] [cursor=pointer]
+    - button "↺ restart flow" [ref=f7e179] [cursor=pointer]

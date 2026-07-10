@@ -1,0 +1,19 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e250]:
+    - generic [ref=f1e253]:
+      - heading "Create your account" [level=1] [ref=f1e254]
+      - paragraph [ref=f1e255]: Free to start. No credit card.
+    - generic [ref=f1e256]:
+      - button "Continue with Google" [ref=f1e257] [cursor=pointer]:
+        - img [ref=f1e258]
+        - text: Continue with Google
+      - generic [ref=f1e263]: or
+      - textbox "work@email.com" [ref=f1e266]
+      - textbox "Create a password" [ref=f1e267]
+      - button "Start free" [ref=f1e268] [cursor=pointer]
+    - paragraph [ref=f1e269]:
+      - text: Already have an account?
+      - button "Sign in" [ref=f1e270] [cursor=pointer]
+  - generic [ref=f1e25]:
+    - button "← site" [ref=f1e26] [cursor=pointer]
+    - button "↺ restart flow" [ref=f1e27] [cursor=pointer]

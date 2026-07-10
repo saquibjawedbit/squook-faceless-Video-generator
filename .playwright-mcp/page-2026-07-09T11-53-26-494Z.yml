@@ -1,0 +1,175 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Squook" [ref=e5] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=e7]: Squook
+      - navigation [ref=e8]:
+        - link "Gallery" [ref=e9] [cursor=pointer]:
+          - /url: "#/#gallery"
+        - link "Pricing" [ref=e10] [cursor=pointer]:
+          - /url: "#/pricing"
+        - link "Start free" [ref=e11] [cursor=pointer]:
+          - /url: "#/app"
+  - generic [ref=e12]:
+    - generic [ref=e13]:
+      - heading "Videos that look designed. Made from a sentence." [level=1] [ref=e14]:
+        - text: Videos that look designed.
+        - text: Made from a sentence.
+      - paragraph [ref=e15]: Describe the video you want. Squook directs it — real footage, clean typography, motion graphics, cut to the beat — and renders it ready to post.
+    - generic [ref=e16]:
+      - generic [ref=e17]:
+        - generic [ref=e19]:
+          - generic: 0:22 · 16:9
+          - generic:
+            - generic: PROMPT
+            - generic: “Launch film for a project-management app — bold type, fast cuts”
+        - generic [ref=e22]:
+          - generic: 0:15 · 1:1
+          - generic:
+            - generic: PROMPT
+            - generic: “Instagram ad for a single-origin coffee brand, warm and tactile”
+      - generic [ref=e24]:
+        - generic [ref=e26]:
+          - generic: 0:30 · 16:9
+          - generic:
+            - generic: PROMPT
+            - generic: “30-second explainer of how our API pricing works”
+        - generic [ref=e29]:
+          - generic: 0:18 · 9:16
+          - generic:
+            - generic: PROMPT
+            - generic: “Vertical teaser for a fitness app — night city run, beat-synced”
+      - generic [ref=e31]:
+        - generic [ref=e33]:
+          - generic: 0:20 · 16:9
+          - generic:
+            - generic: PROMPT
+            - generic: “Funding announcement — quiet confidence, serif overlays”
+        - generic [ref=e36]:
+          - generic: 0:35 · 16:9
+          - generic:
+            - generic: PROMPT
+            - generic: “Product demo of our analytics dashboard from screen recordings”
+    - paragraph [ref=e38]: Every video above was made from the prompt on its card. Nothing else.
+    - generic [ref=e39]:
+      - link "Try Squook — it's free" [ref=e40] [cursor=pointer]:
+        - /url: "#/app"
+      - generic [ref=e41]: No editing skills. No credit card.
+  - generic [ref=e42]:
+    - generic [ref=e43]: HOW IT WORKS
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - generic [ref=e46]: "01"
+        - heading "Describe your video" [level=3] [ref=e47]
+        - paragraph [ref=e48]: Plain words. The audience, the mood, the length — like briefing a director.
+      - generic [ref=e49]:
+        - generic [ref=e50]: "02"
+        - heading "Squook directs & renders" [level=3] [ref=e51]
+        - paragraph [ref=e52]: It writes the concept, picks footage and music, sets the type, and cuts it to the beat.
+      - generic [ref=e53]:
+        - generic [ref=e54]: "03"
+        - heading "Download & post" [level=3] [ref=e55]
+        - paragraph [ref=e56]: Rendered in the right format for Reels, Shorts, or ads. Ready to ship.
+    - paragraph [ref=e57]: Squook composes from licensed stock footage, music, and motion graphics — or footage you upload yourself.
+  - generic [ref=e58]:
+    - generic [ref=e59]: WHY SQUOOK
+    - generic [ref=e60]:
+      - generic [ref=e61]:
+        - heading "Actually looks designed" [level=3] [ref=e62]
+        - paragraph [ref=e63]: Real footage, clean typography, motion graphics synced to the music — not templated slop you have to fix.
+      - generic [ref=e64]:
+        - heading "No editing skills needed" [level=3] [ref=e65]
+        - paragraph [ref=e66]: If you can describe it, you can make it. No timeline, no keyframes, no software to learn.
+      - generic [ref=e67]:
+        - heading "Bring your own footage" [level=3] [ref=e68]
+        - paragraph [ref=e69]: Drop in product shots or b-roll and Squook edits them in — or works entirely from its licensed library.
+      - generic [ref=e70]:
+        - heading "Ready to post" [level=3] [ref=e71]
+        - paragraph [ref=e72]: Delivered in the exact format the platform wants — Reels, Shorts, TikTok, or ad specs.
+  - generic [ref=e73]:
+    - paragraph [ref=e74]: Trusted by teams shipping video every week
+    - generic [ref=e75]:
+      - generic [ref=e76]: fathom
+      - generic [ref=e77]: LOOPWORK
+      - generic [ref=e78]: Brightline
+      - generic [ref=e79]: NORTHWIND
+      - generic [ref=e80]: atlas&co
+    - generic [ref=e81]:
+      - generic [ref=e82]: REVIEW WALL
+      - generic [ref=e83]:
+        - generic [ref=e84]:
+          - generic [ref=e85]:
+            - paragraph [ref=e86]: "\"I typed two sentences and got a launch video that looked like we hired an agency. Our whole feed is Squook now.\""
+            - generic [ref=e87]:
+              - generic [ref=e88]: M
+              - generic [ref=e89]:
+                - generic [ref=e90]: Maya Chen
+                - generic [ref=e91]:
+                  - img [ref=e92]
+                  - text: "@maya.builds"
+          - generic [ref=e96]:
+            - paragraph [ref=e97]: "\"My Shorts intro used to take a day in After Effects. Now it's a prompt.\""
+            - generic [ref=e98]:
+              - generic [ref=e99]: J
+              - generic [ref=e100]:
+                - generic [ref=e101]: Jonas Weber
+                - generic [ref=e102]:
+                  - img [ref=e103]
+                  - text: "@JonasExplains"
+        - generic [ref=e106]:
+          - generic [ref=e107]:
+            - paragraph [ref=e108]: "\"I've tried every AI video tool. This is the first one where I didn't open an editor afterward.\""
+            - generic [ref=e109]:
+              - generic [ref=e110]: D
+              - generic [ref=e111]:
+                - generic [ref=e112]: Dev Patel
+                - generic [ref=e113]:
+                  - img [ref=e114]
+                  - text: "@DevShipsDaily"
+          - generic [ref=e117]:
+            - paragraph [ref=e118]: "\"We shipped 12 ad variants in an afternoon. Every single one looked designed.\""
+            - generic [ref=e119]:
+              - generic [ref=e120]: L
+              - generic [ref=e121]:
+                - generic [ref=e122]: Liam O'Connor
+                - generic [ref=e123]:
+                  - img [ref=e124]
+                  - text: "@liam.launches"
+        - generic [ref=e128]:
+          - generic [ref=e129]:
+            - paragraph [ref=e130]: "\"Product ads in the right specs, cut to the beat. It replaced a week of back-and-forth with freelancers.\""
+            - generic [ref=e131]:
+              - generic [ref=e132]: S
+              - generic [ref=e133]:
+                - generic [ref=e134]: Sofia Reyes
+                - generic [ref=e135]:
+                  - img [ref=e136]
+                  - text: "@sofiareyes.mkt"
+          - generic [ref=e140]:
+            - paragraph [ref=e141]: "\"Uploaded my own b-roll and it cut it like a pro editor. The typography is actually clean.\""
+            - generic [ref=e142]:
+              - generic [ref=e143]: A
+              - generic [ref=e144]:
+                - generic [ref=e145]: Amara Osei
+                - generic [ref=e146]:
+                  - img [ref=e147]
+                  - text: "@amara.creates"
+  - generic [ref=e152]:
+    - heading "Your first video is one sentence away." [level=2] [ref=e153]:
+      - text: Your first video is
+      - text: one sentence away.
+    - link "Start free" [ref=e154] [cursor=pointer]:
+      - /url: "#/app"
+  - contentinfo [ref=e155]:
+    - generic [ref=e156]:
+      - generic [ref=e157]: © 2026 Squook
+      - navigation [ref=e159]:
+        - link "About" [ref=e160] [cursor=pointer]:
+          - /url: "#/about"
+        - link "Contact" [ref=e161] [cursor=pointer]:
+          - /url: "#"
+        - link "Terms" [ref=e162] [cursor=pointer]:
+          - /url: "#"
+        - link "Privacy" [ref=e163] [cursor=pointer]:
+          - /url: "#"

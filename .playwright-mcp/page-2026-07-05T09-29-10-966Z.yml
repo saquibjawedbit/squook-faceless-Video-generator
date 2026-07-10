@@ -1,0 +1,5 @@
+- generic [ref=f10e2]:
+  - generic [ref=f10e3]: loading editor…
+  - generic [ref=f10e4]:
+    - button "← site" [ref=f10e5] [cursor=pointer]
+    - button "↺ restart flow" [ref=f10e6] [cursor=pointer]

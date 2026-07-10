@@ -1,0 +1,20 @@
+- generic [ref=f5e3]:
+  - generic [ref=f5e4]:
+    - generic [ref=f5e40]:
+      - generic [ref=f5e41]: Ever
+      - generic [ref=f5e42]: spent
+      - generic [ref=f5e43]: "30"
+      - generic [ref=f5e44]: minutes
+      - generic [ref=f5e45]: every
+    - generic [ref=f5e13]:
+      - generic [ref=f5e14]:
+        - button "Pause video" [active] [ref=f5e46] [cursor=pointer]:
+          - img [ref=f5e47]
+        - button "Mute sound" [ref=f5e20] [cursor=pointer]:
+          - img [ref=f5e21]
+        - generic [ref=f5e23]: 0:01 / 1:00
+      - button "Enter Fullscreen" [ref=f5e25] [cursor=pointer]:
+        - img [ref=f5e26]
+  - generic [ref=f5e36]:
+    - generic [ref=f5e37]: Create a Demo SaaS Video · 1800f · 1080×1920
+    - 'button "live edit: accent → cyan" [ref=f5e38]'

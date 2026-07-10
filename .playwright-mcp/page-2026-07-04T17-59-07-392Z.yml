@@ -1,0 +1,98 @@
+- generic [ref=e2]:
+  - banner [ref=e553]:
+    - generic [ref=e554]:
+      - link "Squook" [ref=e555] [cursor=pointer]:
+        - /url: "#/"
+        - generic [ref=e557]: Squook
+      - navigation [ref=e558]:
+        - link "Gallery" [ref=e559] [cursor=pointer]:
+          - /url: "#/#gallery"
+        - link "Pricing" [ref=e560] [cursor=pointer]:
+          - /url: "#/pricing"
+        - link "Start free" [ref=e561] [cursor=pointer]:
+          - /url: "#/app"
+  - generic [ref=e563]:
+    - generic [ref=e564]: ABOUT SQUOOK
+    - heading "We think everyone should be able to make video." [level=1] [ref=e565]:
+      - text: We think everyone
+      - text: should be able to make video.
+    - paragraph [ref=e566]: Great video has always been gated behind editors, timelines, and taste most people never had time to build. Squook is an AI director that closes that gap — so a sentence is all it takes to ship something that looks designed.
+  - generic [ref=e568]:
+    - generic [ref=e569]:
+      - generic [ref=e570]: 2M+
+      - generic [ref=e571]: Videos rendered
+    - generic [ref=e572]:
+      - generic [ref=e573]: 120k
+      - generic [ref=e574]: Creators & teams
+    - generic [ref=e575]:
+      - generic [ref=e576]: "190"
+      - generic [ref=e577]: Countries
+    - generic [ref=e578]:
+      - generic [ref=e579]: 40s
+      - generic [ref=e580]: Avg. time to first cut
+  - generic [ref=e581]:
+    - generic [ref=e582]: OUR STORY
+    - generic [ref=e583]:
+      - heading "It started with a bad launch video." [level=2] [ref=e584]
+      - generic [ref=e585]:
+        - paragraph [ref=e586]: In 2024 we were two founders and a designer trying to announce a product. A week of After Effects later, we had ninety seconds we weren't proud of — and we'd shipped nothing else.
+        - paragraph [ref=e587]: "The tools that promised to help all produced the same templated slop you had to fix by hand. So we built the thing we actually wanted: a director you brief in plain words, that picks the footage and music, sets the type, and cuts to the beat — then hands you a file ready to post."
+        - paragraph [ref=e588]: Squook is that director. Today it's used by founders, marketers, and creators in 190 countries to make video that looks designed, from a sentence.
+  - generic [ref=e589]:
+    - generic [ref=e590]: WHAT WE BELIEVE
+    - generic [ref=e591]:
+      - generic [ref=e592]:
+        - heading "Taste is the feature" [level=3] [ref=e593]
+        - paragraph [ref=e594]: Anyone can generate a video. We obsess over the ones that actually look designed — the typography, the pacing, the cut on the beat.
+      - generic [ref=e595]:
+        - heading "A sentence should be enough" [level=3] [ref=e596]
+        - paragraph [ref=e597]: The interface is the prompt. Every step we can remove between an idea and a finished video is a step we remove.
+      - generic [ref=e598]:
+        - heading "Licensed, always" [level=3] [ref=e599]
+        - paragraph [ref=e600]: Every frame of footage and every note of music Squook composes from is cleared for commercial use. No takedown surprises, ever.
+      - generic [ref=e601]:
+        - heading "Ship, then ship again" [level=3] [ref=e602]
+        - paragraph [ref=e603]: We would rather put something real in your hands this week than a perfect thing next quarter. The product improves in public.
+  - generic [ref=e604]:
+    - generic [ref=e605]: THE TEAM
+    - paragraph [ref=e606]: A small crew of designers, engineers, and film people — building from Lisbon and remotely.
+    - generic [ref=e607]:
+      - generic [ref=e608]:
+        - generic [ref=e609]: R
+        - generic [ref=e610]:
+          - generic [ref=e611]: Rhea Nair
+          - generic [ref=e612]: Co-founder · CEO
+      - generic [ref=e613]:
+        - generic [ref=e614]: T
+        - generic [ref=e615]:
+          - generic [ref=e616]: Theo Larsson
+          - generic [ref=e617]: Co-founder · CTO
+      - generic [ref=e618]:
+        - generic [ref=e619]: M
+        - generic [ref=e620]:
+          - generic [ref=e621]: Mina Adeyemi
+          - generic [ref=e622]: Head of Design
+      - generic [ref=e623]:
+        - generic [ref=e624]: K
+        - generic [ref=e625]:
+          - generic [ref=e626]: Kai Tanaka
+          - generic [ref=e627]: Head of Research
+    - paragraph [ref=e628]: We're hiring across design, research, and infrastructure. Come build the director with us.
+  - generic [ref=e630]:
+    - heading "Make something that looks designed." [level=2] [ref=e631]:
+      - text: Make something that
+      - text: looks designed.
+    - link "Start free" [ref=e632] [cursor=pointer]:
+      - /url: "#/app"
+  - contentinfo [ref=e633]:
+    - generic [ref=e634]:
+      - generic [ref=e635]: © 2026 Squook
+      - navigation [ref=e637]:
+        - link "About" [ref=e638] [cursor=pointer]:
+          - /url: "#/about"
+        - link "Contact" [ref=e639] [cursor=pointer]:
+          - /url: "#"
+        - link "Terms" [ref=e640] [cursor=pointer]:
+          - /url: "#"
+        - link "Privacy" [ref=e641] [cursor=pointer]:
+          - /url: "#"

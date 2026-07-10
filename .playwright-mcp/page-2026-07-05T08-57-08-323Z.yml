@@ -1,0 +1,129 @@
+- generic [ref=f6e2]:
+  - generic [ref=f6e234]:
+    - banner [ref=f6e235]:
+      - generic [ref=f6e236]:
+        - generic [ref=f6e237]:
+          - generic [ref=f6e240]: Squook
+          - button "← New video" [ref=f6e241] [cursor=pointer]
+          - generic [ref=f6e242]: Create a Demo SaaS Video
+        - generic [ref=f6e243]:
+          - generic [ref=f6e244]: DRAFT 3
+          - button "Saved" [ref=f6e245] [cursor=pointer]
+          - button "Re-render" [ref=f6e246] [cursor=pointer]
+          - generic [ref=f6e247]:
+            - generic [ref=f6e248]: "Y"
+            - button "Sign out" [ref=f6e249] [cursor=pointer]
+          - button "Download" [ref=f6e250] [cursor=pointer]
+    - main [ref=f6e251]:
+      - generic [ref=f6e252]:
+        - generic [ref=f6e266]:
+          - generic [ref=f6e267]:
+            - button "Play video" [ref=f6e268] [cursor=pointer]:
+              - img [ref=f6e269]
+            - button "Mute sound" [ref=f6e272] [cursor=pointer]:
+              - img [ref=f6e273]
+            - generic [ref=f6e275]: 0:00 / 0:59
+          - button "Enter Fullscreen" [ref=f6e277] [cursor=pointer]:
+            - img [ref=f6e278]
+        - generic [ref=f6e288]:
+          - generic [ref=f6e289]:
+            - generic [ref=f6e290]: TIMELINE
+            - generic [ref=f6e291]: 0:00 / 0:59 · drag to reorder · edges to trim
+          - generic [ref=f6e292] [cursor=pointer]:
+            - generic [ref=f6e293]: 0s
+            - generic [ref=f6e294]: 5s
+            - generic [ref=f6e295]: 10s
+            - generic [ref=f6e296]: 15s
+            - generic [ref=f6e297]: 20s
+            - generic [ref=f6e298]: 25s
+            - generic [ref=f6e299]: 30s
+            - generic [ref=f6e300]: 35s
+            - generic [ref=f6e301]: 40s
+            - generic [ref=f6e302]: 45s
+            - generic [ref=f6e303]: 50s
+            - generic [ref=f6e304]: 55s
+          - generic [ref=f6e305]:
+            - generic [ref=f6e306]:
+              - generic [ref=f6e307]: 1 · VIDEO
+              - generic [ref=f6e308]: 5.0s
+              - button "Delete scene 1" [ref=f6e309] [cursor=pointer]: ✕
+            - generic [ref=f6e312]:
+              - generic [ref=f6e313]: 2 · VIDEO
+              - generic [ref=f6e314]: 5.0s
+              - button "Delete scene 2" [ref=f6e315] [cursor=pointer]: ✕
+            - generic [ref=f6e318]:
+              - generic [ref=f6e319]: 3 · VIDEO
+              - generic [ref=f6e320]: 11.0s
+              - button "Delete scene 3" [ref=f6e321] [cursor=pointer]: ✕
+            - generic [ref=f6e324]:
+              - generic [ref=f6e325]: 4 · SHADER
+              - generic [ref=f6e326]: 5.0s
+              - button "Delete scene 4" [ref=f6e327] [cursor=pointer]: ✕
+            - generic [ref=f6e330]:
+              - generic [ref=f6e331]: 5 · VIDEO
+              - generic [ref=f6e332]: 12.0s
+              - button "Delete scene 5" [ref=f6e333] [cursor=pointer]: ✕
+            - generic [ref=f6e336]:
+              - generic [ref=f6e337]: 6 · VIDEO
+              - generic [ref=f6e338]: 7.0s
+              - button "Delete scene 6" [ref=f6e339] [cursor=pointer]: ✕
+            - generic [ref=f6e342]:
+              - generic [ref=f6e343]: 7 · SHADER
+              - generic [ref=f6e344]: 7.0s
+              - button "Delete scene 7" [ref=f6e345] [cursor=pointer]: ✕
+            - generic [ref=f6e348]:
+              - generic [ref=f6e349]: 8 · SOLID
+              - generic [ref=f6e350]: 7.0s
+              - button "Delete scene 8" [ref=f6e351] [cursor=pointer]: ✕
+      - generic [ref=f6e354]:
+        - generic [ref=f6e355]:
+          - generic [ref=f6e356]: DESIGN
+          - generic [ref=f6e357]:
+            - generic [ref=f6e358]: Theme colors
+            - generic [ref=f6e359]:
+              - generic [ref=f6e360]: Background
+              - generic [ref=f6e362]:
+                - textbox [ref=f6e363] [cursor=pointer]: "#180a0a"
+                - textbox "#rrggbb" [ref=f6e364]: "#180a0a"
+            - generic [ref=f6e365]:
+              - generic [ref=f6e366]: Accent
+              - generic [ref=f6e368]:
+                - textbox [ref=f6e369] [cursor=pointer]: "#00e5ff"
+                - textbox "#rrggbb" [ref=f6e370]: "#00e5ff"
+            - generic [ref=f6e371]:
+              - generic [ref=f6e372]: Accent 2
+              - generic [ref=f6e374]:
+                - textbox [ref=f6e375] [cursor=pointer]: "#ffb703"
+                - textbox "#rrggbb" [ref=f6e376]: "#ffb703"
+            - generic [ref=f6e377]:
+              - generic [ref=f6e378]: Text
+              - generic [ref=f6e380]:
+                - textbox [ref=f6e381] [cursor=pointer]: "#ffffff"
+                - textbox "#rrggbb" [ref=f6e382]: "#ffffff"
+          - generic [ref=f6e383]:
+            - generic [ref=f6e384]: Type
+            - generic [ref=f6e385]:
+              - generic [ref=f6e386]: Caption size
+              - spinbutton [ref=f6e388]: "41"
+            - generic [ref=f6e389]:
+              - generic [ref=f6e390]: Title size
+              - spinbutton [ref=f6e392]: "83"
+          - generic [ref=f6e393]:
+            - generic [ref=f6e394]: Music
+            - generic [ref=f6e395]:
+              - generic [ref=f6e396]: Volume
+              - generic [ref=f6e397]:
+                - slider [ref=f6e398]: "0.3"
+                - generic [ref=f6e399]: "0.3"
+          - paragraph [ref=f6e400]: Click any element in the preview to edit it — click again to select the layer underneath.
+        - generic [ref=f6e401]:
+          - generic [ref=f6e402]: AI EDIT
+          - textbox "Describe a change — “make scene 2 shorter”, “warmer colors”…" [ref=f6e403]
+          - button "Apply change" [disabled] [ref=f6e404]
+        - group [ref=f6e405]:
+          - generic "▸ REGENERATE FROM SCRATCH" [ref=f6e406] [cursor=pointer]:
+            - generic [ref=f6e407]: ▸
+            - text: REGENERATE FROM SCRATCH
+  - generic [ref=f6e4]:
+    - button "← site" [ref=f6e5] [cursor=pointer]
+    - button "↺ restart flow" [ref=f6e6] [cursor=pointer]

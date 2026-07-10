@@ -1,0 +1,139 @@
+- generic [ref=f2e2]:
+  - generic [ref=f2e7]:
+    - banner [ref=f2e8]:
+      - generic [ref=f2e9]:
+        - generic [ref=f2e10]:
+          - generic [ref=f2e13]: Squook
+          - button "← New video" [ref=f2e14] [cursor=pointer]
+          - generic [ref=f2e15]: Three Tiny Habits That Quietly Make You Smarter
+        - generic [ref=f2e16]:
+          - generic [ref=f2e17]: DRAFT 1
+          - button "Save" [ref=f2e181] [cursor=pointer]
+          - button "Re-render" [ref=f2e19] [cursor=pointer]
+          - generic [ref=f2e20]:
+            - generic [ref=f2e21]: "Y"
+            - button "Sign out" [ref=f2e22] [cursor=pointer]
+          - button "Download" [ref=f2e23] [cursor=pointer]
+    - main [ref=f2e24]:
+      - generic [ref=f2e26]:
+        - generic [ref=f2e27]:
+          - generic [ref=f2e28]: EDITING ROOM
+          - generic [ref=f2e182]: 2 edits
+        - generic [ref=f2e29]:
+          - generic [ref=f2e183]: Warmer colors throughout
+          - generic [ref=f2e184]:
+            - generic [ref=f2e185]:
+              - generic [ref=f2e186]: EDIT 01
+              - button "⟲ REVERT" [ref=f2e187] [cursor=pointer]
+            - text: Updated the theme palette to warmer colors throughout.
+          - generic [ref=f2e189]: actually tone that down a bit — less orange
+          - generic [ref=f2e190]:
+            - generic [ref=f2e192]: EDIT 02 · ROLLED BACK
+            - text: Reduced orange intensity in accent colors
+          - generic [ref=f2e195]: Rolled back to before EDIT 02.
+        - generic [ref=f2e36]:
+          - generic [ref=f2e37]:
+            - textbox "Ask for a change…" [ref=f2e38]
+            - button "Send" [disabled] [ref=f2e39]: ↑
+          - generic [ref=f2e40]: ENTER SENDS · SHIFT+ENTER FOR A NEW LINE · SELECT AN ELEMENT TO SCOPE
+      - generic [ref=f2e41]:
+        - generic [ref=f2e55]:
+          - generic [ref=f2e56]:
+            - button "Play video" [ref=f2e57] [cursor=pointer]:
+              - img [ref=f2e58]
+            - button "Mute sound" [ref=f2e61] [cursor=pointer]:
+              - img [ref=f2e62]
+            - generic [ref=f2e64]: 0:00 / 0:58
+          - button "Enter Fullscreen" [ref=f2e66] [cursor=pointer]:
+            - img [ref=f2e67]
+        - paragraph [ref=f2e196]: ▸ Rolled back EDIT 02
+        - generic [ref=f2e77]:
+          - generic [ref=f2e78]:
+            - generic [ref=f2e79]: TIMELINE
+            - generic [ref=f2e80]: 0:00 / 0:58 · drag to reorder · edges to trim
+          - generic [ref=f2e81] [cursor=pointer]:
+            - generic [ref=f2e82]: 0s
+            - generic [ref=f2e83]: 5s
+            - generic [ref=f2e84]: 10s
+            - generic [ref=f2e85]: 15s
+            - generic [ref=f2e86]: 20s
+            - generic [ref=f2e87]: 25s
+            - generic [ref=f2e88]: 30s
+            - generic [ref=f2e89]: 35s
+            - generic [ref=f2e90]: 40s
+            - generic [ref=f2e91]: 45s
+            - generic [ref=f2e92]: 50s
+            - generic [ref=f2e93]: 55s
+          - generic [ref=f2e94]:
+            - generic [ref=f2e95]:
+              - generic [ref=f2e96]: 1 · SOLID
+              - generic [ref=f2e97]: 7.0s
+              - button "Delete scene 1" [ref=f2e98] [cursor=pointer]: ✕
+            - generic [ref=f2e101]:
+              - generic [ref=f2e102]: 2 · SHADER
+              - generic [ref=f2e103]: 12.0s
+              - button "Delete scene 2" [ref=f2e104] [cursor=pointer]: ✕
+            - generic [ref=f2e107]:
+              - generic [ref=f2e108]: 3 · SHADER
+              - generic [ref=f2e109]: 12.0s
+              - button "Delete scene 3" [ref=f2e110] [cursor=pointer]: ✕
+            - generic [ref=f2e113]:
+              - generic [ref=f2e114]: 4 · VIDEO
+              - generic [ref=f2e115]: 12.0s
+              - button "Delete scene 4" [ref=f2e116] [cursor=pointer]: ✕
+            - generic [ref=f2e119]:
+              - generic [ref=f2e120]: 5 · SHADER
+              - generic [ref=f2e121]: 9.0s
+              - button "Delete scene 5" [ref=f2e122] [cursor=pointer]: ✕
+            - generic [ref=f2e125]:
+              - generic [ref=f2e126]: 6 · SOLID
+              - generic [ref=f2e127]: 6.0s
+              - button "Delete scene 6" [ref=f2e128] [cursor=pointer]: ✕
+      - generic [ref=f2e131]:
+        - generic [ref=f2e132]:
+          - generic [ref=f2e133]: DESIGN
+          - generic [ref=f2e134]:
+            - generic [ref=f2e135]: Theme colors
+            - generic [ref=f2e136]:
+              - generic [ref=f2e137]: Background
+              - generic [ref=f2e139]:
+                - textbox [ref=f2e140] [cursor=pointer]: "#2a1b0f"
+                - textbox "#rrggbb" [ref=f2e141]: "#2a1b0f"
+            - generic [ref=f2e142]:
+              - generic [ref=f2e143]: Accent
+              - generic [ref=f2e145]:
+                - textbox [ref=f2e146] [cursor=pointer]: "#ff9a56"
+                - textbox "#rrggbb" [ref=f2e147]: "#ff9a56"
+            - generic [ref=f2e148]:
+              - generic [ref=f2e149]: Accent 2
+              - generic [ref=f2e151]:
+                - textbox [ref=f2e152] [cursor=pointer]: "#ff6f61"
+                - textbox "#rrggbb" [ref=f2e153]: "#ff6f61"
+            - generic [ref=f2e154]:
+              - generic [ref=f2e155]: Text
+              - generic [ref=f2e157]:
+                - textbox [ref=f2e158] [cursor=pointer]: "#000000"
+                - textbox "#rrggbb" [ref=f2e159]: "#000000"
+          - generic [ref=f2e160]:
+            - generic [ref=f2e161]: Type
+            - generic [ref=f2e162]:
+              - generic [ref=f2e163]: Caption size
+              - spinbutton [ref=f2e165]: "45"
+            - generic [ref=f2e166]:
+              - generic [ref=f2e167]: Title size
+              - spinbutton [ref=f2e169]: "80"
+          - generic [ref=f2e170]:
+            - generic [ref=f2e171]: Music
+            - generic [ref=f2e172]:
+              - generic [ref=f2e173]: Volume
+              - generic [ref=f2e174]:
+                - slider [ref=f2e175]: "0.3"
+                - generic [ref=f2e176]: "0.3"
+          - paragraph [ref=f2e177]: Click any element in the preview to edit it — click again to select the layer underneath.
+        - group [ref=f2e178]:
+          - generic "▸ REGENERATE FROM SCRATCH" [ref=f2e179] [cursor=pointer]:
+            - generic [ref=f2e180]: ▸
+            - text: REGENERATE FROM SCRATCH
+  - generic [ref=f2e4]:
+    - button "← site" [ref=f2e5] [cursor=pointer]
+    - button "↺ restart flow" [ref=f2e6] [cursor=pointer]

@@ -1,0 +1,22 @@
+- generic [ref=e2]:
+  - generic [ref=e4]:
+    - generic [ref=e7]:
+      - heading "Welcome back" [level=1] [ref=e28]
+      - paragraph [ref=e9]: Your videos are waiting.
+    - generic [ref=e29]:
+      - button "Continue with Google" [ref=e30] [cursor=pointer]:
+        - img [ref=e31]
+        - text: Continue with Google
+      - generic [ref=e36]: or
+      - textbox "work@email.com" [ref=e39]: nobody@example.com
+      - generic [ref=e40]:
+        - textbox "Password" [ref=e41]: wrongpassword123
+        - button "Forgot password?" [ref=e42] [cursor=pointer]
+      - paragraph [ref=e48]: Invalid login credentials
+      - button "Sign in" [ref=e49] [cursor=pointer]
+    - paragraph [ref=e44]:
+      - text: New to Squook?
+      - button "Start free" [ref=e45] [cursor=pointer]
+  - generic [ref=e25]:
+    - button "← site" [ref=e26] [cursor=pointer]
+    - button "↺ restart flow" [ref=e27] [cursor=pointer]

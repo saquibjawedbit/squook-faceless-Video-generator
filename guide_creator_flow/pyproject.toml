@@ -1,0 +1,26 @@
+[project]
+name = "guide_creator_flow"
+version = "0.1.0"
+description = "guide_creator_flow using crewAI"
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.10,<3.14"
+dependencies = [
+    "crewai[tools]>=1.15.1,<2.0.0",
+    "kokoro>=0.9.4",
+    "pyloudnorm>=0.2.0",
+    "soundfile>=0.14.0",
+]
+
+[project.scripts]
+kickoff = "guide_creator_flow.main:kickoff"
+run_crew = "guide_creator_flow.main:kickoff"
+plot = "guide_creator_flow.main:plot"
+run_with_trigger = "guide_creator_flow.main:run_with_trigger"
+master = "guide_creator_flow.tools.mastering:run"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.crewai]
+type = "flow"

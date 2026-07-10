@@ -1,0 +1,142 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - generic [ref=e7]: Squook
+      - generic [ref=e11]:
+        - generic [ref=e12]: Launch film — Northwind PM
+        - generic [ref=e13]: Draft 2 · autosaved
+    - generic [ref=e14]:
+      - generic [ref=e15]:
+        - button "Undo" [ref=e16] [cursor=pointer]
+        - button "Redo" [ref=e20] [cursor=pointer]
+      - button "Re-render" [ref=e24] [cursor=pointer]
+      - button "Export" [ref=e25] [cursor=pointer]
+      - generic [ref=e26]: "Y"
+  - generic [ref=e27]:
+    - complementary [ref=e28]:
+      - generic [ref=e29]:
+        - button "Layers" [ref=e30] [cursor=pointer]
+        - button "Media" [ref=e31] [cursor=pointer]
+      - generic [ref=e33]:
+        - button "Skyline at dusk HOOK · Stock 3.5s" [ref=e34] [cursor=pointer]:
+          - generic [ref=e36]:
+            - generic [ref=e37]: Skyline at dusk
+            - generic [ref=e38]: HOOK · Stock
+          - generic [ref=e39]: 3.5s
+        - button "Dashboard screen-rec PRODUCT · Yours 6.0s" [ref=e40] [cursor=pointer]:
+          - generic [ref=e42]:
+            - generic [ref=e43]: Dashboard screen-rec
+            - generic [ref=e44]: PRODUCT · Yours
+          - generic [ref=e45]: 6.0s
+        - button "Feature highlight FEATURE · Stock 4.0s" [ref=e46] [cursor=pointer]:
+          - generic [ref=e48]:
+            - generic [ref=e49]: Feature highlight
+            - generic [ref=e50]: FEATURE · Stock
+          - generic [ref=e51]: 4.0s
+        - button "Team at work PROOF · Stock 4.5s" [ref=e52] [cursor=pointer]:
+          - generic [ref=e54]:
+            - generic [ref=e55]: Team at work
+            - generic [ref=e56]: PROOF · Stock
+          - generic [ref=e57]: 4.5s
+        - button "Logo end card CTA · Brand kit 3.0s" [ref=e58] [cursor=pointer]:
+          - generic [ref=e60]:
+            - generic [ref=e61]: Logo end card
+            - generic [ref=e62]: CTA · Brand kit
+          - generic [ref=e63]: 3.0s
+        - button "“Ship faster.” TEXT · 0:00 3.0s" [ref=e64] [cursor=pointer]:
+          - generic [ref=e66]:
+            - generic [ref=e67]: “Ship faster.”
+            - generic [ref=e68]: TEXT · 0:00
+          - generic [ref=e69]: 3.0s
+        - button "“10× your output” TEXT · 0:09 4.0s" [ref=e70] [cursor=pointer]:
+          - generic [ref=e72]:
+            - generic [ref=e73]: “10× your output”
+            - generic [ref=e74]: TEXT · 0:09
+          - generic [ref=e75]: 4.0s
+        - button "“northwind.io” TEXT · 0:18 2.5s" [ref=e76] [cursor=pointer]:
+          - generic [ref=e78]:
+            - generic [ref=e79]: “northwind.io”
+            - generic [ref=e80]: TEXT · 0:18
+          - generic [ref=e81]: 2.5s
+        - button "Beat-synced electronic MUSIC · 68%" [ref=e82] [cursor=pointer]:
+          - generic [ref=e84]:
+            - generic [ref=e85]: Beat-synced electronic
+            - generic [ref=e86]: MUSIC · 68%
+        - button "Nova — warm VOICEOVER · 90%" [ref=e87] [cursor=pointer]:
+          - generic [ref=e89]:
+            - generic [ref=e90]: Nova — warm
+            - generic [ref=e91]: VOICEOVER · 90%
+    - main [ref=e92]:
+      - generic [ref=e94]:
+        - generic [ref=e95]: HOOK · Skyline at dusk
+        - generic: Skyline at dusk
+        - generic [ref=e97]:
+          - button "Select" [ref=e98] [cursor=pointer]
+          - button "Pin comment" [ref=e100] [cursor=pointer]
+          - button "Draw" [ref=e102] [cursor=pointer]
+        - generic [ref=e104]: 16:9 · 1920×1080
+        - generic [ref=e105]:
+          - button [ref=e106] [cursor=pointer]
+          - generic [ref=e108]: 0:00
+          - slider [ref=e109]: "0.1"
+          - generic [ref=e110]: 0:21
+      - generic [ref=e111]:
+        - generic [ref=e112]:
+          - generic [ref=e113]: TIMELINE
+          - generic [ref=e114]:
+            - button "✂ Split" [ref=e115] [cursor=pointer]
+            - button "⧉ Duplicate" [ref=e116] [cursor=pointer]
+            - button "← Move" [ref=e117] [cursor=pointer]
+            - button "Move →" [ref=e118] [cursor=pointer]
+            - button "＋ Text" [ref=e119] [cursor=pointer]
+        - generic [ref=e121]:
+          - generic [ref=e122]:
+            - generic [ref=e123]: 0:00
+            - generic [ref=e124]: 0:03
+            - generic [ref=e125]: 0:06
+            - generic [ref=e126]: 0:09
+            - generic [ref=e127]: 0:12
+            - generic [ref=e128]: 0:15
+            - generic [ref=e129]: 0:18
+            - generic [ref=e130]: 0:21
+          - generic [ref=e131]:
+            - generic [ref=e132]:
+              - generic [ref=e133]: VID
+              - generic [ref=e135]:
+                - button "Skyline at dusk" [ref=e136] [cursor=pointer]
+                - button "Dashboard screen-rec" [ref=e138] [cursor=pointer]
+                - button "Feature highlight" [ref=e140] [cursor=pointer]
+                - button "Team at work" [ref=e142] [cursor=pointer]
+                - button "Logo end card" [ref=e144] [cursor=pointer]
+            - generic [ref=e146]:
+              - generic [ref=e147]: TXT
+              - generic [ref=e149]:
+                - button "Ship faster." [ref=e150] [cursor=pointer]
+                - button "10× your output" [ref=e152] [cursor=pointer]
+                - button "northwind.io" [ref=e154] [cursor=pointer]
+            - generic [ref=e156]:
+              - generic [ref=e157]: AUD
+              - generic [ref=e159]:
+                - button "Beat-synced electronic" [ref=e160] [cursor=pointer]
+                - button "Nova — warm" [ref=e162] [cursor=pointer]
+    - complementary [ref=e164]:
+      - generic [ref=e165]:
+        - button "Director" [ref=e166] [cursor=pointer]
+        - button "Inspect" [ref=e167] [cursor=pointer]
+        - button "Comments" [ref=e168] [cursor=pointer]
+      - generic [ref=e169]:
+        - generic [ref=e171]:
+          - generic [ref=e172]: DIRECTOR
+          - paragraph [ref=e175]: I cut a 21-second launch film — dusk hook, your dashboard recording, a proof beat, and a logo end card, timed to a beat-synced track. Tell me what to change, or edit any layer directly.
+        - generic [ref=e176]:
+          - generic [ref=e177]:
+            - text: "Editing: Skyline at dusk"
+            - button "✕" [ref=e178] [cursor=pointer]
+          - generic [ref=e179]:
+            - textbox "Tell the director what to change…" [ref=e180]
+            - generic [ref=e181]:
+              - generic [ref=e182]:
+                - button "Make it snappier" [ref=e183] [cursor=pointer]
+                - button "Add a proof shot" [ref=e184] [cursor=pointer]
+                - button "Push the brand" [ref=e185] [cursor=pointer]
+              - button [ref=e186] [cursor=pointer]

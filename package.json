@@ -1,0 +1,17 @@
+{
+  "name": "squook",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Prompt-to-video pipeline: CrewAI flow -> Remotion renderer -> Express API -> React webapp.",
+  "scripts": {
+    "setup": "npm --prefix server install && npm --prefix webapp install && npm --prefix renderer install && cd guide_creator_flow && uv sync",
+    "dev": "concurrently -k -n api,web -c blue,green \"npm --prefix server run dev\" \"npm --prefix webapp run dev\"",
+    "start": "concurrently -k -n api,web -c blue,green \"npm --prefix server start\" \"npm --prefix webapp run dev\"",
+    "studio": "npm --prefix renderer run dev",
+    "render": "npm --prefix renderer run render",
+    "flow": "cd guide_creator_flow && uv run kickoff"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0"
+  }
+}

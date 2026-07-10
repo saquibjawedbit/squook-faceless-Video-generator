@@ -1,0 +1,107 @@
+- generic [ref=e2]:
+  - generic [ref=e106]:
+    - banner [ref=e107]:
+      - generic [ref=e108]:
+        - generic [ref=e109]:
+          - generic [ref=e112]: Squook
+          - button "← New video" [ref=e113] [cursor=pointer]
+        - generic [ref=e114]:
+          - generic [ref=e115]: DRAFT 1
+          - generic [ref=e116]:
+            - generic [ref=e117]: "Y"
+            - button "Sign out" [ref=e118] [cursor=pointer]
+          - button "Download" [ref=e119] [cursor=pointer]
+    - main [ref=e120]:
+      - generic [ref=e121]:
+        - generic [ref=e123]:
+          - generic: Draft 1 · 0:15 · 9:16
+        - generic [ref=e125]:
+          - generic [ref=e126]:
+            - generic [ref=e127]: SCENES & ASSETS
+            - generic [ref=e128]: swap any clip — the director re-cuts around it
+          - generic [ref=e129]:
+            - generic [ref=e130]:
+              - generic [ref=e133]:
+                - generic [ref=e134]: SCENE 1 · HOOK
+                - generic [ref=e135]: Skyline at dusk
+              - generic [ref=e136]:
+                - generic [ref=e137]: Stock
+                - generic [ref=e138]:
+                  - generic [ref=e139]: 0:03
+                  - button "Swap" [ref=e140] [cursor=pointer]
+            - generic [ref=e141]:
+              - generic [ref=e144]:
+                - generic [ref=e145]: SCENE 2 · PRODUCT
+                - generic [ref=e146]: Dashboard screen recording
+              - generic [ref=e147]:
+                - generic [ref=e148]: Yours
+                - generic [ref=e149]:
+                  - generic [ref=e150]: 0:06
+                  - button "Swap" [ref=e151] [cursor=pointer]
+            - generic [ref=e152]:
+              - generic [ref=e155]:
+                - generic [ref=e156]: SCENE 3 · PROOF
+                - generic [ref=e157]: Team at work
+              - generic [ref=e158]:
+                - generic [ref=e159]: Stock
+                - generic [ref=e160]:
+                  - generic [ref=e161]: 0:04
+                  - button "Swap" [ref=e162] [cursor=pointer]
+            - generic [ref=e163]:
+              - generic [ref=e166]:
+                - generic [ref=e167]: SCENE 4 · CTA
+                - generic [ref=e168]: Logo on black
+              - generic [ref=e169]:
+                - generic [ref=e170]: Brand kit
+                - generic [ref=e171]:
+                  - generic [ref=e172]: 0:03
+                  - button "Swap" [ref=e173] [cursor=pointer]
+            - button "＋ Upload footage MP4 / MOV, up to 2 min" [ref=e174] [cursor=pointer]:
+              - text: ＋ Upload footage
+              - text: MP4 / MOV, up to 2 min
+      - generic [ref=e175]:
+        - generic [ref=e176]:
+          - generic [ref=e177]: REVISE
+          - textbox "Tell the director what to change — “slower pace”, “more product shots”…" [ref=e178]
+        - generic [ref=e179]:
+          - generic [ref=e180]: DURATION
+          - generic [ref=e181]:
+            - button "15s" [ref=e182] [cursor=pointer]
+            - button "30s" [ref=e183] [cursor=pointer]
+            - button "60s" [ref=e184] [cursor=pointer]
+        - generic [ref=e185]:
+          - generic [ref=e186]: ASPECT RATIO
+          - generic [ref=e187]:
+            - button "9:16" [ref=e188] [cursor=pointer]
+            - button "16:9" [ref=e189] [cursor=pointer]
+            - button "1:1" [ref=e190] [cursor=pointer]
+        - generic [ref=e191]:
+          - generic [ref=e192]: VOICEOVER
+          - generic [ref=e193]:
+            - button "Nova Warm & bright" [ref=e194] [cursor=pointer]:
+              - generic [ref=e195]:
+                - generic [ref=e196]: Nova
+                - generic [ref=e197]: Warm & bright
+            - button "Atlas Deep & calm" [ref=e199] [cursor=pointer]:
+              - generic [ref=e200]:
+                - generic [ref=e201]: Atlas
+                - generic [ref=e202]: Deep & calm
+            - button "Juno Energetic" [ref=e204] [cursor=pointer]:
+              - generic [ref=e205]:
+                - generic [ref=e206]: Juno
+                - generic [ref=e207]: Energetic
+            - button "No voiceover Captions only" [ref=e209] [cursor=pointer]:
+              - generic [ref=e210]:
+                - generic [ref=e211]: No voiceover
+                - generic [ref=e212]: Captions only
+        - generic [ref=e214]:
+          - generic [ref=e215]: MUSIC
+          - generic [ref=e216]:
+            - button "Beat-synced electronic" [ref=e217] [cursor=pointer]
+            - button "Warm acoustic" [ref=e218] [cursor=pointer]
+            - button "Cinematic score" [ref=e219] [cursor=pointer]
+            - button "No music" [ref=e220] [cursor=pointer]
+        - button "Re-render draft" [ref=e222]
+  - generic [ref=e66]:
+    - button "← site" [ref=e67] [cursor=pointer]
+    - button "↺ restart flow" [ref=e68] [cursor=pointer]

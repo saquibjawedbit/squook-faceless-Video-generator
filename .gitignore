@@ -1,0 +1,41 @@
+# Video files
+*.mp4
+*.mov
+*.webm
+*.mkv
+*.avi
+*.m4v
+
+# Audio files
+*.mp3
+*.wav
+*.m4a
+*.aac
+*.ogg
+*.flac
+*.opus
+
+# Generated pipeline output (videos, audio, IR assets)
+renderer/out/
+renderer/public/
+guide_creator_flow/output/
+server/artifacts/
+server/uploads/
+
+# Dependencies & environments
+node_modules/
+.venv/
+__pycache__/
+
+# Env files & secrets
+.env
+.env.local
+*.local
+
+# Build output
+dist/
+dist-ssr/
+
+# Misc
+.DS_Store
+*.log

@@ -1,0 +1,20 @@
+- generic [ref=f1e2]:
+  - generic [ref=f1e4]:
+    - generic [ref=f1e30]:
+      - button "← Back" [ref=f1e31] [cursor=pointer]
+      - generic [ref=f1e32]: STEP 1 / 1
+      - button "Skip →" [ref=f1e33] [cursor=pointer]
+    - generic [ref=f1e10]:
+      - heading "What will you make first?" [level=1] [ref=f1e34]
+      - paragraph [ref=f1e35]: We'll tailor your examples and pre-write your first prompt.
+    - generic [ref=f1e36]:
+      - button "Product demos" [ref=f1e37] [cursor=pointer]
+      - button "Ads" [ref=f1e38] [cursor=pointer]
+      - button "Explainers" [ref=f1e39] [cursor=pointer]
+      - button "Social posts" [ref=f1e40] [cursor=pointer]
+      - button "Announcements" [ref=f1e41] [cursor=pointer]
+      - button "Something else" [ref=f1e42] [cursor=pointer]
+    - button "Continue — you can decide later" [ref=f1e44] [cursor=pointer]
+  - generic [ref=f1e25]:
+    - button "← site" [ref=f1e26] [cursor=pointer]
+    - button "↺ restart flow" [ref=f1e27] [cursor=pointer]

@@ -1,0 +1,70 @@
+- generic [ref=e2]:
+  - generic [ref=e3]:
+    - banner [ref=e4]:
+      - generic [ref=e5]:
+        - generic [ref=e8]: Squook
+        - generic [ref=e9]:
+          - generic [ref=e10]: 3 free videos left
+          - generic [ref=e11]:
+            - generic [ref=e12]: "Y"
+            - button "Sign out" [ref=e13] [cursor=pointer]
+    - main [ref=e14]:
+      - generic [ref=e15]:
+        - generic [ref=e16]: YOUR FIRST VIDEO
+        - heading "Let’s make your first video." [level=1] [ref=e17]
+      - generic [ref=e18]:
+        - textbox "Describe your video — the audience, the mood, the length…" [ref=e19]
+        - generic [ref=e20]:
+          - generic [ref=e21]:
+            - generic [ref=e22]: DURATION
+            - generic [ref=e23]:
+              - button "15s" [ref=e24] [cursor=pointer]
+              - button "30s" [ref=e25] [cursor=pointer]
+              - button "60s" [ref=e26] [cursor=pointer]
+          - generic [ref=e27]:
+            - generic [ref=e28]: ASPECT RATIO
+            - generic [ref=e29]:
+              - button "9:16" [ref=e30] [cursor=pointer]
+              - button "16:9" [ref=e31] [cursor=pointer]
+              - button "1:1" [ref=e32] [cursor=pointer]
+          - generic [ref=e33]:
+            - generic [ref=e34]: VOICEOVER
+            - generic [ref=e35]:
+              - button "Nova" [ref=e36] [cursor=pointer]
+              - button "Atlas" [ref=e37] [cursor=pointer]
+              - button "Juno" [ref=e38] [cursor=pointer]
+              - button "No voice" [ref=e39] [cursor=pointer]
+          - generic [ref=e40]:
+            - generic [ref=e41]: MUSIC
+            - generic [ref=e42]:
+              - button "Beat-synced" [ref=e43] [cursor=pointer]
+              - button "Acoustic" [ref=e44] [cursor=pointer]
+              - button "Score" [ref=e45] [cursor=pointer]
+              - button "None" [ref=e46] [cursor=pointer]
+        - generic [ref=e47]:
+          - button "Attach footage or images" [ref=e48] [cursor=pointer]:
+            - img [ref=e49]
+          - button "Generate ▸" [ref=e51] [cursor=pointer]
+      - generic [ref=e52]:
+        - generic [ref=e53]:
+          - generic [ref=e54]: EXAMPLES
+          - generic [ref=e55]: click a card to use its prompt
+        - generic [ref=e56]:
+          - generic [ref=e58] [cursor=pointer]:
+            - generic: 0:22 · 16:9
+            - generic:
+              - generic: PROMPT
+              - generic: “Launch film for a project-management app — bold type, fast cuts”
+          - generic [ref=e61] [cursor=pointer]:
+            - generic: 0:30 · 16:9
+            - generic:
+              - generic: PROMPT
+              - generic: “30-second explainer of how our API pricing works”
+          - generic [ref=e64] [cursor=pointer]:
+            - generic: 0:18 · 9:16
+            - generic:
+              - generic: PROMPT
+              - generic: “Vertical teaser for a fitness app — night city run, beat-synced”
+  - generic [ref=e66]:
+    - button "← site" [ref=e67] [cursor=pointer]
+    - button "↺ restart flow" [ref=e68] [cursor=pointer]
