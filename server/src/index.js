@@ -12,6 +12,7 @@ import { getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicV
 import { runDirectorChat, runDirectorChatStream } from './directorAgent.js';
 import { appendChat, readChat, clearChat } from './chatStore.js';
 import { STAGES, previewScript } from './pipeline.js';
+import { reviseScript } from './scriptRevise.js';
 import { readIr, writeIr, hasSnapshot, assetSnapshotDir } from './snapshot.js';
 import { validateIr } from './ir.js';
 import { runAiEdit } from './aiEdit.js';
@@ -133,6 +134,19 @@ app.post('/api/script/preview', requireAuth, async (req, res) => {
     res.json(out);
   } catch (e) {
     res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+// AI-revise the review script from a plain-language instruction → { script }.
+app.post('/api/script/revise', requireAuth, async (req, res) => {
+  const instruction = String(req.body?.instruction || '').trim();
+  const script = req.body?.script;
+  if (!instruction) return res.status(400).json({ error: 'instruction is required' });
+  if (!script?.scenes?.length) return res.status(400).json({ error: 'script is required' });
+  try {
+    res.json({ script: await reviseScript(script, instruction) });
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
   }
 });
 
@@ -437,6 +451,14 @@ app.delete('/api/projects/:id', requireAuth, async (req, res) => {
 app.get('/api/projects/:id/file', async (req, res) => {
   const p = await getProject(req.params.id);
   if (!p || !p.videoPath) return res.status(404).json({ error: 'not found' });
+  // ?download forces a save-as (Content-Disposition: attachment) — the browser
+  // download attribute is ignored cross-origin, so the header is what makes the
+  // Export button download instead of navigating to the video.
+  if (req.query.download !== undefined) {
+    const q = String(req.query.download || '');
+    const name = (/\.mp4$/i.test(q) ? q : `${p.title || 'squook-video'}.mp4`).replace(/[^\w.-]+/g, '_');
+    res.setHeader('Content-Disposition', `attachment; filename="${name}"`);
+  }
   await streamFile(req, res, p.videoPath, 'video/mp4');
 });
 

@@ -43,7 +43,10 @@ export function validateIr(ir) {
     if (!Number.isFinite(md[k]) || md[k] <= 0) fail(`metadata.${k} invalid`);
   }
   if (!Array.isArray(ir.scenes) || !ir.scenes.length) fail('scenes must be a non-empty array');
-  if (ir.scenes.length > 60) fail('too many scenes');
+  // A sanity cap against pathological IRs, not a product limit — long videos are
+  // legitimate (a ~7-min explainer is ~60 scenes at ~7s each). Generation renders
+  // without validating, so keep this well above real content or HD re-render 422s.
+  if (ir.scenes.length > 400) fail('too many scenes (over 400)');
 
   ir.scenes.forEach((s, i) => {
     const at = `scene ${i + 1}`;

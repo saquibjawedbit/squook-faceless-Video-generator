@@ -37,6 +37,11 @@ export const previewScript = ({ prompt, format, duration, genre, uploadNames }) 
   jfetch('/api/script/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ prompt, format, duration, genre, uploadNames: uploadNames || [] }) });
 
+// AI-revise the review script from an instruction → { script }.
+export const reviseScript = ({ script, instruction }) =>
+  jfetch('/api/script/revise', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ script, instruction }) }).then((r) => r.script);
+
 // ——— Content presets (genre) ———
 // { builtins:[{id,label,description,icon}], custom:[{id,label,description,bundle}] }
 export const listPresets = () => jfetch('/api/presets');

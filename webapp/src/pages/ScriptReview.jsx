@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Box from '../lib/Box.jsx';
 import { css } from '../lib/css.js';
+import { reviseScript } from '../lib/api.js';
 
 const mono = "'JetBrains Mono',monospace";
 const grotesk = "'Schibsted Grotesk',sans-serif";
@@ -81,6 +82,8 @@ export default function ScriptReview({ review, prompt, busy, onBack, onGenerate 
   useEffect(() => {
     const onKey = (e) => {
       if (!(e.metaKey || e.ctrlKey)) return;
+      // The revise prompt is an <input> — let it do native text undo there.
+      if (e.target && e.target.tagName === 'INPUT') return;
       const k = e.key.toLowerCase();
       if (k === 'z') { e.preventDefault(); (e.shiftKey ? redo : undo)(); }
       else if (k === 'y') { e.preventDefault(); redo(); }
@@ -88,6 +91,34 @@ export default function ScriptReview({ review, prompt, busy, onBack, onGenerate 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
+
+  // AI revise — send the current (edited) script + instruction to the agent.
+  const [revising, setRevising] = useState(false);
+  const [err, setErr] = useState('');
+  const promptRef = useRef(null);
+
+  const revise = () => {
+    const instruction = (promptRef.current?.value || '').trim();
+    if (!instruction || revising) return;
+    setRevising(true); setErr('');
+    const orig = review?.script || {};
+    reviseScript({ script: { ...orig, scenes }, instruction })
+      .then((revised) => {
+        past.current.push(scenes); // AI revisions are undoable too
+        future.current = [];
+        lastEditAt.current = 0;
+        setScenes((revised.scenes || []).map((s, i) => ({
+          index: s.index ?? i + 1,
+          narration: s.narration || '',
+          on_screen_text: s.on_screen_text || '',
+          visual: s.visual || '',
+          duration_seconds: s.duration_seconds,
+        })));
+        if (promptRef.current) promptRef.current.value = '';
+        setRevising(false);
+      })
+      .catch((e) => { setRevising(false); setErr(e.message || 'Revision failed — try rephrasing'); });
+  };
   const total = scenes.reduce((n, s) => n + (s.duration_seconds || 0), 0);
   const words = scenes.reduce((n, s) => n + (s.narration.trim() ? s.narration.trim().split(/\s+/).length : 0), 0);
 
@@ -166,6 +197,25 @@ export default function ScriptReview({ review, prompt, busy, onBack, onGenerate 
         <p style={{ margin: '26px 0 0', fontSize: 12.5, lineHeight: 1.6, color: 'rgba(244,243,240,0.38)' }}>
           The visuals (footage, graphics, music) are chosen when you generate. You can restyle everything in the editor afterward.
         </p>
+      </div>
+
+      {/* AI-revise bar — the instruction goes to the director, who rewrites the script */}
+      <div style={css('position:fixed;left:0;right:0;bottom:0;z-index:6;backdrop-filter:blur(10px);background:rgba(11,11,14,0.82);border-top:1px solid rgba(255,255,255,0.08)')}>
+        <div style={css('max-width:840px;margin:0 auto;padding:13px 24px')}>
+          {err && <div style={{ fontSize: 12, color: '#ff9b7a', marginBottom: 8 }}>{err}</div>}
+          <div style={css('display:flex;gap:8px;align-items:center;border:1px solid rgba(255,255,255,0.14);border-radius:12px;background:rgba(255,255,255,0.03);padding:5px 5px 5px 14px')}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flex: 'none' }}><path d="M12 3l1.9 5.6L20 10l-6.1 1.4L12 17l-1.9-5.6L4 10l6.1-1.4z" /></svg>
+            <input
+              ref={promptRef} type="text" disabled={revising}
+              placeholder="Ask the director to revise — e.g. “make it punchier” or “add a scene on pricing”"
+              onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); revise(); } }}
+              style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', background: 'transparent', color: '#F4F3F0', fontSize: 14 }}
+            />
+            <Box t="button" onClick={revise} disabled={revising}
+              s={'cursor:pointer;border:none;border-radius:9px;padding:9px 16px;font-size:13.5px;font-weight:600;background:var(--accent);color:#0B0B0E;transition:filter .15s' + (revising ? ';opacity:0.6;pointer-events:none' : '')}
+              sh="filter:brightness(1.1)">{revising ? 'Revising…' : 'Revise'}</Box>
+          </div>
+        </div>
       </div>
     </div>
   );

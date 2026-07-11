@@ -451,19 +451,62 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
     setState((st) => ({ tf: { ...st.tf, [id]: { ...st.tf[id], [prop]: +val } } }));
   };
 
-  // Export downloads the real rendered MP4 when a project is loaded.
-  const doExport = async () => {
+  // Trigger a browser download of a rendered MP4 URL. The `download` attribute
+  // is ignored cross-origin (the webapp and API are different origins), so we
+  // ask the server (or Supabase) for Content-Disposition: attachment via a query
+  // param — that's what makes it save instead of navigate to the video.
+  const triggerDownload = (url) => {
+    const name = (stateRef.current.projTitle || 'squook-video').replace(/[^\w-]+/g, '_') + '.mp4';
+    const href = url + (url.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(name);
+    const a = document.createElement('a');
+    a.href = href;
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+  };
+
+  // Download the current preview render (540p) as-is — instant, no re-render.
+  const exportPreview = async () => {
     const id = stateRef.current.projId;
+    setState({ exportMenu: false });
     if (!id) { toast('▸ Export isn’t wired for the demo timeline — open a generated video to export.'); return; }
     try {
-      const url = await getPlaybackUrl(id);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = (stateRef.current.projTitle || 'squook-video').replace(/[^\w-]+/g, '_') + '.mp4';
-      a.target = '_blank'; a.rel = 'noopener';
-      document.body.appendChild(a); a.click(); a.remove();
+      triggerDownload(await getPlaybackUrl(id));
       toast('▸ Downloading your video…');
     } catch (e) { toast('▸ Export failed — ' + (e.message || e)); }
+  };
+
+  // Render the current edit at full 1080p, then download it automatically.
+  const exportHD = async () => {
+    const s0 = stateRef.current;
+    setState({ exportMenu: false });
+    if (!s0.projId || !s0.ir) { toast('HD export needs a generated project — this is the demo timeline.'); return; }
+    if (s0.rendering) { toast('Already rendering — hang tight.'); return; }
+    clearTimeout(saveT.current);
+    setState({ rendering: true, renderPct: 0, renderStage: 'queued' });
+    try {
+      await rerenderProject(s0.projId, stateRef.current.ir, 'hd');
+      setState({ saveState: 'saved' });
+      toast('▸ Rendering HD (1080p) — we’ll download it when it’s ready…');
+      clearInterval(pollIv.current);
+      pollIv.current = setInterval(async () => {
+        try {
+          const p = await getProject(s0.projId);
+          if (p.status === 'done') {
+            clearInterval(pollIv.current);
+            let url = await getPlaybackUrl(s0.projId);
+            url += (url.includes('?') ? '&' : '?') + 'v=' + p.draft;
+            setState({ rendering: false, draft: p.draft, videoUrl: url, vTime: 0, playing: false });
+            triggerDownload(url);
+            toast('✓ HD ready — downloading');
+          } else if (p.status === 'failed') {
+            clearInterval(pollIv.current); setState({ rendering: false });
+            toast('HD export failed — ' + (p.error || 'unknown error'));
+          } else {
+            setState({ renderPct: p.progress || 0, renderStage: p.stage || '' });
+          }
+        } catch { /* transient poll error — keep polling */ }
+      }, 1500);
+    } catch (e) { setState({ rendering: false }); toast('HD export failed — ' + (e.message || e)); }
   };
 
   // Save this project's look (theme + inferred media mix) as a reusable preset
@@ -1558,7 +1601,31 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
             </div>
             <Box t="button" onClick={doSavePreset} title="Save this video's look as a reusable preset" s="cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:8px 12px;font-size:13px;color:rgba(244,243,240,0.85);transition:border-color .15s" sh="border-color:rgba(255,255,255,0.3)">★ Save style</Box>
             <Box t="button" onClick={doRender} s={'cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:8px 14px;font-size:13px;transition:border-color .15s;' + (S.rendering ? 'color:var(--accent)' : 'color:rgba(244,243,240,0.85)')} sh="border-color:rgba(255,255,255,0.3)">{S.rendering ? `Rendering ${S.renderPct}%` : 'Re-render'}</Box>
-            <Box t="button" onClick={doExport} s="cursor:pointer;border:none;border-radius:9px;padding:8px 18px;background:var(--accent);color:#0B0B0E;font-size:13.5px;font-weight:600;transition:filter .15s" sh="filter:brightness(1.12)">Export</Box>
+            <div style={css('position:relative')}>
+              <Box t="button" onClick={() => setState({ exportMenu: !S.exportMenu })} s="cursor:pointer;border:none;border-radius:9px;padding:8px 16px;background:var(--accent);color:#0B0B0E;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:filter .15s" sh="filter:brightness(1.12)">
+                Export
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+              </Box>
+              {S.exportMenu && (
+                <>
+                  <div onClick={() => setState({ exportMenu: false })} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                  <div style={css('position:absolute;right:0;top:calc(100% + 9px);z-index:41;width:268px;background:#141418;border:1px solid rgba(255,255,255,0.13);border-radius:13px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,0.55)')}>
+                    <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.14em', color: 'rgba(244,243,240,0.4)', padding: '9px 11px 7px' }}>DOWNLOAD QUALITY</div>
+                    <Box t="button" onClick={exportPreview} s="cursor:pointer;width:100%;text-align:left;background:none;border:none;border-radius:9px;padding:10px 11px;display:block;transition:background .12s" sh="background:rgba(255,255,255,0.05)">
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: '#F4F3F0' }}>Preview · 540p</div>
+                      <div style={{ fontSize: 11.5, color: 'rgba(244,243,240,0.5)', marginTop: 2 }}>Instant — downloads the current render</div>
+                    </Box>
+                    <Box t="button" onClick={exportHD} disabled={S.rendering} s={'cursor:pointer;width:100%;text-align:left;background:none;border:none;border-radius:9px;padding:10px 11px;display:block;transition:background .12s' + (S.rendering ? ';opacity:0.5;pointer-events:none' : '')} sh="background:rgba(255,255,255,0.05)">
+                      <div style={{ fontSize: 13.5, fontWeight: 600, color: '#F4F3F0', display: 'flex', alignItems: 'center', gap: 7 }}>
+                        Full HD · 1080p
+                        <span style={{ fontFamily: mono, fontSize: 8.5, letterSpacing: '0.1em', background: 'color-mix(in oklab, var(--accent) 22%, transparent)', color: 'var(--accent)', padding: '2px 6px', borderRadius: 5 }}>BEST</span>
+                      </div>
+                      <div style={{ fontSize: 11.5, color: 'rgba(244,243,240,0.5)', marginTop: 2 }}>Re-renders at full quality, then downloads</div>
+                    </Box>
+                  </div>
+                </>
+              )}
+            </div>
             <span style={css('width:31px;height:31px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:rgba(244,243,240,0.8)')}>Y</span>
           </div>
         </header>

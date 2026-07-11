@@ -4,6 +4,7 @@ import { css } from '../lib/css.js';
 import { navigate } from '../lib/router.js';
 import { createProject, previewScript, listProjects, getProject, thumbSrc, listPresets, createPreset, deletePreset } from '../lib/api.js';
 import ScriptReview from './ScriptReview.jsx';
+import LoadingScreen from './LoadingScreen.jsx';
 
 /**
  * Squook Home — a faithful React port of `Squook Home.dc.html`: the logged-in
@@ -287,6 +288,18 @@ export default function SquookHome({ userName = 'Alex' }) {
 
   /* ---- computed render values ---- */
   const S = state;
+
+  // Generating (after approving the script) → full-screen progress.
+  if (S.generating) {
+    return (
+      <LoadingScreen
+        stage={S.genStage}
+        progress={S.genProgress}
+        prompt={S.prompt.trim()}
+        title={S.review?.script?.metadata?.title || ''}
+      />
+    );
+  }
 
   // Review step: the script is written — show it for edit/approval before render.
   if (S.review) {
