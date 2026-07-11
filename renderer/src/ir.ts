@@ -34,6 +34,10 @@ export type VideoLayer = {
   freeze_last: boolean;
   trim_start_s: number;
   trim_end_s: number | null;
+  // Clip's own audio level, 0..1. Absent/0 = muted (the default — clips are
+  // silent unless mixed up manually or by the Director), so existing IRs are
+  // unchanged. 1 = full volume.
+  volume?: number;
   transform?: Transform;
 };
 
@@ -78,13 +82,59 @@ export type GraphicLayer = {
     suffix?: string;
     label?: string;
     icons?: string[];
+    // Per-icon fetched SVG paths (Iconify). Aligned with `icons`; an entry may
+    // be null when the fetch failed, in which case the renderer uses an emoji.
+    icon_srcs?: (string | null)[];
     annotation?: 'arrow' | 'circle' | 'underline';
   };
 };
 
 export type ShaderIRLayer = {
   type: 'shader';
-  kind: 'nebula' | 'waves' | 'grid';
+  kind: 'nebula' | 'waves' | 'grid' | 'aurora' | 'mesh' | 'rays';
+  speed?: number; // time multiplier (default 1); <1 calmer, >1 livelier
+  intensity?: number; // strength of the effect over the base bg (default 1)
+  color_a?: string; // hex override for the primary accent the shader uses
+  color_b?: string; // hex override for the secondary accent
+  transform?: Transform;
+};
+
+// A keyframe animates a subset of a shape's props at time `t` (seconds into the
+// scene). Missing props hold their base/previous value.
+export type MotionKeyframe = {
+  t: number;
+  x?: number; // 0..100, % of canvas width
+  y?: number; // 0..100, % of canvas height
+  r?: number; // 0..100, % of min(width,height)
+  scale?: number;
+  rotate?: number; // degrees
+  opacity?: number; // 0..1
+};
+
+// One primitive in a generic vector animation. Coordinates are 0..100 (% of the
+// canvas) so they're resolution-independent. Colors are a theme token
+// (accent|accent2|text|bg) or a hex string.
+export type MotionShape = {
+  kind: 'circle' | 'ring' | 'dot' | 'rect' | 'line' | 'text';
+  x?: number; y?: number; // center (line: start point)
+  x2?: number; y2?: number; // line end point
+  r?: number; // circle/ring/dot radius, % of min dimension
+  w?: number; h?: number; // rect size, % of canvas
+  text?: string;
+  size?: number; // text px
+  fill?: string;
+  stroke?: string;
+  stroke_width?: number; // px
+  opacity?: number;
+  keyframes?: MotionKeyframe[];
+};
+
+// A data-authored custom animation: the Director composes shapes + keyframes and
+// this layer interprets them deterministically — no generated code, no assets.
+export type MotionLayer = {
+  type: 'motion';
+  shapes: MotionShape[];
+  bg?: string; // optional background fill (token or hex); default transparent
   transform?: Transform;
 };
 
@@ -127,7 +177,8 @@ export type Layer =
   | GraphicLayer
   | CaptionsLayer
   | LottieIRLayer
-  | ShaderIRLayer;
+  | ShaderIRLayer
+  | MotionLayer;
 
 
 export type Transition = {

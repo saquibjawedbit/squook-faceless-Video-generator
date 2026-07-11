@@ -65,9 +65,14 @@ export function deriveView(ir) {
   let start = 0;
   (ir.scenes || []).forEach((sc, si) => {
     const dur = sc.duration_s;
+    // A clip's own audio only exists when its primary visual is a video.
+    const pvi = primaryVisualIx(sc);
+    const pv = pvi >= 0 ? sc.layers[pvi] : null;
+    const isVideo = pv?.type === 'video';
     clips.push({
       id: 'sc' + si, sceneIx: si, scene: 'S' + (si + 1), label: sceneLabel(sc),
       src: 'Scene ' + (si + 1), dur, grad: sceneGrad(si), narration: sc.narration || '',
+      hasAudio: isVideo, vol: isVideo ? Math.round((pv.volume ?? 0) * 100) : 0,
     });
     (sc.layers || []).forEach((l, li) => {
       const id = `ly${si}_${li}`;

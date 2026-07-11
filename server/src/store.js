@@ -39,7 +39,7 @@ function publicView(p) {
   };
 }
 
-export async function createProject({ userId, prompt, format, preset, uploads, music, voice, duration }) {
+export async function createProject({ userId, prompt, format, preset, genre, presetBundle, uploads, music, voice, duration }) {
   const p = {
     id: randomUUID(),
     userId,
@@ -49,6 +49,11 @@ export async function createProject({ userId, prompt, format, preset, uploads, m
     // is backfilled from the render IR when the video finishes.
     format: format || '',
     preset,
+    // Content preset (genre): a built-in id or 'custom'. Persisted as a column
+    // so the card/regeneration knows it. A custom preset's full bundle rides
+    // `presetBundle` to the flow but isn't a column (passthrough, like music).
+    genre: genre || 'auto',
+    presetBundle: presetBundle || null,
     status: 'queued',
     stage: null,
     progress: 0,
@@ -69,7 +74,8 @@ export async function createProject({ userId, prompt, format, preset, uploads, m
   if (persistenceEnabled) {
     const { error } = await admin.from('projects').insert({
       id: p.id, user_id: userId, title: p.title, prompt, format: p.format,
-      preset, status: 'queued', progress: 0, uploads: p.uploads.map((u) => ({ name: u.name, size: u.size })),
+      preset, genre: p.genre, status: 'queued', progress: 0,
+      uploads: p.uploads.map((u) => ({ name: u.name, size: u.size })),
     });
     if (error) console.warn('[db] insert failed:', error.message);
   }
@@ -245,7 +251,7 @@ export async function reconcileInterrupted() {
 function fromRow(r) {
   return {
     id: r.id, userId: r.user_id, prompt: r.prompt, title: r.title,
-    format: r.format, preset: r.preset, status: r.status, stage: r.stage,
+    format: r.format, preset: r.preset, genre: r.genre || 'auto', status: r.status, stage: r.stage,
     progress: r.progress, error: r.error, uploads: r.uploads || [],
     storagePath: r.storage_path, thumbPath: r.thumb_path, durationS: r.duration_s,
     videoPath: null, createdAt: r.created_at,

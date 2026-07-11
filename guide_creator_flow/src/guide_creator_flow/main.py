@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from crewai.flow import Flow, and_, listen, start
 
-from guide_creator_flow import ir_builder
+from guide_creator_flow import ir_builder, presets
 from guide_creator_flow.crews.content_crew.content_crew import (
     AssetPlan,
     ContentCrew,
@@ -54,7 +54,9 @@ PRESETS = {
 
 class ContentState(BaseModel):
     prompt: str = ""
-    preset: str = "landscape"
+    preset: str = "landscape"     # aspect/runtime preset (landscape | reel)
+    genre: str = "auto"           # content preset (auto | educational | animation | images | custom)
+    preset_bundle: dict = {}      # the RESOLVED active preset bundle (see presets.py)
     script: dict = {}
     asset_plan: list = []
     render_ir: dict = {}
@@ -65,6 +67,12 @@ class ContentState(BaseModel):
     duration_s: int = 0          # target runtime; 0 = the preset's default
     sfx: bool = False            # transition/impact sound design — prompt opt-in
     uploads: list = []           # [{path, name, type}] — the user's own footage
+    # Review re-run: user-edited script (skips the crew) + the phase-1 asset plan.
+    edited_script: dict = {}
+    edited_asset_plan: list = []
+    # Preview mode: run ONLY directing, dump the script for the review screen,
+    # then stop (no TTS/assets/render).
+    preview_only: bool = False
     # Attribution for a fetched CC track (required credit); empty for the
     # synthesised bed, which is ours and needs none.
     music_credit: dict = {}
@@ -187,6 +195,7 @@ class ContentFlow(Flow[ContentState]):
                 (audio / name).unlink(missing_ok=True)
 
         explicit_preset = None
+        custom_bundle: dict = {}
         if crewai_trigger_payload:
             self.state.prompt = crewai_trigger_payload.get("prompt", DEFAULT_PROMPT)
             p = crewai_trigger_payload.get("preset") or ""
@@ -194,6 +203,10 @@ class ContentFlow(Flow[ContentState]):
                 explicit_preset = p
             elif p:
                 print(f"Unknown preset '{p}'; will infer from the prompt")
+            # Content preset (genre): a built-in id, or "custom" with a full
+            # bundle the server resolved from the user's saved preset.
+            self.state.genre = (crewai_trigger_payload.get("genre") or presets.DEFAULT_GENRE).lower()
+            custom_bundle = crewai_trigger_payload.get("preset_bundle") or {}
             self.state.music = (crewai_trigger_payload.get("music") or "").lower()
             self.state.voice = (crewai_trigger_payload.get("voice") or "").lower()
             # Legacy payloads carried duration as "15s"/"30s".
@@ -201,14 +214,29 @@ class ContentFlow(Flow[ContentState]):
             if d.rstrip("s").isdigit():
                 self.state.duration_s = int(d.rstrip("s"))
             self.state.uploads = crewai_trigger_payload.get("uploads") or []
+            # Review re-run: the user edited the script in the review screen. Skip
+            # the writing/directing crew and use their script + the phase-1 asset
+            # plan, so their exact words are what gets narrated & rendered.
+            self.state.edited_script = crewai_trigger_payload.get("edited_script") or {}
+            self.state.edited_asset_plan = crewai_trigger_payload.get("asset_plan") or []
+            self.state.preview_only = bool(crewai_trigger_payload.get("preview"))
             print(f"Using trigger payload: {crewai_trigger_payload}")
         else:
             if len(sys.argv) > 1:
                 self.state.prompt = sys.argv[1]
             else:
                 self.state.prompt = DEFAULT_PROMPT
-            if len(sys.argv) > 2 and sys.argv[2] in PRESETS:
-                explicit_preset = sys.argv[2]
+            # Extra positional args: an aspect preset and/or a content genre,
+            # in any order (`kickoff "<prompt>" reel images`).
+            for arg in sys.argv[2:]:
+                if arg in PRESETS:
+                    explicit_preset = arg
+                elif arg in presets.PRESETS:
+                    self.state.genre = arg
+
+        # Resolve the active content preset once; a custom bundle (already the
+        # full shape) wins, else the built-in for the genre, else auto.
+        self.state.preset_bundle = presets.resolve(self.state.genre, custom_bundle)
 
         # There are no composer knobs — the prompt IS the brief. Whatever the
         # caller didn't pin explicitly gets read out of the prompt; anything
@@ -224,9 +252,14 @@ class ContentFlow(Flow[ContentState]):
         self.state.music = self.state.music or intent.get("music", "")
         self.state.duration_s = self.state.duration_s or intent.get("duration_s", 0)
         self.state.sfx = bool(intent.get("sfx"))
+        # A content preset can carry default voice/music, but only as the LAST
+        # resort — an explicit payload value or a prompt-inferred one wins.
+        self.state.voice = self.state.voice or (self.state.preset_bundle.get("voice_default") or "")
+        self.state.music = self.state.music or (self.state.preset_bundle.get("music_default") or "")
 
         print(
             f"Prompt: {self.state.prompt} | Preset: {self.state.preset}"
+            + (f" | genre={self.state.genre}" if self.state.genre != presets.DEFAULT_GENRE else "")
             + (f" | ~{self.state.duration_s}s" if self.state.duration_s else "")
             + (f" | voice={self.state.voice}" if self.state.voice else "")
             + (f" | music={self.state.music}" if self.state.music else "")
@@ -258,30 +291,55 @@ class ContentFlow(Flow[ContentState]):
             uploads_brief = "The user did not upload any of their own footage."
         music_brief = self.state.music or "auto"
 
-        # A local model occasionally emits a directing script that fails
-        # validation; that's a dice roll, not a config problem, so one fresh
-        # attempt rescues the run instead of failing the whole generation.
-        script = None
-        for attempt in (1, 2):
-            result = (
-                ContentCrew()
-                .crew()
-                .kickoff(inputs={
-                    "prompt": self.state.prompt,
-                    "word_count": preset["word_count"],
-                    "runtime": preset["runtime"],
-                    "uploads": uploads_brief,
-                    "music": music_brief,
-                })
-            )
-            for task_output in result.tasks_output:
-                if isinstance(task_output.pydantic, DirectionScript):
-                    script = task_output.pydantic
-            if script is not None:
-                break
-            print(f"Directing task did not produce a valid DirectionScript (attempt {attempt})")
-        if script is None:
-            raise RuntimeError("Directing task did not produce a valid DirectionScript")
+        # Soft steering: the active preset's guidance snippets ride the crew
+        # inputs. Empty for 'auto', so behaviour is unchanged. Each carries its
+        # own "Genre direction —" prefix (or "") so the task YAML can drop it on
+        # its own line without an awkward dangling label.
+        guidance = (self.state.preset_bundle or {}).get("guidance") or {}
+
+        def _genre_line(key: str) -> str:
+            text = (guidance.get(key) or "").strip()
+            return f"Genre direction — {text}" if text else ""
+
+        writer_guidance = _genre_line("writer")
+        director_guidance = _genre_line("director")
+        asset_guidance = _genre_line("asset")
+
+        # Review re-run: the user edited the script — skip the crew entirely and
+        # adopt their exact scenes + the phase-1 asset plan. Everything downstream
+        # (TTS on the new words, retiming, captions, render) runs as normal.
+        if self.state.edited_script and self.state.edited_script.get("scenes"):
+            print("Using user-edited script from the review screen (skipping the crew)")
+            script = DirectionScript(**self.state.edited_script)
+            result = None
+        else:
+            # A local model occasionally emits a directing script that fails
+            # validation; that's a dice roll, not a config problem, so one fresh
+            # attempt rescues the run instead of failing the whole generation.
+            script = None
+            for attempt in (1, 2):
+                result = (
+                    ContentCrew()
+                    .crew()
+                    .kickoff(inputs={
+                        "prompt": self.state.prompt,
+                        "word_count": preset["word_count"],
+                        "runtime": preset["runtime"],
+                        "uploads": uploads_brief,
+                        "music": music_brief,
+                        "writer_guidance": writer_guidance,
+                        "director_guidance": director_guidance,
+                        "asset_guidance": asset_guidance,
+                    })
+                )
+                for task_output in result.tasks_output:
+                    if isinstance(task_output.pydantic, DirectionScript):
+                        script = task_output.pydantic
+                if script is not None:
+                    break
+                print(f"Directing task did not produce a valid DirectionScript (attempt {attempt})")
+            if script is None:
+                raise RuntimeError("Directing task did not produce a valid DirectionScript")
         print("Direction script generated")
 
         # Strip any direction the director leaked into the spoken line (section
@@ -302,15 +360,42 @@ class ContentFlow(Flow[ContentState]):
         )
         self.state.script = script.model_dump()
 
-        if isinstance(result.pydantic, AssetPlan):
+        if result is None:
+            # Edited-script re-run: reuse the phase-1 asset plan so visuals stay
+            # exactly as reviewed (no fresh, non-deterministic stock search).
+            self.state.asset_plan = self.state.edited_asset_plan or []
+        elif isinstance(result.pydantic, AssetPlan):
             self.state.asset_plan = result.pydantic.model_dump()["assets"]
         else:
             print("Warning: asset task did not produce a valid AssetPlan, skipping assets")
             self.state.asset_plan = []
 
+        # Hard-enforce the content preset's media policy BEFORE fetch_assets
+        # consumes the plan, so the genre's promise (e.g. images → only photos)
+        # holds regardless of what the curator chose. No-op for 'auto'.
+        before = [(e.get("scene_index"), e.get("media_type")) for e in self.state.asset_plan]
+        presets.apply_media_policy(self.state.asset_plan, self.state.preset_bundle)
+        after = [(e.get("scene_index"), e.get("media_type")) for e in self.state.asset_plan]
+        changed = sum(1 for b, a in zip(before, after) if b != a)
+        if changed:
+            print(f"Preset '{self.state.genre}': media policy rewrote {changed} scene(s)")
+
+        # Preview mode: the script (+ asset plan) is all the review screen needs.
+        # Dump it and let the downstream stages no-op, so no TTS/assets/render run.
+        if self.state.preview_only:
+            out_dir = Path("output"); out_dir.mkdir(exist_ok=True)
+            (out_dir / "preview_script.json").write_text(
+                json.dumps({"script": self.state.script, "asset_plan": self.state.asset_plan},
+                           ensure_ascii=False, indent=2),
+                encoding="utf-8",
+            )
+            print("Saved output/preview_script.json (preview mode — stopping before render)")
+
     @listen(generate_content)
     def generate_narration(self):
         _mark("generate_narration")
+        if self.state.preview_only:
+            return
         # "none" = no voiceover: keep the word-count durations, no audio track.
         if self.state.voice == "none":
             print("Voiceover disabled by user choice (no narration audio)")
@@ -347,6 +432,8 @@ class ContentFlow(Flow[ContentState]):
     @listen(generate_content)
     def fetch_assets(self):
         _mark("fetch_assets")
+        if self.state.preview_only:
+            return
         print(f"Fetching assets for {len(self.state.asset_plan)} scenes")
         assets_dir = Path("output/assets")
         scenes_by_index = {scene["index"]: scene for scene in self.state.script["scenes"]}
@@ -488,6 +575,8 @@ class ContentFlow(Flow[ContentState]):
     @listen(fetch_assets)
     def fetch_music(self):
         _mark("fetch_music")
+        if self.state.preview_only:
+            return
         """Generate an original background track from the Director's brief with
         MusicGen (Hugging Face, Asset stage). The output is ours — no
         attribution. Falls back silently to a synthesised bed (in compile_ir)
@@ -522,6 +611,8 @@ class ContentFlow(Flow[ContentState]):
     @listen(and_(generate_narration, fetch_music))
     def compile_ir(self):
         _mark("compile_ir")
+        if self.state.preview_only:
+            return
         print("Compiling render IR")
         scene_facts = [
             {
@@ -534,12 +625,20 @@ class ContentFlow(Flow[ContentState]):
             }
             for scene in self.state.script["scenes"]
         ]
+        bundle = self.state.preset_bundle or {}
+        media_policy = bundle.get("media_policy") or {}
+        ken_burns_all = bool(media_policy.get("ken_burns_all"))
+        theme_bias = bundle.get("theme") or {}
+        guidance = bundle.get("guidance") or {}
         try:
-            plan = ir_builder.compile_render_plan(scene_facts)
+            plan = ir_builder.compile_render_plan(
+                scene_facts, ken_burns_all=ken_burns_all, guidance=guidance.get("director", "")
+            )
         except Exception as e:
             print(f"Technical Director failed ({e}); using default treatment")
             plan = ir_builder.RenderPlan(
-                scenes=[ir_builder.default_scene_plan(f) for f in scene_facts]
+                scenes=[ir_builder.default_scene_plan(f, ken_burns_all=ken_burns_all)
+                        for f in scene_facts]
             )
 
         graphic_indexes = {
@@ -556,9 +655,14 @@ class ContentFlow(Flow[ContentState]):
             if scene["index"] in graphic_indexes
         ]
         print(f"Designing graphics for {len(graphic_facts)} scenes")
-        graphics = ir_builder.design_graphics(graphic_facts)
+        graphics = ir_builder.design_graphics(graphic_facts, guidance=guidance.get("director", ""))
 
-        theme = ir_builder.build_theme(self.state.prompt)
+        theme = ir_builder.build_theme(
+            self.state.prompt,
+            mood_pool=theme_bias.get("mood_pool"),
+            font_pool=theme_bias.get("font_pool"),
+            guidance=guidance.get("design", ""),
+        )
         # Music ladder: honour the decision (user chip > Director brief); when
         # music is wanted, use the fetched track, else synthesise a bed.
         brief = (self.state.script or {}).get("music") or {}
@@ -622,6 +726,8 @@ class ContentFlow(Flow[ContentState]):
     @listen(compile_ir)
     def save_content(self):
         _mark("save_content")
+        if self.state.preview_only:
+            return
         print("Saving direction script")
         output_dir = Path("output")
         output_dir.mkdir(exist_ok=True)
@@ -632,6 +738,10 @@ class ContentFlow(Flow[ContentState]):
             f.write(self.state.direction_script)
         with open(output_dir / "render_ir.json", "w") as f:
             json.dump(self.state.render_ir, f, indent=2, ensure_ascii=False)
+        # The asset plan is persisted so a review re-run can reuse it verbatim
+        # (keeping the same visuals for the user's edited script).
+        with open(output_dir / "asset_plan.json", "w") as f:
+            json.dump(self.state.asset_plan, f, indent=2, ensure_ascii=False)
         print("Saved output/direction_script.json and output/render_ir.json")
         self._sync_renderer()
         _mark("end")  # flush the final stage's timing

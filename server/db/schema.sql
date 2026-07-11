@@ -8,7 +8,8 @@ create table if not exists public.projects (
   title        text not null,
   prompt       text not null,
   format       text,
-  preset       text,
+  preset       text,                              -- aspect/runtime preset (landscape | reel)
+  genre        text not null default 'auto',      -- content preset (auto | educational | animation | images | custom-…)
   status       text not null default 'queued',   -- queued | running | done | failed
   stage        text,
   progress     int  not null default 0,
@@ -47,5 +48,48 @@ create policy "projects_own_update" on public.projects
 
 drop policy if exists "projects_own_delete" on public.projects;
 create policy "projects_own_delete" on public.projects
+  for delete to authenticated
+  using ((select auth.uid()) = user_id);
+
+-- Existing databases created before content presets: add the column in place.
+-- (No-op once the column exists; safe to run alongside the create-table above.)
+alter table public.projects add column if not exists genre text not null default 'auto';
+
+
+-- ── Content presets (the "genre" dimension) ────────────────────────────────
+-- A user's saved, reusable style. `bundle` is the full preset shape the flow
+-- consumes (media_policy, theme, guidance, voice/music defaults). Built-in
+-- presets live in code, not here — this table is only the user's own.
+create table if not exists public.presets (
+  id         text primary key,                    -- 'custom-xxxxxxxx' (assigned by the server)
+  user_id    uuid not null references auth.users(id) on delete cascade,
+  label      text not null,
+  bundle     jsonb not null default '{}'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+create index if not exists presets_user_created_idx
+  on public.presets (user_id, created_at desc);
+
+alter table public.presets enable row level security;
+
+drop policy if exists "presets_own_select" on public.presets;
+create policy "presets_own_select" on public.presets
+  for select to authenticated
+  using ((select auth.uid()) = user_id);
+
+drop policy if exists "presets_own_insert" on public.presets;
+create policy "presets_own_insert" on public.presets
+  for insert to authenticated
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "presets_own_update" on public.presets;
+create policy "presets_own_update" on public.presets
+  for update to authenticated
+  using ((select auth.uid()) = user_id)
+  with check ((select auth.uid()) = user_id);
+
+drop policy if exists "presets_own_delete" on public.presets;
+create policy "presets_own_delete" on public.presets
   for delete to authenticated
   using ((select auth.uid()) = user_id);

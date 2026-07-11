@@ -12,12 +12,14 @@ import os
 import random
 import re
 import secrets
+from pathlib import Path
 from typing import Literal
 
 from crewai import Agent
 from pydantic import BaseModel
 
 from guide_creator_flow.crews.content_crew.content_crew import llm
+from guide_creator_flow.tools import icons
 
 FPS = 30
 WIDTH = 1920
@@ -121,12 +123,26 @@ MOOD_DEFAULT_FONT = {
 }
 
 
-def build_theme(prompt: str) -> dict:
+def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "") -> dict:
     """Prompt decides the mood (LLM); a seed decides the concrete design
     within that mood — so re-running the same prompt still varies.
-    Set DESIGN_SEED for a reproducible look."""
-    mood, music_mood = "calm", "calm"
-    font_style = MOOD_DEFAULT_FONT["calm"]
+    Set DESIGN_SEED for a reproducible look.
+
+    A content preset may narrow the Design Director's palette: `mood_pool` /
+    `font_pool` restrict the choices (and the fallback) to a subset, and
+    `guidance` adds a one-line steer. Unknown pool entries are ignored; an empty
+    intersection falls back to the full vocabulary."""
+    # Restrict the offered moods/fonts to the preset's pools, keeping the
+    # authored order. An empty/nonsense pool leaves the full vocabulary.
+    moods = tuple(m for m in MOODS if m in set(mood_pool)) if mood_pool else MOODS
+    moods = moods or MOODS
+    fonts = tuple(f for f in FONT_STYLES if f in set(font_pool)) if font_pool else tuple(FONT_STYLES)
+    fonts = fonts or tuple(FONT_STYLES)
+    default_mood = moods[0] if mood_pool else "calm"
+    default_font = fonts[0] if font_pool else MOOD_DEFAULT_FONT[default_mood]
+
+    mood, music_mood = default_mood, "calm"
+    font_style = default_font
     try:
         agent = Agent(
             role="Design Director",
@@ -142,11 +158,12 @@ def build_theme(prompt: str) -> dict:
         result = agent.kickoff(
             "Choose the art direction for a short video about:\n"
             f'"{prompt}"\n'
-            f"mood (emotional register): one of {list(MOODS)}\n"
+            + (f"{guidance}\n" if guidance else "")
+            + f"mood (emotional register): one of {list(moods)}\n"
             f"music: one of {list(MUSIC_MOODS)}\n"
             "font (the typographic personality that best fits this topic — "
             f"e.g. a serif reads editorial/premium, a mono reads technical): "
-            f"one of {list(FONT_STYLES)}\n"
+            f"one of {list(fonts)}\n"
             'Respond with RAW JSON ONLY: {"mood": "...", "music": "...", "font": "..."}'
         )
         text = result.raw.strip()
@@ -154,11 +171,14 @@ def build_theme(prompt: str) -> dict:
         if fence:
             text = fence.group(1).strip()
         data = json.loads(text)
-        mood = _pick(data.get("mood"), MOODS, "calm")
+        mood = _pick(data.get("mood"), moods, default_mood)
         music_mood = _pick(data.get("music"), MUSIC_MOODS, "calm")
-        font_style = _pick(data.get("font"), tuple(FONT_STYLES), MOOD_DEFAULT_FONT[mood])
+        # Fallback font must stay inside the pool; only when unconstrained do we
+        # fall back to the mood's default font (original behaviour).
+        font_fallback = fonts[0] if font_pool else MOOD_DEFAULT_FONT.get(mood, default_font)
+        font_style = _pick(data.get("font"), fonts, font_fallback)
     except Exception as e:
-        print(f"Design Director failed ({e}); using calm defaults")
+        print(f"Design Director failed ({e}); using {default_mood} defaults")
 
     seed = os.getenv("DESIGN_SEED")
     rng = random.Random(int(seed) if seed else secrets.randbits(32))
@@ -217,10 +237,11 @@ class RenderPlan(BaseModel):
     scenes: list[ScenePlan]
 
 
-def default_scene_plan(fact: dict) -> ScenePlan:
+def default_scene_plan(fact: dict, ken_burns_all: bool = False) -> ScenePlan:
+    is_still = fact["media"] in ("photo", "image")
     return ScenePlan(
         index=fact["index"],
-        ken_burns="zoom_in" if fact["media"] == "photo" else "none",
+        ken_burns="zoom_in" if (is_still or (ken_burns_all and is_still)) else "none",
         text_position="lower_third" if fact["on_screen_text"] else "none",
         text_enter="fade_up" if fact["on_screen_text"] else "none",
     )
@@ -278,9 +299,13 @@ def _parse_render_plan(raw: str) -> RenderPlan:
     return RenderPlan(scenes=plans)
 
 
-def compile_render_plan(scene_facts: list[dict]) -> RenderPlan:
+def compile_render_plan(scene_facts: list[dict], ken_burns_all: bool = False,
+                        guidance: str = "") -> RenderPlan:
     """Pass 2: the Technical Director decides creative treatment only.
-    Mechanical truths (trims, frame counts) are resolved in code afterwards."""
+    Mechanical truths (trims, frame counts) are resolved in code afterwards.
+
+    `ken_burns_all` guarantees a Ken Burns move on every still (for the images
+    preset); `guidance` adds a one-line genre steer to the prompt."""
     agent = Agent(
         role="Technical Director",
         goal=(
@@ -297,7 +322,8 @@ def compile_render_plan(scene_facts: list[dict]) -> RenderPlan:
         verbose=True,
     )
     prompt = (
-        "For EVERY scene below, choose its render treatment. Rules:\n"
+        (f"{guidance}\n" if guidance else "")
+        + "For EVERY scene below, choose its render treatment. Rules:\n"
         "- fit: 'cover' normally; 'contain' only if cropping would destroy the visual.\n"
         "- if_too_short: what to do when the clip is shorter than the scene "
         "(loop for ambient/abstract footage, freeze for a strong final pose, "
@@ -321,15 +347,30 @@ def compile_render_plan(scene_facts: list[dict]) -> RenderPlan:
     plan = _parse_render_plan(result.raw)
     if not plan.scenes:
         raise ValueError("Technical Director returned no usable plan")
+    if ken_burns_all:
+        # Images preset: every still must move. Force a default zoom where the
+        # director left it static (leave any direction it did pick).
+        stills = {f["index"] for f in scene_facts if f.get("media") in ("photo", "image")}
+        for scene_plan in plan.scenes:
+            if scene_plan.index in stills and scene_plan.ken_burns == "none":
+                scene_plan.ken_burns = "zoom_in"
     return plan
 
 
 # ------------------------------------------------------- Pass 2b: graphics
 
 GRAPHIC_KINDS = ("node_graph", "bar_chart", "counter", "icon_row", "title_card", "annotate")
+# Concept vocabulary the Graphic Designer picks from for icon_row scenes. These
+# are resolved to real Iconify SVGs at build time (tools/icons.py); the list is
+# a menu of well-supported concepts, but any word resolves via Iconify search.
 ICON_NAMES = (
-    "brain", "chip", "database", "network", "eye", "gear",
-    "chart", "lightbulb", "clock", "check", "cross", "arrow",
+    "brain", "chip", "cpu", "database", "network", "server", "eye", "gear",
+    "chart", "growth", "lightbulb", "idea", "clock", "check", "cross", "arrow",
+    "rocket", "cloud", "lock", "shield", "code", "money", "people", "user",
+    "globe", "phone", "email", "search", "star", "heart", "fire", "flash",
+    "speed", "target", "map", "calendar", "document", "folder", "cart", "gift",
+    "warning", "info", "link", "robot", "atom", "dna", "leaf", "sun", "key",
+    "trophy", "book", "wifi", "battery",
 )
 
 
@@ -415,9 +456,10 @@ def _sanitize_graphic(entry: dict, fact: dict) -> GraphicSpec:
     return spec
 
 
-def design_graphics(graphic_facts: list[dict]) -> dict[int, GraphicSpec]:
+def design_graphics(graphic_facts: list[dict], guidance: str = "") -> dict[int, GraphicSpec]:
     """Design animated graphics for scenes the curator flagged as 'graphic'.
-    Returns {scene_index: spec}; falls back to title cards on any failure."""
+    Returns {scene_index: spec}; falls back to title cards on any failure.
+    `guidance` adds an optional one-line genre steer to the prompt."""
     if not graphic_facts:
         return {}
     agent = Agent(
@@ -435,7 +477,8 @@ def design_graphics(graphic_facts: list[dict]) -> dict[int, GraphicSpec]:
         verbose=True,
     )
     prompt = (
-        "For EVERY scene below choose ONE graphic component and its parameters.\n"
+        (f"{guidance}\n" if guidance else "")
+        + "For EVERY scene below choose ONE graphic component and its parameters.\n"
         "Components and their parameters:\n"
         "- node_graph: node_layers (list of 2-5 ints, nodes per layer), labels "
         "(optional, one per layer), pulse ('forward'|'backward'|'none')\n"
@@ -474,7 +517,7 @@ def design_graphics(graphic_facts: list[dict]) -> dict[int, GraphicSpec]:
     return specs
 
 
-def _graphic_layer(spec: GraphicSpec) -> dict:
+def _graphic_layer(spec: GraphicSpec, theme: dict | None = None, scene_idx: int = 0) -> dict:
     params: dict = {}
     if spec.kind == "node_graph":
         params = {"node_layers": spec.node_layers, "labels": spec.labels, "pulse": spec.pulse}
@@ -484,6 +527,16 @@ def _graphic_layer(spec: GraphicSpec) -> dict:
         params = {"number": spec.number, "suffix": spec.suffix, "label": spec.label}
     elif spec.kind == "icon_row":
         params = {"icons": spec.icons, "labels": spec.labels}
+        # Resolve each concept to a real Iconify SVG, recoloured to the accent.
+        # icon_srcs[i] is null when a fetch fails → renderer falls back to emoji.
+        accent = (theme or {}).get("palette", {}).get("accent", "#ffffff")
+        srcs: list = []
+        for i, concept in enumerate(spec.icons):
+            rel = f"output/assets/icons/s{scene_idx}_{i}.svg"
+            ok = icons.fetch(concept, Path(rel), color=accent, size=240)
+            srcs.append(rel if ok else None)
+        if any(srcs):
+            params["icon_srcs"] = srcs
     elif spec.kind == "title_card":
         params = {"title": spec.title, "subtitle": spec.subtitle}
     elif spec.kind == "annotate":
@@ -608,18 +661,22 @@ def resolve_ir(
                 "ken_burns": sp.ken_burns if sp.ken_burns != "none" else "zoom_in",
             })
         else:
-            # Ambient shader instead of a flat solid: nebula for big text
-            # moments, calm dot-grid under data graphics, waves for the rest.
+            # Ambient shader instead of a flat solid, chosen to fit the beat and
+            # varied by a per-scene seed so repeated kinds don't feel flat:
+            #   title cards → soft, atmospheric (nebula / aurora / mesh)
+            #   data graphics → structured, calm (grid / mesh / rays)
+            #   everything else → flowing energy (waves / aurora / rays)
+            srng = random.Random(f"{os.getenv('DESIGN_SEED') or '0'}-{scene['index']}")
             if graphic and graphic.kind == "title_card":
-                shader = "nebula"
+                shader = srng.choice(("nebula", "aurora", "mesh"))
             elif graphic and graphic.kind in ("node_graph", "bar_chart", "icon_row", "counter"):
-                shader = "grid"
+                shader = srng.choice(("grid", "mesh", "rays"))
             else:
-                shader = "waves"
+                shader = srng.choice(("waves", "aurora", "rays"))
             layers.append({"type": "shader", "kind": shader})
 
         if graphic:
-            layers.append(_graphic_layer(graphic))
+            layers.append(_graphic_layer(graphic, theme, scene["index"]))
 
         audio = scene.get("audio")
         if audio:

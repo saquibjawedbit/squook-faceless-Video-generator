@@ -45,7 +45,7 @@ export const GraphicLayer: React.FC<{
         />
       );
     case 'icon_row':
-      return <IconRow icons={p.icons ?? []} labels={p.labels ?? []} fps={fps} partStyles={ps} />;
+      return <IconRow icons={p.icons ?? []} iconSrcs={p.icon_srcs ?? []} labels={p.labels ?? []} fps={fps} partStyles={ps} />;
     case 'title_card':
       return <TitleCard title={p.title ?? ''} subtitle={p.subtitle ?? ''} fps={fps} partStyles={ps} />;
     case 'annotate':

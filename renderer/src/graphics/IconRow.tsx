@@ -1,6 +1,7 @@
 import {AbsoluteFill, spring, useCurrentFrame} from 'remotion';
 import {useTheme} from '../theme';
 import type {PartStyle} from '../ir';
+import {asset} from '../ir';
 import {Part} from './Part';
 
 const EMOJI: Record<string, string> = {
@@ -20,10 +21,11 @@ const EMOJI: Record<string, string> = {
 
 export const IconRow: React.FC<{
   icons: string[];
+  iconSrcs?: (string | null)[];
   labels: string[];
   fps: number;
   partStyles?: Record<string, PartStyle>;
-}> = ({icons, labels, fps, partStyles}) => {
+}> = ({icons, iconSrcs = [], labels, fps, partStyles}) => {
   const frame = useCurrentFrame();
   const {palette, font} = useTheme();
 
@@ -43,7 +45,12 @@ export const IconRow: React.FC<{
               transform: `scale(${pop})`,
             }}
           >
-            <div style={{fontSize: 160, lineHeight: 1.2}}>{EMOJI[name] ?? '⚙️'}</div>
+            {iconSrcs[i] ? (
+              // Real fetched vector icon (Iconify), already recoloured to accent.
+              <img src={asset(iconSrcs[i] as string)} width={160} height={160} style={{display: 'block'}} alt="" />
+            ) : (
+              <div style={{fontSize: 160, lineHeight: 1.2}}>{EMOJI[name] ?? '⚙️'}</div>
+            )}
             <Part
               name={`label_${i}`}
               partStyles={partStyles}

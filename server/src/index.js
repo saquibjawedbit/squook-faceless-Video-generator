@@ -10,11 +10,14 @@ import { ensureBucket } from './supabaseAdmin.js';
 import { enqueueProject, enqueueRerender } from './jobs.js';
 import { getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
 import { runDirectorChat, runDirectorChatStream } from './directorAgent.js';
-import { appendChat, readChat } from './chatStore.js';
-import { STAGES } from './pipeline.js';
+import { appendChat, readChat, clearChat } from './chatStore.js';
+import { STAGES, previewScript } from './pipeline.js';
 import { readIr, writeIr, hasSnapshot, assetSnapshotDir } from './snapshot.js';
 import { validateIr } from './ir.js';
 import { runAiEdit } from './aiEdit.js';
+import { searchStock } from './stock.js';
+import { ingestUrl, ingestUpload } from './ingest.js';
+import { listPresets, createPreset, deletePreset, bundleFor } from './presets.js';
 
 // A transient network failure (e.g. a Supabase auth check timing out) must
 // degrade that one request, never kill the server — observed taking the whole
@@ -97,11 +100,72 @@ app.post('/api/projects', requireAuth, upload.array('files', 6), async (req, res
   const uploads = (req.files || []).map((f) => ({
     path: f.path, name: f.originalname, size: f.size, type: f.mimetype,
   }));
+  // Content preset (genre): built-in id resolves in the flow; a custom id needs
+  // its stored bundle passed along so the flow uses it verbatim.
+  const genre = (req.body?.genre || 'auto').trim();
+  const presetBundle = await bundleFor(req.user.id, genre);
+  // Optional reviewed/edited script (JSON strings in the multipart body).
+  let editedScript, assetPlan;
+  try { editedScript = req.body?.editedScript ? JSON.parse(req.body.editedScript) : undefined; } catch { /* ignore */ }
+  try { assetPlan = req.body?.assetPlan ? JSON.parse(req.body.assetPlan) : undefined; } catch { /* ignore */ }
   const p = await enqueueProject({
-    userId: req.user.id, prompt, format: req.body?.format, uploads,
+    userId: req.user.id, prompt, format: req.body?.format, genre, presetBundle, uploads,
     music: req.body?.music, voice: req.body?.voice, duration: req.body?.duration,
+    editedScript, assetPlan,
   });
   res.status(201).json(publicView(p));
+});
+
+// Generate JUST the script (directing) for the review-before-render step — no
+// project, no render. Returns { script, asset_plan } the client shows and edits.
+app.post('/api/script/preview', requireAuth, async (req, res) => {
+  const prompt = (req.body?.prompt || '').trim();
+  if (!prompt) return res.status(400).json({ error: 'prompt is required' });
+  if (prompt.length > 2000) return res.status(400).json({ error: 'prompt too long' });
+  const genre = (req.body?.genre || 'auto').trim();
+  const presetBundle = await bundleFor(req.user.id, genre);
+  try {
+    const out = await previewScript({
+      prompt, format: req.body?.format, genre, presetBundle,
+      uploads: Array.isArray(req.body?.uploadNames) ? req.body.uploadNames.map((n) => ({ name: String(n) })) : [],
+      music: req.body?.music, voice: req.body?.voice, duration: req.body?.duration,
+    });
+    res.json(out);
+  } catch (e) {
+    res.status(500).json({ error: String(e.message || e) });
+  }
+});
+
+// ---- Content presets (genre) ----------------------------------------------
+
+// List built-in + the caller's custom presets for the composer picker.
+app.get('/api/presets', requireAuth, async (req, res) => {
+  res.json(await listPresets(req.user.id));
+});
+
+// Create a custom preset — from an explicit bundle (composer form) or from an
+// existing project's rendered look (`fromProjectId`, the editor's save action).
+app.post('/api/presets', requireAuth, async (req, res) => {
+  if (persistenceEnabled && req.user.id === 'anon') {
+    return res.status(401).json({ error: 'Sign in to save presets' });
+  }
+  const { label, bundle, fromProjectId } = req.body || {};
+  if (!label && !fromProjectId) return res.status(400).json({ error: 'label or fromProjectId required' });
+  try {
+    const resolveProject = async (id) => {
+      const proj = await getProject(id);
+      return proj && proj.userId === req.user.id ? proj : null;
+    };
+    const created = await createPreset(req.user.id, { label, bundle, fromProjectId }, resolveProject);
+    res.status(201).json(created);
+  } catch (e) {
+    res.status(400).json({ error: String(e.message || e) });
+  }
+});
+
+app.delete('/api/presets/:id', requireAuth, async (req, res) => {
+  await deletePreset(req.user.id, req.params.id);
+  res.json({ ok: true });
 });
 
 // List the caller's past projects (history).
@@ -171,6 +235,55 @@ app.get('/api/projects/:id/assets/*', async (req, res) => {
   await streamFile(req, res, filePath, ASSET_MIME[extname(filePath).toLowerCase()] || 'application/octet-stream');
 });
 
+// ————— Replace footage: stock search + asset ingest —————
+
+// Unified stock-footage search (Pexels + Pixabay). `provider` = all|pexels|pixabay.
+app.get('/api/projects/:id/stock', requireAuth, async (req, res) => {
+  const p = await ownedProject(req, res);
+  if (!p) return;
+  const q = String(req.query.q || '').trim();
+  if (!q) return res.json({ results: [] });
+  try {
+    const results = await searchStock(q, { provider: String(req.query.provider || 'all') });
+    res.json({ results });
+  } catch (e) {
+    res.status(502).json({ error: String(e.message || e) });
+  }
+});
+
+// Ingest a replacement clip from a direct/stock URL → returns the new IR `src`.
+// The client then sets the target layer's src and PUTs the IR.
+app.post('/api/projects/:id/assets/fetch', requireAuth, async (req, res) => {
+  const p = await ownedProject(req, res);
+  if (!p) return;
+  if (!(await hasSnapshot(p.id))) return res.status(404).json({ error: 'no editable source for this project' });
+  const url = String(req.body?.url || '').trim();
+  if (!url) return res.status(400).json({ error: 'url is required' });
+  try {
+    const out = await ingestUrl(p.id, url);
+    res.json(out);
+  } catch (e) {
+    res.status(e.status || 502).json({ error: String(e.message || e) });
+  }
+});
+
+// Ingest a replacement clip from an uploaded file → returns the new IR `src`.
+app.post('/api/projects/:id/assets/upload', requireAuth, upload.single('file'), async (req, res) => {
+  const p = await ownedProject(req, res);
+  if (!p) { if (req.file) await unlink(req.file.path).catch(() => {}); return; }
+  if (!req.file) return res.status(400).json({ error: 'file is required' });
+  if (!(await hasSnapshot(p.id))) {
+    await unlink(req.file.path).catch(() => {});
+    return res.status(404).json({ error: 'no editable source for this project' });
+  }
+  try {
+    const out = await ingestUpload(p.id, req.file);
+    res.json(out);
+  } catch (e) {
+    res.status(e.status || 500).json({ error: String(e.message || e) });
+  }
+});
+
 // Re-render from the (optionally just-saved) edited IR — render + master only,
 // no AI flow. Produces a new draft of the same project.
 app.post('/api/projects/:id/render', requireAuth, async (req, res) => {
@@ -213,6 +326,15 @@ app.get('/api/projects/:id/chat', requireAuth, async (req, res) => {
   res.json({ messages: await readChat(p.id) });
 });
 
+// Start a fresh Director conversation — wipes the persisted history so the next
+// turn carries no prior context (used by the editor's "New chat" button).
+app.delete('/api/projects/:id/chat', requireAuth, async (req, res) => {
+  const p = await ownedProject(req, res);
+  if (!p) return;
+  await clearChat(p.id);
+  res.json({ ok: true });
+});
+
 // One conversational turn. The agent loop can reply (talk/ask), inspect the IR,
 // or propose ops — proposals are sandbox-applied and self-corrected against the
 // real diff before the user ever sees them. Nothing persists until the client
@@ -234,12 +356,14 @@ app.post('/api/projects/:id/chat', requireAuth, async (req, res) => {
     const result = await runDirectorChat({
       ir: doc, message: msg,
       selection: typeof selection === 'string' ? selection.slice(0, 200) : undefined,
-      history,
+      history, projectId: p.id,
     });
     await appendChat(p.id, { role: 'user', text: msg });
     await appendChat(p.id, {
       role: 'assistant', text: result.reply,
-      ...(result.proposal ? { proposal: { summary: result.proposal.summary, diff: result.proposal.diff } } : {}),
+      // Persist the proposed IR too, so the proposal stays appliable after a
+      // reload (the client rehydrates pendingIr from it).
+      ...(result.proposal ? { proposal: { summary: result.proposal.summary, diff: result.proposal.diff, ir: result.proposal.ir } } : {}),
     });
     res.json({ reply: result.reply, proposal: result.proposal || null, trace: result.trace });
   } catch (e) {
@@ -275,13 +399,13 @@ app.post('/api/projects/:id/chat/stream', requireAuth, async (req, res) => {
   try {
     const history = await readChat(p.id);
     const result = await runDirectorChatStream(
-      { ir: doc, message: msg, selection: typeof selection === 'string' ? selection.slice(0, 200) : undefined, history },
+      { ir: doc, message: msg, selection: typeof selection === 'string' ? selection.slice(0, 200) : undefined, history, projectId: p.id },
       (ev) => send(ev),
     );
     await appendChat(p.id, { role: 'user', text: msg });
     await appendChat(p.id, {
       role: 'assistant', text: result.reply,
-      ...(result.proposal ? { proposal: { summary: result.proposal.summary, diff: result.proposal.diff } } : {}),
+      ...(result.proposal ? { proposal: { summary: result.proposal.summary, diff: result.proposal.diff, ir: result.proposal.ir } } : {}),
     });
   } catch (e) {
     send({ type: 'error', error: String(e.message || e), raw: e.raw });

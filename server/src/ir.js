@@ -3,7 +3,7 @@
 // logic — duration_s is the source of truth, frames are derived.
 
 const LAYER_TYPES = new Set([
-  'video', 'image', 'solid', 'audio', 'text', 'graphic', 'captions', 'lottie', 'shader',
+  'video', 'image', 'solid', 'audio', 'text', 'graphic', 'captions', 'lottie', 'shader', 'motion',
 ]);
 const TRANSITIONS = new Set(['cut', 'crossfade', 'slide']);
 
@@ -75,6 +75,11 @@ export function referencedPaths(ir) {
     if (typeof src === 'string' && src) out.add(src.replace(/^output\//, ''));
   };
   add(ir?.metadata?.music?.src);
-  for (const s of ir?.scenes || []) for (const l of s.layers || []) add(l.src);
+  for (const s of ir?.scenes || []) for (const l of s.layers || []) {
+    add(l.src);
+    // Graphic icon_row fetches per-icon SVGs into params.icon_srcs — snapshot
+    // them too, or a re-render loses the icons.
+    for (const iconSrc of l.params?.icon_srcs || []) add(iconSrc);
+  }
   return [...out];
 }

@@ -40,6 +40,14 @@ export const config = {
   ollamaBaseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
   ollamaModel: process.env.OLLAMA_MODEL || 'gpt-oss:120b-cloud',
   mockEdits: String(process.env.MOCK_EDITS).toLowerCase() === 'true',
+  // Stock-footage providers for the editor's "Replace footage" search. Either
+  // (or both) may be blank — each provider is skipped when its key is absent.
+  pexelsKey: process.env.PEXELS_API_KEY || '',
+  pixabayKey: process.env.PIXABAY_API_KEY || '',
+  // NASA + Wikimedia are keyless. logo.dev needs a (free) publishable token;
+  // the secret is optional and only enables brand-name → domain search.
+  logoDevToken: process.env.LOGO_DEV_TOKEN || '',
+  logoDevSecret: process.env.LOGO_DEV_SECRET || '',
 };
 
 export const authEnabled = Boolean(config.supabaseUrl && config.supabaseKey);

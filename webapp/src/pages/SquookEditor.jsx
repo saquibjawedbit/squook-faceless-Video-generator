@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import Box from '../lib/Box.jsx';
 import { css } from '../lib/css.js';
+import { Markdown } from '../lib/markdown.jsx';
 import { currentQuery } from '../lib/router.js';
-import { getProject, getPlaybackUrl, getIR, putIR, rerenderProject, directorChatStream, getChatLog, chatNote } from '../lib/api.js';
+import { getProject, getPlaybackUrl, getIR, putIR, rerenderProject, directorChatStream, getChatLog, chatNote, clearChat, searchStock, fetchAsset, uploadAsset, createPreset } from '../lib/api.js';
 import { deriveView, retimeLocal, uiTf, irTfPatch, primaryVisualIx, selRefOf, sceneGrad, stageRegions, regionAt } from '../lib/irView.js';
 
 /**
@@ -33,6 +34,13 @@ const INITIAL = {
   ir: null, irPast: [], irFuture: [], saveState: 'saved',
   rendering: false, renderPct: 0, renderStage: '',
   inkLive: null, hoverHit: null, dev: false,
+  // "Replace footage" panel (real IR projects only).
+  replace: { open: false, tab: 'search', q: '', results: [], loading: false, err: '', busy: false, url: '' },
+  // Media tab: live stock search + upload that add real footage as new scenes.
+  media: { q: '', results: [], loading: false, err: '', busy: false },
+  // Preview & trim overlay: play a clip and choose how much of it to use. The
+  // used window (outS-inS) is locked to sceneDur — the scene being replaced.
+  preview: { open: false, item: null, target: 'replace', sceneDur: 0, dur: 0, inS: 0, outS: 0, busy: false, err: '' },
   clips: [
     { id: 'c1', scene: 'HOOK', label: 'Skyline at dusk', alts: ['Skyline at dusk', 'Neon street pan', 'Aerial city sweep'], srcIx: 0, src: 'Stock', dur: 3.5, grad: 'linear-gradient(135deg,#3a2416,#c2410c)' },
     { id: 'c2', scene: 'PRODUCT', label: 'Dashboard screen-rec', alts: ['Dashboard screen-rec', 'App close-up', 'Hands on laptop'], srcIx: 0, src: 'Yours', dur: 6.0, grad: 'linear-gradient(135deg,#0f2540,#2563eb)' },
@@ -66,6 +74,50 @@ const INITIAL = {
   chat: [
     { role: 'director', text: 'I cut a 21-second launch film — dusk hook, your dashboard recording, a proof beat, and a logo end card, timed to a beat-synced track. Tell me what to change, or edit any layer directly.' },
   ],
+};
+
+// A short, searchable stock query drawn from a scene's own text (its narration,
+// or a text-layer caption) — used to pre-fill the Replace / Media search boxes
+// with what the scene is about. Drops stopwords and keeps the first few keywords.
+const QUERY_STOP = new Set(('the a an and or but of to in on at for with from by as is are was were be been being ' +
+  'he she it they them his her its their our your you i we this that these those had has have will would can could ' +
+  'about after before then than so just very more most some any all no not what which who into out up down over off ' +
+  'his her their there here when where how why').split(' '));
+const sceneQuery = (scene) => {
+  if (!scene) return '';
+  const caption = (scene.layers || []).find((l) => l.type === 'text' && l.content)?.content;
+  const source = (scene.narration || caption || '').toLowerCase();
+  const seen = new Set();
+  const out = [];
+  for (const w of source.replace(/[^a-z0-9\s]+/g, ' ').split(/\s+/)) {
+    if (w.length <= 2 || QUERY_STOP.has(w) || seen.has(w)) continue;
+    seen.add(w); out.push(w);
+    if (out.length >= 6) break;
+  }
+  return out.join(' ');
+};
+
+// A clean video/image layer for a footage `src`, carrying over an old layer's
+// manual framing (fit/transform) and, for video, an optional {start, end} trim
+// (seconds into the clip). Video layers MUST carry the full field set — the
+// renderer reads trim_start_s/playback_rate directly and throws on undefined.
+const footageLayer = (src, old, trim) => {
+  const isVid = /\.(mp4|webm|mov)$/i.test(src);
+  if (!isVid) {
+    const img = { type: 'image', src, fit: old?.fit || 'cover' };
+    if (old?.transform) img.transform = old.transform;
+    return img;
+  }
+  const l = {
+    type: 'video', src, fit: old?.fit || 'cover',
+    playback_rate: old?.playback_rate ?? 1,
+    loop: old?.loop ?? true,
+    freeze_last: old?.freeze_last ?? false,
+    trim_start_s: trim?.start ?? 0,
+    trim_end_s: trim?.end ?? null,
+  };
+  if (old?.transform) l.transform = old.transform;
+  return l;
 };
 
 /* ---- pure helpers over derived {clips, texts, audio} arrays ---- */
@@ -108,6 +160,11 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
   const pollIv = useRef(null);
   const drawing = useRef(false);
   const lastMut = useRef('');
+  const delRef = useRef(null);          // latest del() for the keyboard shortcut
+  const undoRef = useRef(null);         // latest undo/redo for the key handler
+  const redoRef = useRef(null);
+  const chatScrollRef = useRef(null);   // the Director chat scroll viewport
+  const chatPinned = useRef(true);      // follow new messages while at the bottom
 
   // Merge setState: object → shallow-merge, fn → functional updater (null = no-op).
   const setState = useCallback((patch) => {
@@ -137,6 +194,14 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
       if (s.projId && s.ir && s.saveState !== 'saved') putIR(s.projId, s.ir).catch(() => {});
     };
   }, []);
+
+  // Auto-scroll the Director chat to the newest message — on send and as the
+  // reply streams in — but only while the user is already near the bottom, so
+  // scrolling up to read history isn't yanked back down.
+  useEffect(() => {
+    const el = chatScrollRef.current;
+    if (el && chatPinned.current) el.scrollTop = el.scrollHeight;
+  }, [state.chat, state.streamText, state.thinking, state.agentStatus]);
 
   useEffect(() => {
     const b = document.body.style;
@@ -220,6 +285,9 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
     });
     scheduleSave();
   };
+  // Refs so the once-bound key handler always calls the latest undo/redo.
+  undoRef.current = doUndo;
+  redoRef.current = doRedo;
 
   // If opened for a real project (#/editor?id=…), load it: rendered MP4 into
   // the stage, IR snapshot into the timeline, persisted notes from localStorage.
@@ -266,11 +334,26 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
         // Restore the persistent Director conversation (server-side session).
         getChatLog(id).then((msgs) => {
           if (!ok || !msgs.length) return;
-          const restored = msgs.filter((m) => m.role !== 'system').map((m) => ({
-            role: m.role === 'user' ? 'user' : 'director',
-            text: m.text,
-            ...(m.proposal ? { plan: [m.proposal.summary], planState: 'stale' } : {}),
-          }));
+          // System notes record which proposals the user applied/discarded, keyed
+          // by summary — so a reloaded proposal shows the right state (and an
+          // already-applied one isn't offered for a regressive re-apply).
+          const resolved = new Map();
+          for (const m of msgs) {
+            if (m.role !== 'system') continue;
+            const am = /^User (APPLIED|DISCARDED) the proposed edit: (.*)$/s.exec(m.text || '');
+            if (am) resolved.set(am[2].trim(), am[1] === 'APPLIED' ? 'applied' : 'discarded');
+          }
+          const restored = msgs.filter((m) => m.role !== 'system').map((m) => {
+            const base = { role: m.role === 'user' ? 'user' : 'director', text: m.text };
+            if (!m.proposal) return base;
+            const state = resolved.get((m.proposal.summary || '').trim());
+            if (state) return { ...base, plan: [m.proposal.summary], planState: state };
+            // Still pending: rehydrate the proposed IR so Apply works after reload.
+            if (m.proposal.ir) {
+              return { ...base, plan: [], planState: 'pending', pendingIr: m.proposal.ir, planSummary: m.proposal.summary };
+            }
+            return { ...base, plan: [m.proposal.summary], planState: 'stale' }; // legacy: no IR persisted
+          });
           setState({ chat: [greeting, ...restored] });
         }).catch(() => {});
       }).catch(() => { if (ok) toast('No editable source for this project — timeline shows the demo.'); });
@@ -383,6 +466,17 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
     } catch (e) { toast('▸ Export failed — ' + (e.message || e)); }
   };
 
+  // Save this project's look (theme + inferred media mix) as a reusable preset
+  // the composer can offer on the next video.
+  const doSavePreset = async () => {
+    const id = stateRef.current.projId;
+    if (!id) { toast('▸ Save-as-preset needs a generated project — this is the demo timeline.'); return; }
+    try {
+      const created = await createPreset({ fromProjectId: id });
+      toast('▸ Saved this style as a preset — “' + created.label + '”');
+    } catch (e) { toast('▸ Could not save preset — ' + (e.message || e)); }
+  };
+
   // Re-render the edited IR into a new draft, polling progress into the header.
   const doRender = async () => {
     const s0 = stateRef.current;
@@ -457,10 +551,26 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
     return L.kind === 'music' ? 'the music track' : `the narration audio in scene ${n}`;
   };
 
+  // Start a fresh Director conversation — wipes the server-side history (so the
+  // agent carries no prior context, e.g. old refusals) and resets the panel to
+  // a clean greeting.
+  const newChat = async () => {
+    const s0 = stateRef.current;
+    if (s0.thinking) return;
+    const dur = s0.ir?.metadata?.total_duration_seconds || 0;
+    const scenes = s0.ir?.scenes?.length || 0;
+    const greeting = { role: 'director', text: `Fresh start. I directed “${s0.projTitle || 'your video'}” — ${scenes} scenes over ${Math.round(dur)}s. What would you like to change?` };
+    setState({ chat: [greeting], streamText: '', thinking: false, agentStatus: '' });
+    chatPinned.current = true;
+    if (s0.projId) { try { await clearChat(s0.projId); } catch { /* non-fatal */ } }
+    toast('Started a new chat');
+  };
+
   const send = async () => {
     const s0 = stateRef.current;
     const text = s0.input.trim();
     if (!text || s0.thinking) return;
+    chatPinned.current = true; // sending your prompt → follow the conversation down
 
     // Real mode: one STREAMING turn of the server-side Director AGENT — a
     // tool-use loop that can discuss (reply), inspect the IR, or propose ops
@@ -710,6 +820,198 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
     toast('Replaced shot');
   };
 
+  /* ---- Replace footage: stock search + upload/URL ingest (IR projects) ---- */
+  const setReplace = useCallback((patch) => {
+    setState((s) => ({ replace: { ...s.replace, ...(typeof patch === 'function' ? patch(s.replace) : patch) } }));
+  }, [setState]);
+
+  const openReplace = () => {
+    const s = stateRef.current;
+    if (!s.ir) { toast('Replacing footage needs a real project — open one from Home'); return; }
+    if (s.sel?.type !== 'clip' && s.sel?.type !== 'text') { toast('Select a scene or layer to replace'); return; }
+    // Pre-fill the search with what this scene is about, and search it right away.
+    const v = viewOf(s);
+    const ref = selRefOf(s.ir, v, s.sel);
+    const sceneIx = ref?.sceneIx ?? v.clips.find((x) => x.id === s.sel.id)?.sceneIx;
+    const q = sceneQuery(s.ir.scenes[sceneIx]);
+    setReplace({ open: true, tab: 'search', err: '', q, results: [] });
+    if (q) runStockSearch(q);
+  };
+  const closeReplace = () => setReplace({ open: false, busy: false });
+
+  const runStockSearch = async (query) => {
+    const s = stateRef.current;
+    const q = (query ?? s.replace.q).trim();
+    if (!q) return;
+    setReplace({ loading: true, err: '', results: [] });
+    try {
+      const results = await searchStock(s.projId, q);
+      setReplace({ loading: false, results });
+      if (!results.length) setReplace({ err: 'No clips found. Try different words — or add PEXELS_API_KEY / PIXABAY_API_KEY to the server .env.' });
+    } catch (e) {
+      setReplace({ loading: false, err: e.message || String(e) });
+    }
+  };
+
+  // Replace WHATEVER layer is selected with the new footage — the selected
+  // scene's visual (video, image, graphic, solid, lottie…), a selected caption,
+  // whatever `selRefOf` resolves to. The layer is rebuilt as a clean video/image
+  // in place (keeping its manual framing/crop) so no stale fields carry over.
+  // Scene timing, narration and other layers are untouched. Falls back to the
+  // selected scene's primary visual — or adds a layer — when there's no ref.
+  const applyReplacementSrc = (src, trim) => {
+    const s = stateRef.current;
+    const v = viewOf(s);
+    const ref = selRefOf(s.ir, v, s.sel);
+    // Resolve the target scene synchronously (the mutateIr updater runs later, so
+    // we can't rely on a flag it sets — validate up front instead).
+    const sceneIx = ref ? ref.sceneIx : v.clips.find((x) => x.id === s.sel?.id)?.sceneIx;
+    if (sceneIx == null || !s.ir.scenes[sceneIx]) return false;
+    mutateIr('', (ir) => {
+      const layers = ir.scenes[sceneIx]?.layers;
+      if (!layers) return false;
+      if (ref && layers[ref.layerIx]) { layers[ref.layerIx] = footageLayer(src, layers[ref.layerIx], trim); return; }
+      const vi = layers.findIndex((x) => x.type === 'video' || x.type === 'image');
+      if (vi >= 0) layers[vi] = footageLayer(src, layers[vi], trim);
+      else layers.unshift(footageLayer(src, null, trim));
+    });
+    return true;
+  };
+
+  // Run an ingest promise (→ { src }), apply it, and close the panel.
+  const ingestAndApply = async (promise, label) => {
+    const s = stateRef.current;
+    setReplace({ busy: true, err: '' });
+    try {
+      const { src } = await promise;
+      if (!applyReplacementSrc(src)) throw new Error('Could not apply to the selected scene');
+      chatNote(s.projId, `Replaced the selected scene's footage (${label}).`);
+      toast('Footage replaced — Re-render to see it in the video');
+      setReplace({ busy: false, open: false, url: '' });
+    } catch (e) {
+      setReplace({ busy: false, err: e.message || String(e) });
+    }
+  };
+
+  // Stock / URL picks preview first (choose how much to use); upload applies now.
+  const chooseStock = (item) => openPreview(item, 'replace');
+  const chooseUrl = () => {
+    const url = stateRef.current.replace.url.trim();
+    if (!url) { setReplace({ err: 'Paste a direct video or image URL' }); return; }
+    openPreview({ download: url, provider: 'link', credit: url.split('/').pop() || 'URL' }, 'replace');
+  };
+  const chooseUpload = (file) => { if (file) ingestAndApply(uploadAsset(stateRef.current.projId, file), file.name); };
+
+  /* ---- Preview & trim: play a clip, pick how much of it to use ---- */
+  const setPreview = useCallback((patch) => {
+    setState((s) => ({ preview: { ...s.preview, ...(typeof patch === 'function' ? patch(s.preview) : patch) } }));
+  }, [setState]);
+
+  // The duration_s of the scene a preview would replace (the trim window width).
+  const targetSceneDur = (target) => {
+    const s = stateRef.current;
+    if (!s.ir) return 0;
+    const v = viewOf(s);
+    let sceneIx;
+    if (target === 'media') sceneIx = currentClipAt(v.clips, tlTimeOf(s))?.sceneIx;
+    else { const ref = selRefOf(s.ir, v, s.sel); sceneIx = ref?.sceneIx ?? v.clips.find((x) => x.id === s.sel?.id)?.sceneIx; }
+    return s.ir.scenes[sceneIx]?.duration_s || 0;
+  };
+
+  // target: 'replace' (selected layer) | 'media' (scene at the playhead).
+  const openPreview = (item, target) => {
+    if (!stateRef.current.ir) { toast('Open a real project first'); return; }
+    setPreview({ open: true, item, target, sceneDur: targetSceneDur(target), dur: 0, inS: 0, outS: 0, busy: false, err: '' });
+  };
+  const closePreview = () => setPreview({ open: false, busy: false });
+
+  const confirmPreview = async () => {
+    const s = stateRef.current;
+    const { item, target, inS, outS, dur } = s.preview;
+    if (!item) return;
+    setPreview({ busy: true, err: '' });
+    // Only write a trim when the user actually narrowed the range.
+    const narrowed = dur > 0 && (inS > 0.05 || outS < dur - 0.05);
+    const trim = narrowed ? { start: +inS.toFixed(2), end: +outS.toFixed(2) } : { start: 0, end: null };
+    try {
+      const { src } = await fetchAsset(s.projId, item.download);
+      const applied = target === 'media' ? replaceCurrentFootage(src, trim) : applyReplacementSrc(src, trim);
+      if (!applied) throw new Error('Could not apply the footage to this scene');
+      const amt = narrowed ? ` — using ${(outS - inS).toFixed(1)}s` : '';
+      chatNote(s.projId, `Replaced footage with ${item.provider} · ${item.credit}${amt}.`);
+      toast('Footage replaced' + amt + ' — Re-render to see it in the video');
+      setPreview({ open: false, busy: false });
+      setReplace({ open: false });
+    } catch (e) {
+      setPreview({ busy: false, err: e.message || String(e) });
+    }
+  };
+
+  /* ---- Media tab: live stock search + upload → add real footage scenes ---- */
+  const setMedia = useCallback((patch) => {
+    setState((s) => ({ media: { ...s.media, ...(typeof patch === 'function' ? patch(s.media) : patch) } }));
+  }, [setState]);
+
+  const runMediaSearch = async (query) => {
+    const s = stateRef.current;
+    const q = (query ?? s.media.q).trim();
+    if (!q) return;
+    setMedia({ loading: true, err: '', results: [] });
+    try {
+      const results = await searchStock(s.projId, q);
+      setMedia({ loading: false, results });
+      if (!results.length) setMedia({ err: 'No clips found. Try different words — or check the stock API keys in server .env.' });
+    } catch (e) {
+      setMedia({ loading: false, err: e.message || String(e) });
+    }
+  };
+
+  // Open the Media tab; if its box is empty, seed it from the current scene.
+  const openMediaTab = () => {
+    const s = stateRef.current;
+    setState({ leftTab: 'media' });
+    if (s.ir && !s.media.q.trim()) {
+      const c = currentClipAt(viewOf(s).clips, tlTimeOf(s));
+      const q = sceneQuery(s.ir.scenes[c?.sceneIx]);
+      if (q) { setMedia({ q }); runMediaSearch(q); }
+    }
+  };
+
+  // Replace the footage of the scene under the playhead — whatever's on screen
+  // right now — with `src`. Keeps that scene's timing, narration and framing.
+  const replaceCurrentFootage = (src, trim) => {
+    const s = stateRef.current;
+    const cur = currentClipAt(viewOf(s).clips, tlTimeOf(s));
+    if (!cur || cur.sceneIx == null || !s.ir.scenes[cur.sceneIx]) return false;
+    mutateIr('', (ir) => {
+      const layers = ir.scenes[cur.sceneIx]?.layers;
+      if (!layers) return false;
+      const vi = primaryVisualIx(ir.scenes[cur.sceneIx]);
+      if (vi >= 0) layers[vi] = footageLayer(src, layers[vi], trim);
+      else layers.unshift(footageLayer(src, null, trim));
+    });
+    setState({ sel: { type: 'clip', id: cur.id }, rightTab: 'inspect' });
+    return true;
+  };
+
+  const addFootage = async (promise, label) => {
+    const s = stateRef.current;
+    if (!s.ir) { toast('Open a real project to replace footage'); return; }
+    setMedia({ busy: true, err: '' });
+    try {
+      const { src } = await promise;
+      if (!replaceCurrentFootage(src)) throw new Error('No scene at the playhead to replace');
+      chatNote(s.projId, `Replaced the current shot with ${label} footage.`);
+      toast('Replaced the current shot — Re-render to see it in the video');
+      setMedia({ busy: false });
+    } catch (e) {
+      setMedia({ busy: false, err: e.message || String(e) });
+    }
+  };
+
+  const addStock = (item) => openPreview(item, 'media');
+  const addUploadMedia = (file) => { if (file) addFootage(uploadAsset(stateRef.current.projId, file), file.name); };
+
   const del = () => {
     const s = stateRef.current;
     const sel = s.sel;
@@ -746,6 +1048,30 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
     }
     toast('Deleted layer');
   };
+  delRef.current = del;
+
+  // Keyboard: ctrl/⌘+Z undo, ctrl/⌘+shift+Z (or ctrl+Y) redo, Delete removes the
+  // selected layer. All skip when a text field (search, chat, captions…) or the
+  // Replace modal has focus, so native text editing / undo works there.
+  useEffect(() => {
+    const onKey = (e) => {
+      const t = e.target;
+      const inField = t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+      if ((e.metaKey || e.ctrlKey) && !inField) {
+        const k = e.key.toLowerCase();
+        if (k === 'z') { e.preventDefault(); (e.shiftKey ? redoRef : undoRef).current?.(); return; }
+        if (k === 'y') { e.preventDefault(); redoRef.current?.(); return; }
+      }
+      if (e.key !== 'Delete' && e.key !== 'Backspace') return;
+      if (inField) return;
+      const s = stateRef.current;
+      if (s.replace.open || s.preview.open || !s.sel) return;
+      e.preventDefault();
+      delRef.current?.();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
 
   const addClip = (item) => {
     const s = stateRef.current;
@@ -1106,6 +1432,20 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
       swapClip: () => swap(),
       clipSource: isClipL ? (S.ir ? 'fit' : L.src) : '',
       moveLeft: () => move(-1), moveRight: () => move(1),
+      // Per-clip audio: only video clips carry their own sound (muted by default).
+      clipHasAudio: isClipL && S.ir && !!L.hasAudio,
+      clipVol: isClipL ? (L.vol || 0) : 0,
+      setClipVol: (e) => {
+        const v = +e.target.value;
+        const s = stateRef.current;
+        const ref = selRefOf(s.ir, viewOf(s), s.sel);
+        if (!ref) return;
+        mutateIr('vol:clip:' + sel.id, (ir) => {
+          const l = ir.scenes[ref.sceneIx]?.layers?.[ref.layerIx];
+          if (!l || l.type !== 'video') return false;
+          l.volume = v / 100;
+        });
+      },
       audioVol: isAudioL ? L.vol : 0, audioVolValue: isAudioL ? L.vol : 0,
       setVol: (e) => {
         const v = +e.target.value;
@@ -1216,6 +1556,7 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M15 14l5-5-5-5" /><path d="M20 9H9a5 5 0 0 0 0 10h1" /></svg>
               </Box>
             </div>
+            <Box t="button" onClick={doSavePreset} title="Save this video's look as a reusable preset" s="cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:8px 12px;font-size:13px;color:rgba(244,243,240,0.85);transition:border-color .15s" sh="border-color:rgba(255,255,255,0.3)">★ Save style</Box>
             <Box t="button" onClick={doRender} s={'cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:8px 14px;font-size:13px;transition:border-color .15s;' + (S.rendering ? 'color:var(--accent)' : 'color:rgba(244,243,240,0.85)')} sh="border-color:rgba(255,255,255,0.3)">{S.rendering ? `Rendering ${S.renderPct}%` : 'Re-render'}</Box>
             <Box t="button" onClick={doExport} s="cursor:pointer;border:none;border-radius:9px;padding:8px 18px;background:var(--accent);color:#0B0B0E;font-size:13.5px;font-weight:600;transition:filter .15s" sh="filter:brightness(1.12)">Export</Box>
             <span style={css('width:31px;height:31px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:rgba(244,243,240,0.8)')}>Y</span>
@@ -1227,6 +1568,144 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
           <div style={css('position:fixed;top:70px;left:50%;transform:translateX(-50%);z-index:120;background:rgba(20,20,25,0.96);border:1px solid color-mix(in oklab, var(--accent) 45%, transparent);border-radius:11px;padding:11px 18px;font-size:13px;color:#F4F3F0;box-shadow:0 12px 40px rgba(0,0,0,0.5);max-width:min(90vw,520px)')}>{S.note}</div>
         )}
 
+        {/* ============ REPLACE FOOTAGE MODAL ============ */}
+        {S.replace.open && (
+          <div onClick={closeReplace} style={css('position:fixed;inset:0;z-index:300;background:rgba(6,6,9,0.72);backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center;padding:24px')}>
+            <div onClick={(e) => e.stopPropagation()} style={css('width:min(940px,95vw);max-height:88vh;display:flex;flex-direction:column;background:#141419;border:1px solid rgba(255,255,255,0.1);border-radius:16px;box-shadow:0 30px 90px rgba(0,0,0,0.65);overflow:hidden')}>
+              {/* header */}
+              <div style={css('display:flex;align-items:center;justify-content:space-between;padding:16px 20px;border-bottom:1px solid rgba(255,255,255,0.08)')}>
+                <div style={css('display:flex;flex-direction:column;gap:2px')}>
+                  <span style={css('font-size:15px;font-weight:600;color:#F4F3F0')}>Replace footage</span>
+                  <span style={{ fontFamily: mono, fontSize: 10.5, color: 'rgba(244,243,240,0.45)' }}>
+                    {(clips.find((c) => c.id === sel?.id)?.label) || 'selected scene'} · keeps timing &amp; narration
+                  </span>
+                </div>
+                <Box t="button" onClick={closeReplace} s="cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;width:30px;height:30px;font-size:15px;color:rgba(244,243,240,0.7);transition:border-color .15s" sh="border-color:rgba(255,255,255,0.35)">✕</Box>
+              </div>
+              {/* tabs */}
+              <div style={css('display:flex;gap:6px;padding:12px 20px 0')}>
+                {[['search', '🔎 Search stock'], ['upload', '⭱ Upload file'], ['url', '🔗 Paste URL']].map(([k, label]) => (
+                  <Box key={k} t="button" onClick={() => setReplace({ tab: k, err: '' })}
+                    s={'cursor:pointer;padding:8px 14px;font-size:12.5px;border-radius:8px 8px 0 0;border:1px solid transparent;transition:all .15s;'
+                      + (S.replace.tab === k ? 'background:rgba(255,255,255,0.06);color:#F4F3F0;border-color:rgba(255,255,255,0.1);border-bottom-color:transparent' : 'background:transparent;color:rgba(244,243,240,0.5)')}>{label}</Box>
+                ))}
+              </div>
+              {/* body */}
+              <div style={css('flex:1;min-height:0;overflow:auto;padding:18px 20px')}>
+                {S.replace.tab === 'search' && (
+                  <div style={css('display:flex;flex-direction:column;gap:14px')}>
+                    <div style={css('display:flex;gap:8px')}>
+                      <input autoFocus value={S.replace.q} placeholder="Search Pexels & Pixabay — e.g. city skyline, coffee, ocean…"
+                        onChange={(e) => setReplace({ q: e.target.value })}
+                        onKeyDown={(e) => { if (e.key === 'Enter') runStockSearch(); }}
+                        style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 9, padding: '10px 13px', fontSize: 13, color: '#F4F3F0', outline: 'none' }} />
+                      <Box t="button" onClick={runStockSearch} s="cursor:pointer;background:var(--accent);border:none;border-radius:9px;padding:0 18px;font-size:13px;font-weight:600;color:#0B0B0E">Search</Box>
+                    </div>
+                    {S.replace.loading && <span style={css('font-size:12.5px;color:rgba(244,243,240,0.55)')}>Searching…</span>}
+                    {!S.replace.loading && !!S.replace.results.length && (
+                      <div style={css('display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px')}>
+                        {S.replace.results.map((r) => (
+                          <Box key={r.id} t="button" onClick={() => chooseStock(r)} title={`${r.provider} · ${r.credit}`}
+                            s="cursor:pointer;position:relative;aspect-ratio:16/9;border-radius:9px;overflow:hidden;border:1px solid rgba(255,255,255,0.1);background-color:#000;background-position:center;background-size:cover;background-repeat:no-repeat;padding:0;transition:border-color .15s"
+                            sh="border-color:var(--accent)"
+                            style={{ backgroundImage: r.thumb ? `url("${r.thumb}")` : 'none' }}>
+                            <span style={{ position: 'absolute', top: 5, left: 5, fontFamily: mono, fontSize: 8.5, letterSpacing: '0.05em', textTransform: 'uppercase', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 5px', borderRadius: 4 }}>{r.provider}</span>
+                            {r.duration != null && <span style={{ position: 'absolute', bottom: 5, right: 5, fontFamily: mono, fontSize: 9, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '2px 5px', borderRadius: 4 }}>{Math.round(r.duration)}s</span>}
+                          </Box>
+                        ))}
+                      </div>
+                    )}
+                    {!S.replace.loading && !S.replace.results.length && !S.replace.err && (
+                      <span style={css('font-size:12px;color:rgba(244,243,240,0.4);line-height:1.6')}>Type a search and press Enter. Results come from Pexels &amp; Pixabay — free, commercial-use stock footage.</span>
+                    )}
+                  </div>
+                )}
+                {S.replace.tab === 'upload' && (
+                  <label style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 180, border: '1.5px dashed rgba(255,255,255,0.2)', borderRadius: 12, color: 'rgba(244,243,240,0.6)', fontSize: 13 }}>
+                    <span style={{ fontSize: 26 }}>⭱</span>
+                    <span>Click to choose a video or image</span>
+                    <span style={{ fontFamily: mono, fontSize: 10, color: 'rgba(244,243,240,0.35)' }}>MP4 · MOV · WEBM · JPG · PNG · up to 200MB</span>
+                    <input type="file" accept="video/*,image/*" style={{ display: 'none' }}
+                      onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; chooseUpload(f); }} />
+                  </label>
+                )}
+                {S.replace.tab === 'url' && (
+                  <div style={css('display:flex;flex-direction:column;gap:12px')}>
+                    <span style={css('font-size:12.5px;color:rgba(244,243,240,0.6);line-height:1.6')}>Paste a direct link to a video or image file. We download it into your project so it survives re-renders.</span>
+                    <div style={css('display:flex;gap:8px')}>
+                      <input value={S.replace.url} placeholder="https://…/clip.mp4"
+                        onChange={(e) => setReplace({ url: e.target.value })}
+                        onKeyDown={(e) => { if (e.key === 'Enter') chooseUrl(); }}
+                        style={{ flex: 1, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 9, padding: '10px 13px', fontSize: 13, color: '#F4F3F0', outline: 'none' }} />
+                      <Box t="button" onClick={chooseUrl} s="cursor:pointer;background:var(--accent);border:none;border-radius:9px;padding:0 18px;font-size:13px;font-weight:600;color:#0B0B0E">Fetch</Box>
+                    </div>
+                  </div>
+                )}
+              </div>
+              {/* footer / status */}
+              {(S.replace.err || S.replace.busy) && (
+                <div style={css('padding:12px 20px;border-top:1px solid rgba(255,255,255,0.08);font-size:12.5px;color:' + (S.replace.busy ? 'var(--accent)' : '#ff8a6b'))}>
+                  {S.replace.busy ? 'Adding footage to your project…' : S.replace.err}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* ============ PREVIEW & TRIM OVERLAY ============ */}
+        {S.preview.open && S.preview.item && (() => {
+          const pv = S.preview;
+          const isImg = /\.(jpg|jpeg|png|webp|gif)(\?|$)/i.test(pv.item.download || '');
+          return (
+            <div onClick={closePreview} style={css('position:fixed;inset:0;z-index:320;background:rgba(6,6,9,0.8);backdrop-filter:blur(5px);display:flex;align-items:center;justify-content:center;padding:24px')}>
+              <div onClick={(e) => e.stopPropagation()} style={css('width:min(760px,94vw);max-height:92vh;display:flex;flex-direction:column;background:#141419;border:1px solid rgba(255,255,255,0.1);border-radius:16px;box-shadow:0 30px 90px rgba(0,0,0,0.65);overflow:hidden')}>
+                <div style={css('display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid rgba(255,255,255,0.08)')}>
+                  <div style={css('display:flex;flex-direction:column;gap:2px')}>
+                    <span style={css('font-size:14px;font-weight:600;color:#F4F3F0')}>Preview{isImg ? '' : ' & trim'}</span>
+                    <span style={{ fontFamily: mono, fontSize: 10, color: 'rgba(244,243,240,0.45)' }}>{pv.item.provider} · {pv.item.credit} · {pv.target === 'media' ? 'replaces the shot at the playhead' : 'replaces the selected layer'}</span>
+                  </div>
+                  <Box t="button" onClick={closePreview} s="cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;width:30px;height:30px;font-size:15px;color:rgba(244,243,240,0.7)">✕</Box>
+                </div>
+                <div style={css('padding:16px 18px;display:flex;flex-direction:column;gap:14px;overflow:auto')}>
+                  {isImg ? (
+                    <img src={pv.item.download} alt="" style={{ width: '100%', maxHeight: '48vh', objectFit: 'contain', borderRadius: 10, background: '#000', display: 'block' }} />
+                  ) : (
+                    <video src={pv.item.download} controls autoPlay muted loop
+                      onLoadedMetadata={(e) => { const d = e.currentTarget.duration || 0; const w = pv.sceneDur > 0 ? Math.min(d, pv.sceneDur) : d; setPreview({ dur: d, inS: 0, outS: w }); }}
+                      style={{ width: '100%', maxHeight: '48vh', borderRadius: 10, background: '#000', display: 'block' }} />
+                  )}
+                  {!isImg && (() => {
+                    const win = pv.sceneDur > 0 ? Math.min(pv.dur || pv.sceneDur, pv.sceneDur) : pv.dur;
+                    const maxStart = Math.max(0, (pv.dur || 0) - (pv.sceneDur || 0));
+                    const shorter = pv.dur > 0 && pv.sceneDur > 0 && pv.dur < pv.sceneDur - 0.05;
+                    return (
+                      <div style={css('display:flex;flex-direction:column;gap:10px')}>
+                        <div style={css('display:flex;align-items:center;justify-content:space-between')}>
+                          <span style={css('font-size:12px;color:rgba(244,243,240,0.7)')}>Start point <span style={{ opacity: 0.5 }}>· using {win ? win.toFixed(1) : '…'}s to fit the scene</span></span>
+                          <span style={{ fontFamily: mono, fontSize: 11, color: 'var(--accent)' }}>{pv.dur ? pv.inS.toFixed(1) + 's → ' + pv.outS.toFixed(1) + 's' : 'loading…'}</span>
+                        </div>
+                        <div style={css('display:flex;align-items:center;gap:8px')}>
+                          <span style={{ fontFamily: mono, fontSize: 9.5, color: 'rgba(244,243,240,0.45)', width: 34 }}>START</span>
+                          <input type="range" min="0" max={Math.max(maxStart, 0.1)} step="0.1" value={pv.inS} disabled={!pv.dur || maxStart <= 0}
+                            onChange={(e) => { const inS = Math.max(0, Math.min(+e.target.value, maxStart)); setPreview({ inS, outS: Math.min(pv.dur, inS + pv.sceneDur) }); }}
+                            style={{ flex: 1, accentColor: 'var(--accent)' }} />
+                          <span style={{ fontFamily: mono, fontSize: 10, color: 'rgba(244,243,240,0.8)', width: 42, textAlign: 'right' }}>{pv.inS.toFixed(1)}s</span>
+                        </div>
+                        {shorter && <span style={{ fontFamily: mono, fontSize: 9.5, color: 'rgba(244,243,240,0.4)', lineHeight: 1.5 }}>Clip is {pv.dur.toFixed(1)}s — shorter than the {pv.sceneDur.toFixed(1)}s scene; it loops to fill.</span>}
+                      </div>
+                    );
+                  })()}
+                  {!!pv.err && <span style={css('font-size:12px;color:#ff8a6b;line-height:1.5')}>{pv.err}</span>}
+                </div>
+                <div style={css('display:flex;gap:8px;justify-content:flex-end;padding:12px 18px;border-top:1px solid rgba(255,255,255,0.08)')}>
+                  <Box t="button" onClick={closePreview} s="cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:9px 16px;font-size:12.5px;color:rgba(244,243,240,0.8)">Cancel</Box>
+                  <Box t="button" onClick={confirmPreview} s="cursor:pointer;background:var(--accent);border:none;border-radius:9px;padding:9px 18px;font-size:12.5px;font-weight:600;color:#0B0B0E">{pv.busy ? 'Adding…' : 'Use this clip'}</Box>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* ============ BODY: 3 COLUMNS ============ */}
         <div style={css('flex:1;display:flex;min-height:0;overflow:hidden')}>
 
@@ -1234,7 +1713,7 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
           <aside style={css('flex:none;width:258px;border-right:1px solid rgba(255,255,255,0.07);display:flex;flex-direction:column;min-height:0;background:rgba(255,255,255,0.008)')}>
             <div style={css('flex:none;display:flex;padding:10px 12px 0;gap:4px')}>
               <Box t="button" onClick={() => setState({ leftTab: 'layers' })} s={tab(S.leftTab === 'layers')}>Layers</Box>
-              <Box t="button" onClick={() => setState({ leftTab: 'media' })} s={tab(S.leftTab === 'media')}>Media</Box>
+              <Box t="button" onClick={openMediaTab} s={tab(S.leftTab === 'media')}>Media</Box>
             </div>
 
             {S.leftTab === 'layers' && (
@@ -1255,24 +1734,64 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
             )}
 
             {S.leftTab === 'media' && (
-              <div className="sq-scroll" style={css('flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:16px')}>
-                <Box t="button" onClick={() => toast(S.ir ? 'Uploads attach at generation time — add files from the Home composer.' : 'Drop MP4/MOV here — upload isn’t wired in this prototype')} s="cursor:pointer;border:1px dashed rgba(255,255,255,0.2);border-radius:12px;background:rgba(255,255,255,0.015);color:rgba(244,243,240,0.6);font-size:12.5px;line-height:1.5;padding:16px 12px;transition:border-color .15s,color .15s" sh="border-color:rgba(255,255,255,0.4);color:#F4F3F0">＋ Upload footage<br /><span style={{ fontSize: 10.5, color: 'rgba(244,243,240,0.35)' }}>MP4 / MOV · drag &amp; drop</span></Box>
-                <div style={css('display:flex;flex-direction:column;gap:9px')}>
-                  {mediaGroups.map((g) => (
-                    <div key={g.label} style={css('display:flex;flex-direction:column;gap:8px')}>
-                      <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.4)' }}>{g.label}</span>
+              <div className="sq-scroll" style={css('flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:14px')}>
+                {S.ir ? (
+                  <>
+                    {/* real upload → replaces the shot at the playhead */}
+                    <label style={{ cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, border: '1px dashed rgba(255,255,255,0.2)', borderRadius: 12, background: 'rgba(255,255,255,0.015)', color: 'rgba(244,243,240,0.65)', fontSize: 12.5, lineHeight: 1.5, padding: '16px 12px', textAlign: 'center' }}>
+                      ⟳ Upload &amp; replace shot
+                      <span style={{ fontSize: 10.5, color: 'rgba(244,243,240,0.35)' }}>MP4 · MOV · WEBM · JPG · PNG · up to 200MB</span>
+                      <input type="file" accept="video/*,image/*" style={{ display: 'none' }}
+                        onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; addUploadMedia(f); }} />
+                    </label>
+                    {/* live stock search */}
+                    <div style={css('display:flex;gap:6px')}>
+                      <input value={S.media.q} placeholder="Search stock footage…"
+                        onChange={(e) => setMedia({ q: e.target.value })}
+                        onKeyDown={(e) => { if (e.key === 'Enter') runMediaSearch(); }}
+                        style={{ flex: 1, minWidth: 0, background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.14)', borderRadius: 8, padding: '8px 10px', fontSize: 12.5, color: '#F4F3F0', outline: 'none' }} />
+                      <Box t="button" onClick={runMediaSearch} s="cursor:pointer;background:var(--accent);border:none;border-radius:8px;padding:0 12px;font-size:12px;font-weight:600;color:#0B0B0E">Go</Box>
+                    </div>
+                    {S.media.loading && <span style={css('font-size:11.5px;color:rgba(244,243,240,0.5)')}>Searching Pexels &amp; Pixabay…</span>}
+                    {S.media.busy && <span style={css('font-size:11.5px;color:var(--accent)')}>Adding footage…</span>}
+                    {!!S.media.err && <span style={css('font-size:11.5px;color:#ff8a6b;line-height:1.5')}>{S.media.err}</span>}
+                    {!!S.media.results.length && (
                       <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
-                        {g.items.map((m) => (
-                          <Box key={m.label} t="button" onClick={m.add} title="Add to timeline" s={'cursor:pointer;position:relative;aspect-ratio:16/10;border-radius:9px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;padding:0;background:' + m.bg + ';transition:border-color .15s'} sh="border-color:var(--accent)">
-                            <span style={css('position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.7),transparent 60%)')} />
-                            <span style={css('position:absolute;left:6px;right:6px;bottom:5px;font-size:10px;font-weight:600;color:#fff;text-align:left;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.label}</span>
-                            <span style={css('position:absolute;top:5px;right:5px;width:17px;height:17px;border-radius:50%;background:rgba(11,11,14,0.65);color:#fff;font-size:12px;line-height:17px;text-align:center')}>＋</span>
+                        {S.media.results.map((r) => (
+                          <Box key={r.id} t="button" onClick={() => addStock(r)} title={`Replace the current shot · ${r.provider} · ${r.credit}`}
+                            s="cursor:pointer;position:relative;aspect-ratio:16/10;border-radius:9px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;padding:0;background-color:#000;background-position:center;background-size:cover;background-repeat:no-repeat;transition:border-color .15s"
+                            sh="border-color:var(--accent)"
+                            style={{ backgroundImage: r.thumb ? `url("${r.thumb}")` : 'none' }}>
+                            <span style={{ position: 'absolute', top: 5, left: 5, fontFamily: mono, fontSize: 8, letterSpacing: '0.05em', textTransform: 'uppercase', background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '1px 4px', borderRadius: 3 }}>{r.provider}</span>
+                            <span style={css('position:absolute;top:5px;right:5px;width:17px;height:17px;border-radius:50%;background:rgba(11,11,14,0.72);color:#fff;font-size:11px;line-height:17px;text-align:center')}>⟳</span>
+                            {r.duration != null && <span style={{ position: 'absolute', bottom: 5, right: 5, fontFamily: mono, fontSize: 8.5, background: 'rgba(0,0,0,0.6)', color: '#fff', padding: '1px 4px', borderRadius: 3 }}>{Math.round(r.duration)}s</span>}
                           </Box>
                         ))}
                       </div>
-                    </div>
-                  ))}
-                </div>
+                    )}
+                    {!S.media.loading && !S.media.results.length && !S.media.err && (
+                      <span style={css('font-size:11.5px;color:rgba(244,243,240,0.4);line-height:1.6')}>Search Pexels &amp; Pixabay, or upload a file — picking one replaces the shot at the playhead. Move the playhead to choose which scene.</span>
+                    )}
+                  </>
+                ) : (
+                  // Mock prototype (no project loaded): the original sample swatches.
+                  <div style={css('display:flex;flex-direction:column;gap:9px')}>
+                    {mediaGroups.map((g) => (
+                      <div key={g.label} style={css('display:flex;flex-direction:column;gap:8px')}>
+                        <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.4)' }}>{g.label}</span>
+                        <div style={css('display:grid;grid-template-columns:1fr 1fr;gap:8px')}>
+                          {g.items.map((m) => (
+                            <Box key={m.label} t="button" onClick={m.add} title="Add to timeline" s={'cursor:pointer;position:relative;aspect-ratio:16/10;border-radius:9px;border:1px solid rgba(255,255,255,0.08);overflow:hidden;padding:0;background:' + m.bg + ';transition:border-color .15s'} sh="border-color:var(--accent)">
+                              <span style={css('position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.7),transparent 60%)')} />
+                              <span style={css('position:absolute;left:6px;right:6px;bottom:5px;font-size:10px;font-weight:600;color:#fff;text-align:left;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{m.label}</span>
+                              <span style={css('position:absolute;top:5px;right:5px;width:17px;height:17px;border-radius:50%;background:rgba(11,11,14,0.65);color:#fff;font-size:12px;line-height:17px;text-align:center')}>＋</span>
+                            </Box>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             )}
           </aside>
@@ -1454,7 +1973,20 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
             {/* === DIRECTOR CHAT === */}
             {S.rightTab === 'director' && (
               <div style={css('flex:1;display:flex;flex-direction:column;min-height:0')}>
-                <div className="sq-scroll" style={css('flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px')}>
+                <div style={css('display:flex;justify-content:flex-end;padding:8px 12px 0')}>
+                  <Box t="button" onClick={newChat} title="Start a fresh conversation (clears the chat context)"
+                    s="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:8px;padding:5px 10px;font-size:11.5px;color:rgba(244,243,240,0.7);transition:border-color .15s,color .15s"
+                    sh="border-color:var(--accent);color:#F4F3F0">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 5v14M5 12h14" /></svg>
+                    New chat
+                  </Box>
+                </div>
+                <div
+                  ref={chatScrollRef}
+                  onScroll={(e) => { const el = e.currentTarget; chatPinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80; }}
+                  className="sq-scroll"
+                  style={css('flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:14px')}
+                >
                   {chat.map((msg) => (
                     <div key={msg.key} style={css(msg.wrapStyle)}>
                       {msg.isDirector && (
@@ -1463,7 +1995,9 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
                           <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.5)' }}>DIRECTOR</span>
                         </span>
                       )}
-                      <p style={css(msg.textStyle)}>{msg.text}</p>
+                      {msg.isDirector
+                        ? <Markdown text={msg.text} />
+                        : <p style={css(msg.textStyle)}>{msg.text}</p>}
                       {msg.hasPlan && (
                         <div style={css('margin-top:11px;border:1px solid rgba(255,255,255,0.1);border-radius:11px;background:rgba(255,255,255,0.02);overflow:hidden')}>
                           {msg.plan.length > 0 ? (
@@ -1592,6 +2126,11 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
                       <div style={css('border:1px solid rgba(255,255,255,0.08);border-radius:10px;background:rgba(255,255,255,0.02);padding:10px 12px;font-size:12px;line-height:1.55;color:rgba(244,243,240,0.55)')}>Captions are word-timed to the narration — ask the Director to restyle or rewrite them.</div>
                     )}
 
+                    {/* Replace this layer with footage */}
+                    {S.ir && insp.inspIsText && (
+                      <Box t="button" onClick={openReplace} s="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;background:color-mix(in oklab, var(--accent) 15%, transparent);border:1px solid color-mix(in oklab, var(--accent) 55%, transparent);border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--accent);font-weight:600;transition:border-color .15s" sh="border-color:var(--accent)"><span>⟳ Replace with footage</span><span style={{ fontFamily: mono, fontSize: 10, opacity: 0.7 }}>stock · upload · url</span></Box>
+                    )}
+
                     {/* TRANSFORM */}
                     {insp.inspHasTransform && (
                       <div style={css('display:flex;flex-direction:column;gap:12px;border-top:1px solid rgba(255,255,255,0.07);padding-top:16px')}>
@@ -1630,11 +2169,26 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
                     {insp.inspIsClip && (
                       <div style={css('display:flex;flex-direction:column;gap:10px;border-top:1px solid rgba(255,255,255,0.07);padding-top:16px')}>
                         <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.45)' }}>SOURCE &amp; ORDER</span>
+                        {S.ir && (
+                          <Box t="button" onClick={openReplace} s="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;background:color-mix(in oklab, var(--accent) 15%, transparent);border:1px solid color-mix(in oklab, var(--accent) 55%, transparent);border-radius:9px;padding:10px 12px;font-size:12.5px;color:var(--accent);font-weight:600;transition:border-color .15s" sh="border-color:var(--accent)"><span>⟳ Replace footage</span><span style={{ fontFamily: mono, fontSize: 10, opacity: 0.7 }}>stock · upload · url</span></Box>
+                        )}
                         <Box t="button" onClick={insp.swapClip} s="cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.11);border-radius:9px;padding:10px 12px;font-size:12.5px;color:rgba(244,243,240,0.85);transition:border-color .15s" sh="border-color:var(--accent)"><span>{S.ir ? '◲ Reframe shot' : '⟳ Replace shot'}</span><span style={{ fontFamily: mono, fontSize: 10, color: 'rgba(244,243,240,0.45)' }}>{insp.clipSource}</span></Box>
                         <div style={css('display:flex;gap:8px')}>
                           <Box t="button" onClick={insp.moveLeft} s="flex:1;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.11);border-radius:9px;padding:9px;font-size:12px;color:rgba(244,243,240,0.8);transition:border-color .15s" sh="border-color:rgba(255,255,255,0.3)">← Move</Box>
                           <Box t="button" onClick={insp.moveRight} s="flex:1;cursor:pointer;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.11);border-radius:9px;padding:9px;font-size:12px;color:rgba(244,243,240,0.8);transition:border-color .15s" sh="border-color:rgba(255,255,255,0.3)">Move →</Box>
                         </div>
+                      </div>
+                    )}
+
+                    {/* CLIP AUDIO — the video clip's own sound (muted by default) */}
+                    {insp.clipHasAudio && (
+                      <div style={css('display:flex;flex-direction:column;gap:8px;border-top:1px solid rgba(255,255,255,0.07);padding-top:16px')}>
+                        <div style={css('display:flex;align-items:center;justify-content:space-between')}>
+                          <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.45)' }}>CLIP AUDIO</span>
+                          <span style={{ fontFamily: mono, fontSize: 11, color: insp.clipVol ? 'var(--accent)' : 'rgba(244,243,240,0.5)' }}>{insp.clipVol ? insp.clipVol + '%' : 'muted'}</span>
+                        </div>
+                        <input type="range" min="0" max="100" step="1" value={insp.clipVol} onChange={insp.setClipVol} style={{ width: '100%', accentColor: 'var(--accent)' }} />
+                        <span style={{ fontFamily: mono, fontSize: 9.5, color: 'rgba(244,243,240,0.35)', lineHeight: 1.5 }}>This clip's own sound, mixed under the narration. 0 = silent. Re-render to hear it.</span>
                       </div>
                     )}
 

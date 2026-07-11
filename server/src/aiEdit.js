@@ -162,6 +162,8 @@ function sanitizeLayerPatch(original, proposed, sceneDuration) {
       if (num(proposed.trim_start_s) !== undefined) out.trim_start_s = Math.max(0, Number(proposed.trim_start_s));
       if (proposed.trim_end_s === null) out.trim_end_s = null;
       else if (num(proposed.trim_end_s) !== undefined) out.trim_end_s = Math.max(0, Number(proposed.trim_end_s));
+      // Clip's own audio level (0 = muted, the default; 1 = full).
+      if (num(proposed.volume) !== undefined) out.volume = clamp(proposed.volume, 0, 1);
       break;
     }
     case 'image': {
@@ -212,7 +214,7 @@ function compactLayer(l, i) {
   switch (l.type) {
     case 'text': return { ...base, content: l.content, position: l.position, style: l.style, enter: l.enter, exit: l.exit };
     case 'captions': return { ...base, words: `${l.words?.length || 0} timed words (not editable)`, style: l.style };
-    case 'video': return { ...base, src: (l.src || '').split('/').pop(), fit: l.fit, playback_rate: l.playback_rate, trim_start_s: l.trim_start_s, trim_end_s: l.trim_end_s, loop: l.loop, freeze_last: l.freeze_last };
+    case 'video': return { ...base, src: (l.src || '').split('/').pop(), fit: l.fit, playback_rate: l.playback_rate, trim_start_s: l.trim_start_s, trim_end_s: l.trim_end_s, loop: l.loop, freeze_last: l.freeze_last, volume: l.volume ?? 0 };
     case 'image': return { ...base, src: (l.src || '').split('/').pop(), fit: l.fit, ken_burns: l.ken_burns };
     case 'audio': return { ...base, role: 'voiceover', volume: l.volume ?? 1 };
     case 'graphic': return { ...base, kind: l.kind, params: l.params, ...(l.part_styles ? { part_styles: l.part_styles } : {}) };
@@ -259,6 +261,20 @@ export function applyOps(ir, ops) {
     }
     return next.scenes[idx];
   };
+
+  // Every media file already in the project (clips the pipeline placed + footage
+  // the user uploaded). add_layer can reuse one of these by filename — so a
+  // video/image layer references a REAL file, never an invented one. basename → src.
+  const mediaByName = new Map();
+  for (const s of next.scenes) {
+    for (const l of s.layers || []) {
+      if ((l.type === 'video' || l.type === 'image') && typeof l.src === 'string' && l.src) {
+        mediaByName.set(l.src.split('/').pop(), { src: l.src, type: l.type });
+      }
+    }
+  }
+  const resolveMedia = (want) =>
+    (typeof want === 'string' && want) ? mediaByName.get(want.split('/').pop()) || null : null;
 
   for (const op of ops) {
     if (!op || typeof op !== 'object') { errors.push('op is not an object'); continue; }
@@ -351,8 +367,34 @@ export function applyOps(ir, ops) {
           scene.layers.push(fresh);
         } else if (l.type === 'solid') {
           scene.layers.unshift({ type: 'solid', color: cssColor(l.color) || '#000000' });
+        } else if (l.type === 'video' || l.type === 'image') {
+          // Must reuse a file of the SAME type already in the project — we never
+          // fabricate a src, nor point an image layer at a video (or vice-versa).
+          const media = resolveMedia(l.src);
+          if (!media || media.type !== l.type) {
+            const avail = [...mediaByName.values()].filter((m) => m.type === l.type).map((m) => m.src.split('/').pop());
+            errors.push(`add_layer: a "${l.type}" layer needs "src" to be a ${l.type} already in this project` +
+              (avail.length ? ` — one of: ${avail.join(', ')}` : `; none exist yet — the user must upload ${l.type === 'video' ? 'footage' : 'an image'} first`));
+            break;
+          }
+          const fresh = { type: l.type, src: media.src, fit: oneOf(l.fit, ['cover', 'contain']) || 'cover' };
+          if (l.type === 'video') {
+            const rate = clamp(num(l.playback_rate) ?? 1, 0.25, 3);
+            if (rate !== 1) fresh.playback_rate = rate;
+            if (l.loop === true) fresh.loop = true;
+            if (l.freeze_last === true) fresh.freeze_last = true;
+            const ts = num(l.trim_start_s); if (ts != null) fresh.trim_start_s = clamp(ts, 0, 3600);
+            const te = num(l.trim_end_s); if (te != null) fresh.trim_end_s = clamp(te, 0, 3600);
+            const vol = num(l.volume); if (vol != null) fresh.volume = clamp(vol, 0, 1);
+          } else {
+            const kb = oneOf(l.ken_burns, ['zoom_in', 'zoom_out', 'pan_left', 'pan_right']);
+            if (kb) fresh.ken_burns = kb;
+          }
+          const t = sanitizeTransform(l.transform);
+          if (t) fresh.transform = t;
+          scene.layers.unshift(fresh); // media sits behind text/captions
         } else {
-          errors.push(`add_layer: only "text" and "solid" layers can be added (got ${l.type})`);
+          errors.push(`add_layer: type must be text, solid, video, or image (got ${l.type})`);
         }
         break;
       }
@@ -377,17 +419,20 @@ Available ops (scene numbers are 1-based, layer indexes are 0-based, both refer 
 {"op":"remove_scene","scene":N}
 {"op":"remove_layer","scene":N,"layer":I}
 {"op":"add_layer","scene":N,"layer":{"type":"text","content":"...","position":"center","style":{"font_size":60,"color":"#fff"}}}
+{"op":"add_layer","scene":N,"layer":{"type":"video","src":"<filename of a clip already in THIS video>","fit":"cover"}}   — reuses an existing clip
+{"op":"add_layer","scene":N,"layer":{"type":"image","src":"<filename of an image already in THIS video>","fit":"cover"}}
 
 Layer patch fields by type:
 - every visual layer: "transform": {"x_pct":-100..100,"y_pct":-100..100,"scale":0.1..5,"rotate_deg":-180..180,"opacity":0..1}
 - text: content, position(lower_third|center|top), style{font_size,font_family,font_weight,italic,letter_spacing,align,color,bg}, enter{anim,at_s}, exit{at_s}
 - captions: style{font_size,font_family,font_weight,italic,letter_spacing,color,bg,position(top|center|bottom),highlight(active-word color),uppercase(bool)} — the timed words themselves are NOT editable. font_family may be any Google font name (e.g. "Bebas Neue", "Playfair Display").
-- video: fit(cover|contain), playback_rate(0.25..3), loop, freeze_last, trim_start_s, trim_end_s
+- video: fit(cover|contain), playback_rate(0.25..3), loop, freeze_last, trim_start_s, trim_end_s, volume(0..1 — the clip's OWN audio; 0=muted, the default)
 - image: fit, ken_burns(zoom_in|zoom_out|pan_left|pan_right)
-- solid: color; shader: kind(nebula|waves|grid); lottie: loop; audio: volume(0..1)
+- solid: color; shader: kind(nebula|waves|grid|aurora|mesh|rays); lottie: loop; audio: volume(0..1 — narration/voiceover level)
 - graphic: kind, params{title,subtitle,label,number,suffix,labels[],values[],icons[]}, part_styles{<partName>:{font_size,color,font_family,font_weight,italic,transform}} — parts: counter→value,label; title_card→title,subtitle; bar_chart→title,label_0,label_1…; annotate→label
 
-Rules: use the SMALLEST set of ops that fulfils the request. Never invent new media files.
+Rules: use the SMALLEST set of ops that fulfils the request.
+Media via ops: add_layer can add a video/image layer ONLY by reusing a clip whose filename already appears in this JSON — never invent a media filename here. To swap a graphic (e.g. a counter) for a clip that already exists, remove_layer the graphic then add_layer the video in the same scene. (Fetching brand-new footage is handled outside these ops.)
 Timing (start_frame etc.) is recomputed automatically — only ever change duration_s.`;
 
 const STYLE_SPEC = 'style{font_size:12-200, font_family:"css font stack e.g. Georgia, serif", font_weight:100-900, italic:bool, letter_spacing:px, align:left|center|right, color, bg}';
@@ -395,11 +440,11 @@ const STYLE_SPEC = 'style{font_size:12-200, font_family:"css font stack e.g. Geo
 const layerSpec = (type) => ({
   text: `fields: content, position(lower_third|center|top), ${STYLE_SPEC}, enter{anim:fade_up|typewriter|slide_in, at_s}, exit{at_s}, transform{x_pct,y_pct,scale,rotate_deg,opacity}`,
   captions: `fields: style{font_size:12-200, font_family(any Google font name e.g. "Bebas Neue"), font_weight:100-900, italic, letter_spacing, color, bg, position(top|center|bottom), highlight(active-word color), uppercase(bool)}, transform{...}. The timed words are NOT editable.`,
-  video: 'fields: fit(cover|contain), playback_rate(0.25-3), loop, freeze_last, trim_start_s, trim_end_s, transform{...}. "src" is NOT editable.',
+  video: 'fields: fit(cover|contain), playback_rate(0.25-3), loop, freeze_last, trim_start_s, trim_end_s, volume(0-1 — the clip\'s own audio; 0=muted default), transform{...}. "src" is NOT editable.',
   image: 'fields: fit(cover|contain), ken_burns(zoom_in|zoom_out|pan_left|pan_right), transform{...}. "src" is NOT editable.',
   solid: 'fields: color, transform{...}',
   graphic: 'fields: kind(node_graph|bar_chart|counter|icon_row|title_card|annotate), params{title,subtitle,label,number,suffix,labels[],values[]}, transform{...}',
-  shader: 'fields: kind(nebula|waves|grid), transform{...}',
+  shader: 'fields: kind(nebula|waves|grid|aurora|mesh|rays), transform{...}',
   lottie: 'fields: loop, transform{...}',
   audio: 'fields: volume(0-1)',
 }[type] || 'fields: transform{...}');

@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Box from '../lib/Box.jsx';
 import { css } from '../lib/css.js';
 import { navigate } from '../lib/router.js';
-import { createProject, listProjects, getProject, thumbSrc } from '../lib/api.js';
+import { createProject, previewScript, listProjects, getProject, thumbSrc, listPresets, createPreset, deletePreset } from '../lib/api.js';
+import ScriptReview from './ScriptReview.jsx';
 
 /**
  * Squook Home — a faithful React port of `Squook Home.dc.html`: the logged-in
@@ -22,8 +23,44 @@ const grotesk = "'Schibsted Grotesk',sans-serif";
 const INITIAL = {
   prompt: '', assets: [], format: '16:9', lengthSec: 30,
   generating: false, genStage: '', genProgress: 0, note: '',
+  previewing: false, review: null, // review = { script, asset_plan } once the script is written
   projects: null, // null = loading; [] = loaded-empty
+  genre: 'auto',  // selected content preset id (built-in or custom-xxxx)
+  presets: null,  // { builtins:[], custom:[] } | null while loading
+  presetForm: null, // the "new preset" draft, or null when closed
 };
+
+// Fallbacks so a custom preset (no server icon) still renders a chip glyph, and
+// the "new preset" form can offer the same vocabularies the flow understands
+// (mirrors ir_builder.MOODS / FONT_STYLES and main.py voice/music ids).
+const MEDIA_OPTS = [
+  { v: 'mixed', l: 'Mixed (let AI choose)' },
+  { v: 'images', l: 'Only photos' },
+  { v: 'animation', l: 'Only animation' },
+  { v: 'graphics', l: 'Prefer graphics' },
+];
+const MOOD_OPTS = ['', 'premium', 'playful', 'calm', 'bold', 'warm', 'nature'];
+const FONT_OPTS = ['', 'geometric_sans', 'grotesque_sans', 'editorial_serif', 'classic_serif',
+  'techno_sans', 'display_heavy', 'editorial_display'];
+const VOICE_OPTS = ['', 'none', 'nova', 'atlas', 'juno', 'ryan', 'sonia', 'guy'];
+const MUSIC_OPTS = ['', 'none', 'beat', 'warm', 'score'];
+const EMPTY_PRESET_FORM = { label: '', media: 'mixed', mood: '', font: '', voice: '', music: '', noFaces: false, saving: false };
+
+// Turn the compact form into a preset bundle the server/flow understands.
+function formToBundle(f) {
+  const mp = { force: null, prefer: null, block: null, ken_burns_all: false };
+  if (f.media === 'images') { mp.force = ['photo']; mp.ken_burns_all = true; }
+  else if (f.media === 'animation') mp.force = ['lottie', 'graphic'];
+  else if (f.media === 'graphics') mp.prefer = ['graphic'];
+  if (f.noFaces) mp.block = ['portrait', 'logo'];
+  return {
+    label: f.label.trim() || 'My preset',
+    media_policy: mp,
+    theme: { mood_pool: f.mood ? [f.mood] : null, font_pool: f.font ? [f.font] : null },
+    voice_default: f.voice || '',
+    music_default: f.music || '',
+  };
+}
 
 // Placeholder tile gradients (drafts/failed have no rendered thumbnail).
 const PALETTE = [
@@ -37,19 +74,17 @@ const statusLabel = (p) => p.status === 'failed' ? 'Failed'
   : p.stage ? (p.stage.charAt(0).toUpperCase() + p.stage.slice(1) + '…')
   : 'Queued';
 
-const ATTACH_MAP = {
-  footage: { kind: 'VIDEO', name: 'city-dusk.mp4' },
-  image: { kind: 'IMAGE', name: 'product-shot.png' },
-  brand: { kind: 'BRAND KIT', name: 'Northwind brand kit' },
-  ref: { kind: 'STYLE REF', name: 'reference-reel.mp4' },
-};
-
+// Footage + Image open a real file picker and upload to the pipeline (the
+// asset-curator prefers uploaded files per scene). Brand kit + Reference have
+// no backend feature yet, so they're honestly marked "coming soon".
 const ATTACH_BTNS = [
-  { key: 'footage', label: 'Footage', d: 'M12 15V3m0 0L8 7m4-4l4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2' },
-  { key: 'image', label: 'Image', d: 'M4 4h16v16H4zM4 15l4-4 3 3 4-4 5 5' },
-  { key: 'brand', label: 'Brand kit', d: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5' },
-  { key: 'ref', label: 'Reference', d: 'M12 3l2.6 6H21l-5.2 4 2 7-5.8-4-5.8 4 2-7L3 9h6.4z' },
+  { key: 'footage', label: 'Footage', kind: 'VIDEO', accept: 'video/*', d: 'M12 15V3m0 0L8 7m4-4l4 4M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2' },
+  { key: 'image', label: 'Image', kind: 'IMAGE', accept: 'image/*', d: 'M4 4h16v16H4zM4 15l4-4 3 3 4-4 5 5' },
+  { key: 'brand', label: 'Brand kit', soon: true, d: 'M12 3l9 5-9 5-9-5 9-5zM3 13l9 5 9-5' },
+  { key: 'ref', label: 'Reference', soon: true, d: 'M12 3l2.6 6H21l-5.2 4 2 7-5.8-4-5.8 4 2-7L3 9h6.4z' },
 ];
+
+const fmtSize = (n) => (n == null ? '' : n < 1024 * 1024 ? Math.max(1, Math.round(n / 1024)) + ' KB' : (n / 1048576).toFixed(1) + ' MB');
 
 const TEMPLATES = [
   { label: 'Product launch film', p: 'Launch film for a project-management app — bold type, fast cuts, beat-synced' },
@@ -67,10 +102,10 @@ const metaOf = (p) => [fmtDur(p.durationS), p.format].filter(Boolean).join(' · 
 
 const TRENDING = [
   { prompt: 'Launch film for a project-management app — bold type, fast cuts', creator: '@maya.builds', meta: '0:22 · 16:9', grad: 'linear-gradient(135deg,#3a2416,#c2410c)' },
-  { prompt: 'Instagram ad for a single-origin coffee brand, warm and tactile', creator: '@sofiareyes.mkt', meta: '0:15 · 1:1', grad: 'linear-gradient(135deg,#2a1c12,#a16207)' },
+  { prompt: 'Instagram ad for a single-origin coffee brand, warm and tactile', creator: '@sofiareyes.mkt', meta: '0:15 · 9:16', grad: 'linear-gradient(135deg,#2a1c12,#a16207)' },
   { prompt: '30-second explainer of how our API pricing works', creator: '@DevShipsDaily', meta: '0:30 · 16:9', grad: 'linear-gradient(135deg,#0c2f2a,#0d9488)' },
   { prompt: 'Night city run teaser for a fitness app, beat-synced', creator: '@liam.launches', meta: '0:18 · 9:16', grad: 'linear-gradient(135deg,#101830,#1e3a8a)' },
-  { prompt: 'Abstract product loop with kinetic typography', creator: '@amara.creates', meta: '0:12 · 1:1', grad: 'linear-gradient(135deg,#2a1a2f,#db2777)' },
+  { prompt: 'Abstract product loop with kinetic typography', creator: '@amara.creates', meta: '0:12 · 16:9', grad: 'linear-gradient(135deg,#2a1a2f,#db2777)' },
   { prompt: 'Founder update — warm, direct, serif overlays', creator: '@JonasExplains', meta: '0:20 · 16:9', grad: 'linear-gradient(135deg,#241a3a,#7c3aed)' },
 ];
 
@@ -86,6 +121,8 @@ export default function SquookHome({ userName = 'Alex' }) {
   const composerRef = useRef(null);
   const toastT = useRef(null);
   const pollRef = useRef(null);
+  const fileRef = useRef(null);       // hidden <input type=file> for Footage/Image
+  const pickKindRef = useRef(null);   // which button opened the picker (VIDEO|IMAGE)
 
   const setState = useCallback((patch) => {
     setStateRaw((s) => {
@@ -93,6 +130,14 @@ export default function SquookHome({ userName = 'Alex' }) {
       return p == null ? s : { ...s, ...p };
     });
   }, []);
+
+  // Declared before savePreset/onAttach/etc. which reference it — a useCallback
+  // is a lexical const, so using it above this line is a temporal-dead-zone error.
+  const toast = useCallback((msg) => {
+    clearTimeout(toastT.current);
+    setState({ note: msg });
+    toastT.current = setTimeout(() => setState({ note: '' }), 2600);
+  }, [setState]);
 
   useEffect(() => () => { clearTimeout(toastT.current); clearInterval(pollRef.current); }, []);
 
@@ -103,17 +148,49 @@ export default function SquookHome({ userName = 'Alex' }) {
     return () => { ok = false; };
   }, [setState]);
 
-  const toast = useCallback((msg) => {
-    clearTimeout(toastT.current);
-    setState({ note: msg });
-    toastT.current = setTimeout(() => setState({ note: '' }), 2600);
-  }, [setState]);
+  // Load built-in + the caller's custom content presets for the picker.
+  const reloadPresets = useCallback(() => listPresets()
+    .then((p) => setState({ presets: p }))
+    .catch(() => setState({ presets: { builtins: [], custom: [] } })), [setState]);
+  useEffect(() => { reloadPresets(); }, [reloadPresets]);
 
-  const addAsset = (key) => {
-    const m = ATTACH_MAP[key]; if (!m) return;
-    const a = { id: uid('as'), kind: m.kind, name: m.name };
-    setState((s) => ({ assets: s.assets.concat([a]) }));
-    toast('Attached ' + m.name);
+  const savePreset = useCallback(() => {
+    const f = stateRef.current.presetForm;
+    if (!f || f.saving) return;
+    if (!f.label.trim()) { toast('Name your preset first'); return; }
+    setState((s) => ({ presetForm: { ...s.presetForm, saving: true } }));
+    createPreset({ label: f.label.trim(), bundle: formToBundle(f) })
+      .then(async (created) => {
+        await reloadPresets();
+        setState({ presetForm: null, genre: created.id });
+        toast('Preset saved — “' + created.label + '”');
+      })
+      .catch((err) => { setState((s) => ({ presetForm: { ...s.presetForm, saving: false } })); toast('Could not save preset — ' + (err.message || err)); });
+  }, [setState, toast, reloadPresets]);
+
+  const removePreset = useCallback((id) => {
+    deletePreset(id).catch(() => {});
+    setState((s) => ({ genre: s.genre === id ? 'auto' : s.genre }));
+    reloadPresets();
+  }, [setState, reloadPresets]);
+
+  // Footage/Image → open the real file picker; Brand kit/Reference → not built yet.
+  const onAttach = (b) => {
+    if (b.soon) { toast(b.label + ' — coming soon'); return; }
+    const input = fileRef.current; if (!input) return;
+    pickKindRef.current = b.kind;
+    input.accept = b.accept || '';
+    input.value = '';                 // let the same file be re-picked
+    input.click();
+  };
+  const onFilesPicked = (e) => {
+    const files = Array.from(e.target.files || []);
+    if (!files.length) return;
+    const kind = pickKindRef.current || 'FILE';
+    setState((s) => ({
+      assets: s.assets.concat(files.map((f) => ({ id: uid('as'), kind, name: f.name, size: f.size, file: f }))),
+    }));
+    toast(files.length > 1 ? `Attached ${files.length} files` : 'Attached ' + files[0].name);
   };
   const removeAsset = (id) => setState((s) => ({ assets: s.assets.filter((a) => a.id !== id) }));
 
@@ -139,27 +216,24 @@ export default function SquookHome({ userName = 'Alex' }) {
   };
 
   const handlePaste = (e) => {
+    // Capture a pasted image as a REAL file so it uploads with the project.
     const items = e.clipboardData && e.clipboardData.items;
     if (items) {
       for (const it of items) {
         if (it.type && it.type.indexOf('image') === 0) {
-          e.preventDefault();
-          const a = { id: uid('as'), kind: 'IMAGE', name: 'pasted-image.png' };
-          setState((s) => ({ assets: s.assets.concat([a]) }));
-          toast('Pasted image attached');
+          const f = it.getAsFile();
+          if (f) {
+            e.preventDefault();
+            const name = f.name || `pasted-image.${(it.type.split('/')[1] || 'png')}`;
+            setState((s) => ({ assets: s.assets.concat([{ id: uid('as'), kind: 'IMAGE', name, size: f.size, file: f }]) }));
+            toast('Pasted image attached');
+          }
           return;
         }
       }
     }
-    const text = e.clipboardData && e.clipboardData.getData('text');
-    if (text && /^https?:\/\//i.test(text.trim())) {
-      e.preventDefault();
-      let host = text.trim();
-      try { host = new URL(text.trim()).hostname.replace(/^www\./, ''); } catch { host = text.trim().slice(0, 28); }
-      const a = { id: uid('as'), kind: 'LINK', name: host };
-      setState((s) => ({ assets: s.assets.concat([a]) }));
-      toast('Link attached');
-    }
+    // A pasted URL just lands in the prompt as text (the director reads it) —
+    // no fake "link" chip, since the pipeline doesn't fetch links yet.
   };
 
   const keydown = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); generate(); } };
@@ -181,11 +255,29 @@ export default function SquookHome({ userName = 'Alex' }) {
     tick();
   });
 
+  // Step 1: write the script (directing only) and show it for review.
   const generate = () => {
     const S0 = stateRef.current;
     if (!S0.prompt.trim()) { toast('Describe your video first — or pick a starting point below'); taRef.current?.focus(); return; }
+    if (S0.previewing || S0.generating) return;
+    setState({ previewing: true });
+    previewScript({
+      prompt: S0.prompt.trim(), format: S0.format, duration: S0.lengthSec, genre: S0.genre,
+      uploadNames: (S0.assets || []).map((a) => a.name).filter(Boolean),
+    })
+      .then((r) => { setState({ previewing: false, review: r }); window.scrollTo({ top: 0 }); })
+      .catch((err) => { setState({ previewing: false }); toast('Couldn’t write the script — ' + (err.message || err)); });
+  };
+
+  // Step 2: the user approved/edited the script → run the full pipeline on it.
+  const runGenerate = (editedScript) => {
+    const S0 = stateRef.current;
+    const files = (S0.assets || []).map((a) => a.file).filter(Boolean);
     setState({ generating: true, genStage: 'directing', genProgress: 0 });
-    createProject({ prompt: S0.prompt.trim(), format: S0.format, duration: S0.lengthSec })
+    createProject({
+      prompt: S0.prompt.trim(), format: S0.format, duration: S0.lengthSec, genre: S0.genre, files,
+      editedScript, assetPlan: S0.review?.asset_plan,
+    })
       .then((p) => pollProject(p.id))
       .then((p) => navigate(`editor?id=${p.id}`))
       .catch((err) => { setState({ generating: false }); toast('Generation failed — ' + (err.message || err)); });
@@ -195,8 +287,26 @@ export default function SquookHome({ userName = 'Alex' }) {
 
   /* ---- computed render values ---- */
   const S = state;
+
+  // Review step: the script is written — show it for edit/approval before render.
+  if (S.review) {
+    return (
+      <ScriptReview
+        review={S.review}
+        prompt={S.prompt.trim()}
+        busy={S.generating}
+        onBack={() => setState({ review: null })}
+        onGenerate={runGenerate}
+      />
+    );
+  }
   const seg = (on) => 'cursor:pointer;border:none;background:' + (on ? 'rgba(255,255,255,0.1)' : 'transparent') + ';color:' + (on ? '#F4F3F0' : 'rgba(244,243,240,0.55)') + ';font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;transition:background .15s,color .15s';
-  const formatOpts = ['16:9', '9:16', '1:1'].map((f) => ({ label: f, pick: () => setState({ format: f }), style: seg(S.format === f) }));
+  const formatOpts = ['16:9', '9:16'].map((f) => ({ label: f, pick: () => setState({ format: f }), style: seg(S.format === f) }));
+  // Built-ins first, then the caller's custom presets (marked deletable).
+  const presetList = [
+    ...((S.presets?.builtins) || []),
+    ...((S.presets?.custom) || []).map((p) => ({ ...p, builtin: false })),
+  ];
   const ls = S.lengthSec;
   const lengthLabel = ls < 60 ? ls + 's' : Math.floor(ls / 60) + ':' + String(ls % 60).padStart(2, '0');
   const canGen = S.prompt.trim().length > 0;
@@ -265,6 +375,7 @@ export default function SquookHome({ userName = 'Alex' }) {
                   <span key={a.id} style={css('display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.13);border-radius:9px;padding:6px 8px 6px 10px;font-size:12.5px;color:rgba(244,243,240,0.88)')}>
                     <span style={{ fontFamily: mono, fontSize: 9, letterSpacing: '0.1em', color: 'var(--accent)' }}>{a.kind}</span>
                     <span style={css('max-width:180px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis')}>{a.name}</span>
+                    {a.size != null && <span style={{ fontFamily: mono, fontSize: 10, color: 'rgba(244,243,240,0.4)' }}>{fmtSize(a.size)}</span>}
                     <Box t="button" onClick={() => removeAsset(a.id)} title="Remove" s="cursor:pointer;background:none;border:none;color:rgba(244,243,240,0.5);padding:0;font-size:13px;line-height:1;display:flex" sh="color:#F4F3F0">✕</Box>
                   </span>
                 ))}
@@ -274,8 +385,9 @@ export default function SquookHome({ userName = 'Alex' }) {
             {/* toolbar: attach (left) + format/length (right) */}
             <div style={css('display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(255,255,255,0.07)')}>
               <div style={css('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}>
+                <input ref={fileRef} type="file" multiple onChange={onFilesPicked} style={{ display: 'none' }} />
                 {ATTACH_BTNS.map((b) => (
-                  <Box key={b.key} t="button" onClick={() => addAsset(b.key)} s="cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:8px 12px;font-size:12.5px;color:rgba(244,243,240,0.75);transition:border-color .15s,color .15s" sh="border-color:rgba(255,255,255,0.28);color:#F4F3F0">
+                  <Box key={b.key} t="button" onClick={() => onAttach(b)} title={b.soon ? 'Coming soon' : `Attach ${b.label.toLowerCase()}`} s={`cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:8px 12px;font-size:12.5px;color:rgba(244,243,240,${b.soon ? '0.4' : '0.75'});transition:border-color .15s,color .15s`} sh="border-color:rgba(255,255,255,0.28);color:#F4F3F0">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={b.d} /></svg>
                     {b.label}
                   </Box>
@@ -298,14 +410,66 @@ export default function SquookHome({ userName = 'Alex' }) {
             {/* bottom row: hint + generate */}
             <div style={css('display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:14px')}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: mono, fontSize: 11, color: 'rgba(244,243,240,0.4)' }}>
-                <span style={css('border:1px solid rgba(255,255,255,0.16);border-radius:5px;padding:2px 6px')}>⌘ ⏎</span> to generate · paste a link or image
+                <span style={css('border:1px solid rgba(255,255,255,0.16);border-radius:5px;padding:2px 6px')}>⌘ ⏎</span> to generate · paste or attach an image
               </span>
-              <Box t="button" onClick={generate} s={genStyle} sh="filter:brightness(1.1);transform:translateY(-1px)">
-                Generate video
-                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>
+              <Box t="button" onClick={generate} s={genStyle + (S.previewing ? ';opacity:0.7;pointer-events:none' : '')} sh="filter:brightness(1.1);transform:translateY(-1px)">
+                {S.previewing ? 'Writing your script…' : 'Write script'}
+                {!S.previewing && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>}
               </Box>
             </div>
           </div>
+
+          {/* content-preset picker */}
+          <div style={css('display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-top:16px')}>
+            <span style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.4)', marginRight: 2, marginTop: 8 }}>STYLE</span>
+            <div style={css('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}>
+              {presetList.map((p) => {
+                const on = S.genre === p.id;
+                return (
+                  <Box key={p.id} t="button" onClick={() => setState({ genre: p.id })} title={p.description || ''}
+                    s={`cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:${on ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.03)'};border:1px solid ${on ? 'var(--accent)' : 'rgba(255,255,255,0.1)'};border-radius:99px;padding:7px 13px;font-size:12.5px;color:${on ? '#F4F3F0' : 'rgba(244,243,240,0.72)'};transition:border-color .15s,color .15s`} sh="border-color:var(--accent);color:#F4F3F0">
+                    <span aria-hidden style={{ fontSize: 13 }}>{p.icon || '🎨'}</span>{p.label}
+                    {!p.builtin && (
+                      <Box t="span" onClick={(e) => { e.stopPropagation(); removePreset(p.id); }} title="Delete preset" s="cursor:pointer;color:rgba(244,243,240,0.45);font-size:12px;line-height:1;margin-left:1px" sh="color:#F4F3F0">✕</Box>
+                    )}
+                  </Box>
+                );
+              })}
+              <Box t="button" onClick={() => setState((s) => ({ presetForm: s.presetForm ? null : { ...EMPTY_PRESET_FORM } }))} title="Create your own preset"
+                s="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px dashed rgba(255,255,255,0.22);border-radius:99px;padding:7px 13px;font-size:12.5px;color:rgba(244,243,240,0.6)" sh="border-color:var(--accent);color:#F4F3F0">＋ New preset</Box>
+            </div>
+          </div>
+
+          {/* new-preset form */}
+          {S.presetForm && (() => {
+            const f = S.presetForm;
+            const setF = (patch) => setState((s) => ({ presetForm: { ...s.presetForm, ...patch } }));
+            const field = 'background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:8px 11px;color:#F4F3F0;font-size:12.5px;outline:none';
+            const lbl = { fontFamily: mono, fontSize: 10, letterSpacing: '0.1em', color: 'rgba(244,243,240,0.45)', marginBottom: 5, display: 'block' };
+            const opt = (v) => v ? (v.charAt(0).toUpperCase() + v.slice(1)).replace(/_/g, ' ') : 'Auto';
+            return (
+              <div style={css('margin-top:12px;border:1px solid rgba(255,255,255,0.12);border-radius:14px;background:rgba(255,255,255,0.025);padding:16px 18px;display:flex;flex-direction:column;gap:14px')}>
+                <div style={css('display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px')}>
+                  <label><span style={lbl}>NAME</span><input value={f.label} onChange={(e) => setF({ label: e.target.value })} placeholder="e.g. Calm nature stills" style={{ ...css(field), width: '100%', boxSizing: 'border-box' }} /></label>
+                  <label><span style={lbl}>MEDIA</span><select value={f.media} onChange={(e) => setF({ media: e.target.value })} style={{ ...css(field), width: '100%' }}>{MEDIA_OPTS.map((m) => <option key={m.v} value={m.v} style={{ color: '#000' }}>{m.l}</option>)}</select></label>
+                  <label><span style={lbl}>MOOD</span><select value={f.mood} onChange={(e) => setF({ mood: e.target.value })} style={{ ...css(field), width: '100%' }}>{MOOD_OPTS.map((m) => <option key={m} value={m} style={{ color: '#000' }}>{opt(m)}</option>)}</select></label>
+                  <label><span style={lbl}>FONT</span><select value={f.font} onChange={(e) => setF({ font: e.target.value })} style={{ ...css(field), width: '100%' }}>{FONT_OPTS.map((m) => <option key={m} value={m} style={{ color: '#000' }}>{opt(m)}</option>)}</select></label>
+                  <label><span style={lbl}>VOICE</span><select value={f.voice} onChange={(e) => setF({ voice: e.target.value })} style={{ ...css(field), width: '100%' }}>{VOICE_OPTS.map((m) => <option key={m} value={m} style={{ color: '#000' }}>{m ? opt(m) : 'Auto'}</option>)}</select></label>
+                  <label><span style={lbl}>MUSIC</span><select value={f.music} onChange={(e) => setF({ music: e.target.value })} style={{ ...css(field), width: '100%' }}>{MUSIC_OPTS.map((m) => <option key={m} value={m} style={{ color: '#000' }}>{m ? opt(m) : 'Auto'}</option>)}</select></label>
+                </div>
+                <div style={css('display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap')}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12.5, color: 'rgba(244,243,240,0.75)', cursor: 'pointer' }}>
+                    <input type="checkbox" checked={f.noFaces} onChange={(e) => setF({ noFaces: e.target.checked })} style={{ accentColor: 'var(--accent)' }} />
+                    No real faces (block portraits &amp; logos)
+                  </label>
+                  <div style={css('display:flex;align-items:center;gap:8px')}>
+                    <Box t="button" onClick={() => setState({ presetForm: null })} s="cursor:pointer;background:transparent;border:1px solid rgba(255,255,255,0.14);border-radius:9px;padding:8px 14px;font-size:12.5px;color:rgba(244,243,240,0.7)" sh="color:#F4F3F0;border-color:rgba(255,255,255,0.3)">Cancel</Box>
+                    <Box t="button" onClick={savePreset} s={`cursor:pointer;border:none;border-radius:9px;padding:8px 16px;font-size:12.5px;font-weight:600;background:var(--accent);color:#0B0B0E${f.saving ? ';opacity:0.6' : ''}`} sh="filter:brightness(1.1)">{f.saving ? 'Saving…' : 'Save preset'}</Box>
+                  </div>
+                </div>
+              </div>
+            );
+          })()}
 
           {/* quick-start templates */}
           <div style={css('display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:18px')}>

@@ -9,6 +9,7 @@ import {GraphicLayer} from './layers/GraphicLayer';
 import {CaptionLayer} from './layers/CaptionLayer';
 import {LottieLayer} from './layers/LottieLayer';
 import {ShaderLayer} from './layers/ShaderLayer';
+import {MotionLayer} from './layers/MotionLayer';
 import {LayerBox} from './layers/LayerBox';
 
 export const SceneRenderer: React.FC<{
@@ -46,7 +47,9 @@ export const SceneRenderer: React.FC<{
       case 'image':
         return <ImageLayer layer={layer} durationFrames={scene.duration_frames} />;
       case 'shader':
-        return <ShaderLayer kind={layer.kind} />;
+        return <ShaderLayer layer={layer} />;
+      case 'motion':
+        return <MotionLayer layer={layer} fps={fps} />;
       case 'lottie':
         return <LottieLayer src={layer.src} loop={layer.loop} />;
       case 'captions':

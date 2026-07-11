@@ -27,6 +27,7 @@ writing_task:
     Note on supplied footage: {uploads} Where these clips or images naturally
     fit a beat of the narration, write toward them so they earn their place
     on screen. The intended music mood for this video is: {music}.
+    {writer_guidance}
   expected_output: >
     Narration-ready markdown content of roughly {word_count} words about
     "{prompt}", suitable for reading aloud as a video voiceover.
@@ -78,6 +79,7 @@ directing_task:
     the instant you tap the plus button." Phrases like "the caption reads…",
     "the screen shows…", "text appears saying…", "a title card displays…" must
     NEVER be in narration.
+    {director_guidance}
   expected_output: >
     A JSON object with a "metadata" object (title, prompt, total_duration_seconds,
     scene_count), a "scenes" array where each scene has: index,
@@ -125,6 +127,7 @@ asset_task:
     object, or action ("robot thinking", "rocket launch", "brain"). For
     graphic the query is a 2-5 word summary of what the graphic shows.
     Cover all scenes, one entry per scene, in order.
+    {asset_guidance}
   expected_output: >
     A JSON object with an "assets" array where each entry has: scene_index,
     media_type ("photo", "video", "graphic", "lottie" or "upload"), and query

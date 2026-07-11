@@ -20,14 +20,30 @@ async function jfetch(path, opts) {
 
 // Create a project + kick off generation. `files` is an optional array of File
 // objects. Returns the project's publicView ({ id, status, stage, progress, … }).
-export function createProject({ prompt, format, duration, files }) {
+export function createProject({ prompt, format, duration, genre, files, editedScript, assetPlan }) {
   const fd = new FormData();
   fd.append('prompt', prompt);
   if (format) fd.append('format', format);
   if (duration != null) fd.append('duration', String(duration));
+  if (genre) fd.append('genre', genre);
   for (const f of files || []) fd.append('files', f);
+  // A reviewed/edited script → the flow narrates these exact words (skips the crew).
+  if (editedScript?.scenes) { fd.append('editedScript', JSON.stringify(editedScript)); fd.append('assetPlan', JSON.stringify(assetPlan || [])); }
   return jfetch('/api/projects', { method: 'POST', body: fd });
 }
+
+// Generate the script for review before rendering → { script, asset_plan }.
+export const previewScript = ({ prompt, format, duration, genre, uploadNames }) =>
+  jfetch('/api/script/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt, format, duration, genre, uploadNames: uploadNames || [] }) });
+
+// ——— Content presets (genre) ———
+// { builtins:[{id,label,description,icon}], custom:[{id,label,description,bundle}] }
+export const listPresets = () => jfetch('/api/presets');
+// Create from an explicit bundle (composer form) OR from a project's look
+// ({ fromProjectId, label }). Returns the new preset's view.
+export const createPreset = (body) => jfetch('/api/presets', json(body));
+export const deletePreset = (id) => jfetch(`/api/presets/${id}`, { method: 'DELETE' });
 
 export const listProjects = () => jfetch('/api/projects');
 export const getProject = (id) => jfetch(`/api/projects/${id}`);
@@ -59,6 +75,8 @@ export const aiEdit = (id, payload) => jfetch(`/api/projects/${id}/edit`, json(p
 // diff}, trace }. History lives server-side (artifacts/<id>.chat.jsonl).
 export const directorChat = (id, payload) => jfetch(`/api/projects/${id}/chat`, json(payload));
 export const getChatLog = (id) => jfetch(`/api/projects/${id}/chat`).then((r) => r.messages);
+// Wipe the Director conversation server-side (the editor's "New chat" button).
+export const clearChat = (id) => jfetch(`/api/projects/${id}/chat`, { method: 'DELETE' });
 
 // Streaming turn (Server-Sent Events). Calls onEvent for each event:
 //   {type:'status', label} · {type:'delta', text} · {type:'done', reply,
@@ -96,3 +114,20 @@ export const chatNote = (id, text) => jfetch(`/api/projects/${id}/chat/note`, js
 // poll getProject for progress.
 export const rerenderProject = (id, ir, quality = 'draft') =>
   jfetch(`/api/projects/${id}/render`, json({ ir, quality }));
+
+// ——— Replace footage: unified stock search + asset ingest ———
+// Search Pexels + Pixabay (provider = all|pexels|pixabay) → array of results
+// ({ id, provider, thumb, download, width, height, duration, credit, link }).
+export const searchStock = (id, q, provider = 'all') =>
+  jfetch(`/api/projects/${id}/stock?q=${encodeURIComponent(q)}&provider=${provider}`).then((r) => r.results);
+
+// Download a stock/pasted URL into the project → { src }. The caller sets the
+// target layer's `src` to this and PUTs the IR.
+export const fetchAsset = (id, url) => jfetch(`/api/projects/${id}/assets/fetch`, json({ url }));
+
+// Upload a local file into the project → { src }.
+export const uploadAsset = (id, file) => {
+  const fd = new FormData();
+  fd.append('file', file);
+  return jfetch(`/api/projects/${id}/assets/upload`, { method: 'POST', body: fd });
+};

@@ -8,8 +8,13 @@ const queue = [];
 let working = false;
 const MAX_LOG = 40;
 
-export async function enqueueProject({ userId, prompt, format, uploads, music, voice, duration }) {
-  const p = await createProject({ userId, prompt, format, preset: presetFor(format), uploads, music, voice, duration });
+export async function enqueueProject({ userId, prompt, format, genre, presetBundle, uploads, music, voice, duration, editedScript, assetPlan }) {
+  const p = await createProject({
+    userId, prompt, format, preset: presetFor(format),
+    genre, presetBundle, uploads, music, voice, duration,
+  });
+  // Transient generation inputs (from the review screen) — mem only, not the DB.
+  if (editedScript?.scenes) { p.editedScript = editedScript; p.assetPlan = assetPlan || []; }
   p.log = [];
   queue.push({ id: p.id, kind: 'generate' });
   drain();

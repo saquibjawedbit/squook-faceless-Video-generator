@@ -11,6 +11,34 @@ export const STAGES = ['directing', 'rendering', 'mastering'];
 export const RERENDER_STAGES = ['rendering', 'mastering'];
 const RENDER_IR = resolve(RENDERER_DIR, 'public', 'render_ir.json');
 
+/**
+ * Generate JUST the script (directing crew), for the review-before-render step.
+ * Runs the flow in preview mode — no TTS/assets/render — and returns the
+ * { script, asset_plan } the review screen shows and later renders.
+ */
+export async function previewScript(params, onLog = () => {}) {
+  const payload = JSON.stringify({
+    prompt: params.prompt,
+    preset: presetFor(params.format),
+    genre: params.genre || '',
+    ...(params.presetBundle ? { preset_bundle: params.presetBundle } : {}),
+    uploads: (params.uploads || []).map((u) => ({ path: u.path || '', name: u.name, type: u.type || '' })),
+    music: params.music || '',
+    voice: params.voice || '',
+    duration: params.duration || '',
+    preview: true,
+  });
+  if (config.pipelineMode === 'mock') {
+    return { script: { metadata: { title: params.prompt.slice(0, 60), prompt: params.prompt }, scenes: [
+      { index: 1, narration: '(mock) This is the opening line of your video.', on_screen_text: 'Hello', visual: 'Title card' },
+      { index: 2, narration: '(mock) And here is the second beat, ready to edit.', on_screen_text: '', visual: 'B-roll' },
+    ] }, asset_plan: [] };
+  }
+  await run('uv', ['run', 'run_with_trigger', payload], GUIDE_DIR, onLog);
+  const raw = await readFile(join(GUIDE_DIR, 'output', 'preview_script.json'), 'utf8');
+  return JSON.parse(raw);
+}
+
 export function presetFor(format) {
   // No format given → '' so the flow infers the aspect from the prompt.
   if (!format) return '';
@@ -99,12 +127,20 @@ export async function runPipeline(project, update) {
     const payload = JSON.stringify({
       prompt: project.prompt,
       preset: project.preset,
+      // Content preset (genre): a built-in id ('educational'|'animation'|
+      // 'images'|'auto') or 'custom' with the resolved bundle the flow uses
+      // verbatim. Empty/absent → the flow defaults to 'auto'.
+      genre: project.genre || '',
+      ...(project.presetBundle ? { preset_bundle: project.presetBundle } : {}),
       // Full upload records so the flow's crew can name/assign the user's own
       // footage (not just bare paths).
       uploads: uploads.map((u) => ({ path: u.path, name: u.name, type: u.type })),
       music: project.music || '',
       voice: project.voice || '',
       duration: project.duration || '',
+      // Review edit: the user tweaked the script — the flow skips the crew and
+      // narrates/renders their exact words (with the phase-1 asset plan reused).
+      ...(project.editedScript?.scenes ? { edited_script: project.editedScript, asset_plan: project.assetPlan || [] } : {}),
     });
     update({ stage: 'directing', progress: 5 });
     await run('uv', ['run', 'run_with_trigger', payload], GUIDE_DIR, log);
