@@ -1,9 +1,10 @@
 research_task:
   description: >
-    Research the topic "{prompt}" using your own knowledge. Identify the key
-    facts, core concepts, definitions, surprising details, common
-    misconceptions, and hooks that would make this topic engaging to a
-    general audience.
+    Research the topic "{prompt}". If a web search tool is available, run at
+    most 2-3 targeted searches to verify key facts and capture anything
+    recent; otherwise use your own knowledge. Identify the key facts, core
+    concepts, definitions, surprising details, common misconceptions, and
+    hooks that would make this topic engaging to a general audience.
   expected_output: >
     A structured research brief with roughly 10 bullet points covering the
     most relevant facts, concepts, hooks, and misconceptions about "{prompt}".
@@ -23,7 +24,8 @@ writing_task:
     no stage or camera directions, and never describe the video, its scenes,
     screen recordings, on-screen text, captions, transitions, or music. If a
     sentence talks about how the video is made rather than the subject, rewrite
-    it as something the viewer would actually be told.
+    it as something the viewer would actually be told. Never use emojis
+    anywhere unless the request explicitly asks for them.
     Note on supplied footage: {uploads} Where these clips or images naturally
     fit a beat of the narration, write toward them so they earn their place
     on screen. The intended music mood for this video is: {music}.
@@ -79,6 +81,8 @@ directing_task:
     the instant you tap the plus button." Phrases like "the caption reads…",
     "the screen shows…", "text appears saying…", "a title card displays…" must
     NEVER be in narration.
+    NO EMOJIS: the title, on_screen_text, and narration must never contain
+    emojis unless the original request explicitly asks for them.
     {director_guidance}
   expected_output: >
     A JSON object with a "metadata" object (title, prompt, total_duration_seconds,

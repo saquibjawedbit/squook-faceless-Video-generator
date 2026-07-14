@@ -4,21 +4,6 @@ import type {PartStyle} from '../ir';
 import {asset} from '../ir';
 import {Part} from './Part';
 
-const EMOJI: Record<string, string> = {
-  brain: '🧠',
-  chip: '💻',
-  database: '🗄️',
-  network: '🕸️',
-  eye: '👁️',
-  gear: '⚙️',
-  chart: '📈',
-  lightbulb: '💡',
-  clock: '⏱️',
-  check: '✅',
-  cross: '❌',
-  arrow: '➡️',
-};
-
 export const IconRow: React.FC<{
   icons: string[];
   iconSrcs?: (string | null)[];
@@ -49,7 +34,25 @@ export const IconRow: React.FC<{
               // Real fetched vector icon (Iconify), already recoloured to accent.
               <img src={asset(iconSrcs[i] as string)} width={160} height={160} style={{display: 'block'}} alt="" />
             ) : (
-              <div style={{fontSize: 160, lineHeight: 1.2}}>{EMOJI[name] ?? '⚙️'}</div>
+              // Icon fetch failed — a neutral accent ring with the concept's
+              // initial. Emojis are banned from generated video output.
+              <div
+                style={{
+                  width: 150,
+                  height: 150,
+                  borderRadius: '50%',
+                  border: `6px solid ${palette.accent}`,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: palette.accent,
+                  fontFamily: font.family,
+                  fontWeight: 800,
+                  fontSize: 72,
+                }}
+              >
+                {((labels[i] || name || '?').trim().charAt(0) || '?').toUpperCase()}
+              </div>
             )}
             <Part
               name={`label_${i}`}

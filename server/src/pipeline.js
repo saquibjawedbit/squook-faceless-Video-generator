@@ -5,7 +5,9 @@ import { join, resolve } from 'node:path';
 import {
   GUIDE_DIR, RENDERER_DIR, FINAL_VIDEO, FALLBACK_VIDEO, ARTIFACTS_DIR, config,
 } from './config.js';
-import { snapshotProject, restoreProject, readIr } from './snapshot.js';
+import {
+  snapshotProject, restoreProject, readIr, irSnapshotPath, assetSnapshotDir,
+} from './snapshot.js';
 
 export const STAGES = ['directing', 'rendering', 'mastering'];
 export const RERENDER_STAGES = ['rendering', 'mastering'];
@@ -169,6 +171,29 @@ export async function runPipeline(project, update) {
   project.quality = 'draft';
   update({ progress: 100, log: `done: ${meta.title || dest}` });
   return { videoPath: dest, title: meta.title, durationS: meta.durationS, thumbPath };
+}
+
+/**
+ * Re-voice a project's narration in its snapshot — no render. Synthesizes a
+ * fresh wav per scene with the requested voice and rewrites the snapshot IR
+ * (audio srcs, captions, retimed durations). The editor previews straight
+ * from the snapshot; the mp4 goes stale until the next re-render, exactly
+ * like any other IR edit.
+ */
+export async function runRevoice(project, update, voice) {
+  const log = (line) => update({ log: line });
+  update({ stage: 'revoicing', progress: 10 });
+  if (config.pipelineMode === 'mock') {
+    log(`[mock] revoicing with '${voice}'…`);
+    await wait(1200);
+    return;
+  }
+  const payload = JSON.stringify({
+    ir: irSnapshotPath(project.id),
+    assets: assetSnapshotDir(project.id),
+    voice,
+  });
+  await run('uv', ['run', 'revoice', payload], GUIDE_DIR, log);
 }
 
 /**

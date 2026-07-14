@@ -12,10 +12,11 @@ import { readIr } from './snapshot.js';
 // Built-in metadata for the composer picker. `id` must match Python PRESETS so
 // the flow resolves behaviour from the id alone (no bundle needed).
 export const BUILTIN_PRESETS = [
-  { id: 'auto', label: 'Auto', description: 'Let the director choose everything from the prompt.', icon: '✨', builtin: true },
-  { id: 'educational', label: 'Educational', description: 'Clear explainers driven by diagrams, charts and title cards.', icon: '🎓', builtin: true },
-  { id: 'animation', label: 'Animation', description: 'Playful animated illustrations and motion graphics — no stock footage.', icon: '🎬', builtin: true },
-  { id: 'images', label: 'Images', description: 'Cinematic still photography with Ken Burns motion.', icon: '🖼️', builtin: true },
+  { id: 'auto', label: 'Auto', description: 'Let the director choose everything from the prompt.', icon: '', builtin: true },
+  { id: 'educational', label: 'Educational', description: 'Clear explainers driven by diagrams, charts and title cards.', icon: '', builtin: true },
+  { id: 'animation', label: 'Animation', description: 'Playful animated illustrations and motion graphics — no stock footage.', icon: '', builtin: true },
+  { id: 'footage', label: 'Footage', description: 'Real videos and photos only — no generated graphics.', icon: '', builtin: true },
+  { id: 'images', label: 'Images', description: 'Cinematic still photography with Ken Burns motion.', icon: '', builtin: true },
 ];
 
 const BUILTIN_IDS = new Set(BUILTIN_PRESETS.map((p) => p.id));

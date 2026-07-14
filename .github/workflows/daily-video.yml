@@ -1,0 +1,130 @@
+name: daily-video
+
+on:
+  schedule:
+    # 03:30 UTC = 09:00 IST. GitHub may delay scheduled runs by a few minutes.
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+    inputs:
+      prompt:
+        description: One-off prompt (skips topic rotation)
+        required: false
+      upload:
+        description: Upload to YouTube
+        type: boolean
+        default: true
+
+concurrency:
+  group: daily-video
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      # uv.lock pins the CUDA build of torch (a Kokoro dependency), which
+      # installs ~5GB of NVIDIA wheels the CPU-only runner can't use. Clear
+      # the biggest preinstalled toolchains so the disk survives it.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: System deps (Kokoro phonemizer + audio tools)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends espeak-ng ffmpeg
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: renderer/package-lock.json
+
+      # No uv cache: the CUDA torch wheels alone would blow the 10GB Actions
+      # cache limit and double the disk footprint. Downloads are fast enough.
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
+
+      - name: Cache TTS model weights
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: kokoro-hf-cache-v1
+
+      - name: Install renderer deps
+        working-directory: renderer
+        run: |
+          npm ci
+          npx remotion browser ensure
+
+      - name: Install flow deps
+        working-directory: guide_creator_flow
+        run: uv sync
+
+      - name: Install uploader deps
+        run: pip install --quiet google-api-python-client google-auth google-auth-httplib2
+
+      - name: Generate and upload
+        env:
+          # LLM: any OpenAI-compatible endpoint serving the gpt-oss models the
+          # pipeline uses locally via Ollama (see _make_pipeline_llm in
+          # content_crew.py). Defaults to Groq's free tier; override the repo
+          # VARIABLES to point elsewhere, e.g. Cloudflare Workers AI:
+          #   LLM_BASE_URL  = https://api.cloudflare.com/client/v4/accounts/<id>/ai/v1
+          #   LLM_MODEL     = @cf/openai/gpt-oss-120b
+          #   LLM_FAST_MODEL= @cf/openai/gpt-oss-20b
+          # with the LLM_API_KEY secret set to the matching API key.
+          LLM_PROVIDER: openai-compat
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.groq.com/openai/v1' }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL || 'openai/gpt-oss-120b' }}
+          LLM_FAST_MODEL: ${{ vars.LLM_FAST_MODEL || 'openai/gpt-oss-20b' }}
+          # Optional providers — leave the secrets unset to skip them.
+          # OPENAI_API_KEY also switches TTS from local Kokoro to OpenAI,
+          # ANTHROPIC_API_KEY routes the design steps to Claude (paid).
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          LOGO_DEV_TOKEN: ${{ secrets.LOGO_DEV_TOKEN }}
+          # YouTube upload (see automation/get_youtube_token.py).
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_PRIVACY: public
+          ONE_OFF_PROMPT: ${{ inputs.prompt }}
+          DO_UPLOAD: ${{ inputs.upload }}
+        run: |
+          args=()
+          [ -n "$ONE_OFF_PROMPT" ] && args+=(--prompt "$ONE_OFF_PROMPT")
+          [ "$DO_UPLOAD" = "false" ] && args+=(--no-upload)
+          python3 automation/daily.py "${args[@]}"
+
+      - name: Keep a copy of the video
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-video
+          path: renderer/out/final.mp4
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Commit topic rotation state
+        if: always()
+        run: |
+          if ! git diff --quiet automation/state.json; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add automation/state.json
+            git commit -m "chore: advance daily topic index [skip ci]"
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push
+          fi

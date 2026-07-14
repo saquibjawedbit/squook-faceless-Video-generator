@@ -10,6 +10,7 @@ Rules:
 - ON_SCREEN_TEXT is a short on-screen caption for the scene (or an empty string).
 - VISUAL is a brief description of what's shown (used to pick footage/graphics).
 - Keep the SAME number of scenes unless the instruction clearly asks to add or remove scenes. Apply the instruction to every scene it affects; leave the rest as they are.
+- NO EMOJIS in narration, on_screen_text, or anywhere else, unless the instruction explicitly asks for them.
 Respond with RAW JSON ONLY, no prose:
 {"scenes":[{"index":1,"narration":"...","on_screen_text":"...","visual":"..."}, ...]}`;
 

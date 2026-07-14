@@ -20,12 +20,13 @@ async function jfetch(path, opts) {
 
 // Create a project + kick off generation. `files` is an optional array of File
 // objects. Returns the project's publicView ({ id, status, stage, progress, … }).
-export function createProject({ prompt, format, duration, genre, files, editedScript, assetPlan }) {
+export function createProject({ prompt, format, duration, genre, voice, files, editedScript, assetPlan }) {
   const fd = new FormData();
   fd.append('prompt', prompt);
   if (format) fd.append('format', format);
   if (duration != null) fd.append('duration', String(duration));
   if (genre) fd.append('genre', genre);
+  if (voice) fd.append('voice', voice);
   for (const f of files || []) fd.append('files', f);
   // A reviewed/edited script → the flow narrates these exact words (skips the crew).
   if (editedScript?.scenes) { fd.append('editedScript', JSON.stringify(editedScript)); fd.append('assetPlan', JSON.stringify(assetPlan || [])); }
@@ -33,9 +34,9 @@ export function createProject({ prompt, format, duration, genre, files, editedSc
 }
 
 // Generate the script for review before rendering → { script, asset_plan }.
-export const previewScript = ({ prompt, format, duration, genre, uploadNames }) =>
+export const previewScript = ({ prompt, format, duration, genre, voice, uploadNames }) =>
   jfetch('/api/script/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ prompt, format, duration, genre, uploadNames: uploadNames || [] }) });
+    body: JSON.stringify({ prompt, format, duration, genre, voice, uploadNames: uploadNames || [] }) });
 
 // AI-revise the review script from an instruction → { script }.
 export const reviseScript = ({ script, instruction }) =>
@@ -119,6 +120,11 @@ export const chatNote = (id, text) => jfetch(`/api/projects/${id}/chat/note`, js
 // poll getProject for progress.
 export const rerenderProject = (id, ir, quality = 'draft') =>
   jfetch(`/api/projects/${id}/render`, json({ ir, quality }));
+
+// Change the narration voice: re-synthesizes every scene's voiceover into the
+// project snapshot (queued job — poll getProject, then reload the IR).
+export const revoiceProject = (id, voice) =>
+  jfetch(`/api/projects/${id}/revoice`, json({ voice }));
 
 // ——— Replace footage: unified stock search + asset ingest ———
 // Search Pexels + Pixabay (provider = all|pexels|pixabay) → array of results

@@ -38,6 +38,7 @@ How to work:
 - BACKGROUND / ambient shader of a scene (make it calmer, livelier, a different look, or recolor it): call set_shader with a kind (nebula|waves|grid|aurora|mesh|rays) and optional speed/intensity/color_a/color_b. It adds a shader if the scene has none, else restyles the existing one.
 - CUSTOM VISUALS no stock clip or preset graphic can give (a molecule forming, an orbit, a data flow, a mechanism, an abstract diagram): you CAN build them yourself with compose_animation — you literally draw the scene as vector shapes with keyframes; don't refuse or fall back to stock when the user wants a specific illustrated concept. Coordinates are 0..100 (% of frame, top-left origin), colors are "accent"/"accent2"/"text"/"bg" or hex, keyframe t is seconds into the scene, and a shape holds a keyframed prop's value before its first / after its last keyframe. Example — two atoms drifting together with a bond appearing: shapes:[{"kind":"circle","r":7,"fill":"accent","x":32,"y":50,"keyframes":[{"t":0,"x":32},{"t":1.6,"x":46}]},{"kind":"circle","r":7,"fill":"accent2","x":68,"y":50,"keyframes":[{"t":0,"x":68},{"t":1.6,"x":54}]},{"kind":"line","x":46,"y":50,"x2":54,"y2":50,"stroke":"text","stroke_width":3,"opacity":0,"keyframes":[{"t":1.4,"opacity":0},{"t":1.8,"opacity":1}]},{"kind":"text","text":"H₂O","x":50,"y":72,"size":56,"fill":"text","opacity":0,"keyframes":[{"t":1.8,"opacity":0},{"t":2.2,"opacity":1}]}].
 - [editor event] lines in the conversation are ground truth about what the user applied, discarded, or changed by hand.
+- NO EMOJIS: never put emojis in narration, on-screen text, titles, or any other video text unless the user explicitly asks for them.
 
 Ops reference for propose_edit:
 ${OPS_DOCS}`;
@@ -100,7 +101,8 @@ function sanitizeMotion(rawShapes, rawBg) {
     put('x', s.x, -20, 120); put('y', s.y, -20, 120);
     put('x2', s.x2, -20, 120); put('y2', s.y2, -20, 120);
     put('r', s.r, 0, 60); put('w', s.w, 0, 120); put('h', s.h, 0, 120);
-    put('size', s.size, 6, 400); put('stroke_width', s.stroke_width, 0, 40);
+    // Floor at legible: sub-28px text in a 1080p frame is unreadable noise.
+    put('size', s.size, 28, 300); put('stroke_width', s.stroke_width, 0, 40);
     put('opacity', s.opacity, 0, 1);
     if (typeof s.text === 'string') out.text = s.text.slice(0, 48);
     const f = motionColor(s.fill); if (f) out.fill = f;
@@ -117,6 +119,19 @@ function sanitizeMotion(rawShapes, rawBg) {
       }
       if (kfs.length) out.keyframes = kfs.sort((a, b) => a.t - b.t);
     }
+    if (out.kind === 'text') {
+      // HARD RULE: no emojis in generated video output.
+      out.text = (out.text || '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '').trim();
+      const words = out.text.split(/\s+/).filter(Boolean);
+      // A text shape longer than a short label is a narration dump — the
+      // voice-over speaks it and the lower third already shows it.
+      if (!words.length || words.length > 5) continue;
+      // Text is middle-anchored; keep its center in the safe area so a label
+      // authored at the frame edge doesn't render half-clipped.
+      out.x = Math.min(90, Math.max(10, out.x ?? 50));
+      out.y = Math.min(92, Math.max(8, out.y ?? 50));
+    }
+    if (out.kind === 'rect' && ((out.w ?? 10) < 1 || (out.h ?? 10) < 1)) continue; // zero dimension renders as nothing
     shapes.push(out);
   }
   const bg = motionColor(rawBg);
@@ -258,7 +273,7 @@ function createDirectorAgent(ir, projectId) {
         },
       }),
       compose_animation: tool({
-        description: 'Build a CUSTOM animated diagram from scratch as vector shapes — no stock clip needed. Draw with circles/rings/dots/rects/lines/text, each with optional keyframes (position/size/opacity/scale/rotate over time). Use for bespoke illustrated concepts: a molecule forming, an orbit, a cycle, a mechanism, a flow. Coordinates are 0..100 (% of frame, top-left origin); colors are "accent"|"accent2"|"text"|"bg" or hex; keyframe t is seconds into the scene.',
+        description: 'Build a CUSTOM animated diagram from scratch as vector shapes — no stock clip needed. Draw with circles/rings/dots/rects/lines/text, each with optional keyframes (position/size/opacity/scale/rotate over time). Use for bespoke illustrated concepts: a molecule forming, an orbit, a cycle, a mechanism, a flow. Coordinates are 0..100 (% of frame, top-left origin); colors are "accent"|"accent2"|"text"|"bg" or hex; keyframe t is seconds into the scene. Layout rules: keep centers inside 10..90; text shapes are SHORT labels (1-4 words, size 32-90), never sentences — longer text gets deleted; rects need w>=2 and h>=2.',
         inputSchema: z.object({
           scene: z.number().int().describe('1-based scene number to place the animation in'),
           shapes: z.array(z.looseObject({ kind: z.string() })).min(1).max(48).describe('the vector primitives + their keyframes'),

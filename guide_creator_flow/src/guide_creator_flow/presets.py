@@ -85,6 +85,35 @@ PRESETS: dict[str, dict] = {
             "design": "A bold, playful register with an expressive display typeface.",
         },
     },
+    "footage": {
+        "id": "footage",
+        "label": "Footage",
+        "description": "Real videos and photos only — no generated graphics.",
+        "media_policy": {
+            "force": ["video", "photo"],
+            "prefer": None,
+            "block": None,
+            "ken_burns_all": False,
+        },
+        "theme": {
+            "mood_pool": ["premium", "calm", "nature"],
+            "font_pool": ["condensed_sans", "editorial_serif", "grotesque_sans"],
+        },
+        "voice_default": "",
+        "music_default": "",
+        "guidance": {
+            "writer": "Write visual, concrete narration where every beat describes something "
+                      "a camera can actually show — real places, people, objects and actions. "
+                      "Avoid abstractions that would need a diagram to explain.",
+            "director": "Tell the story entirely through real stock footage and photographs — "
+                        "cinematic clips for motion, strong stills for quiet beats. No "
+                        "diagrams, charts, counters, animated graphics or illustration clips.",
+            "asset": "Use 'video' for anything moving and 'photo' for a strong still subject — "
+                     "never 'graphic' or 'lottie'. Every query must name a concrete, filmable "
+                     "real-world subject.",
+            "design": "A cinematic, documentary register suited to full-bleed footage.",
+        },
+    },
     "images": {
         "id": "images",
         "label": "Images",

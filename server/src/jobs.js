@@ -1,6 +1,6 @@
 import { unlink } from 'node:fs/promises';
 import { createProject, updateProject, finishProject, live, getProject, rehydrate } from './store.js';
-import { runPipeline, runRerender, presetFor } from './pipeline.js';
+import { runPipeline, runRerender, runRevoice, presetFor } from './pipeline.js';
 
 // Single-worker FIFO queue — the pipeline writes shared files (renderer/public,
 // renderer/out), so projects must render one at a time.
@@ -37,15 +37,32 @@ export async function enqueueRerender(id, quality = 'draft') {
   return p;
 }
 
+// Change the narration voice: TTS into the project snapshot, no render.
+// Queued like renders — Kokoro and Remotion would otherwise fight for RAM.
+export async function enqueueRevoice(id, voice) {
+  let p = live(id);
+  if (!p) {
+    p = await getProject(id);
+    if (!p) return null;
+    rehydrate(p);
+  }
+  p.log ||= [];
+  await updateProject(id, { status: 'queued', stage: null, progress: 0, error: null });
+  queue.push({ id, kind: 'revoice', voice });
+  drain();
+  return p;
+}
+
 async function drain() {
   if (working) return;
   working = true;
   try {
     while (queue.length) {
-      const { id, kind, quality } = queue.shift();
+      const { id, kind, quality, voice } = queue.shift();
       const p = live(id);
       if (!p) continue;
-      const firstStage = kind === 'rerender' ? 'rendering' : 'directing';
+      const firstStage =
+        kind === 'rerender' ? 'rendering' : kind === 'revoice' ? 'revoicing' : 'directing';
       await updateProject(id, { status: 'running', stage: firstStage, progress: 5 });
 
       let lastStage = null;
@@ -61,6 +78,14 @@ async function drain() {
       };
 
       try {
+        if (kind === 'revoice') {
+          // No new video artifact — the snapshot changed, the mp4 is stale
+          // until the next re-render (same contract as a saved IR edit).
+          await runRevoice(p, update, voice);
+          p.voice = voice;
+          await updateProject(id, { status: 'done', stage: 'done', progress: 100 });
+          continue;
+        }
         const result = kind === 'rerender'
           ? await runRerender(p, update, quality)
           : await runPipeline(p, update);

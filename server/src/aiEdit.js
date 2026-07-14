@@ -409,6 +409,7 @@ export function applyOps(ir, ops) {
 
 export const OPS_SPEC = `You edit a short video described by JSON. Respond with ONLY this JSON shape:
 {"ops": [...], "summary": "<one short sentence describing what you changed>"}
+Never put emojis in any text you write (narration, on-screen text, titles) unless the user explicitly asks for them.
 
 Available ops (scene numbers are 1-based, layer indexes are 0-based, both refer to the JSON you were given):
 {"op":"set_layer","scene":N,"layer":I,"patch":{...}}            — edit a layer's editable fields

@@ -5,6 +5,7 @@ import os
 import shutil
 import sys
 import time
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -16,6 +17,7 @@ from guide_creator_flow.crews.content_crew.content_crew import (
     AssetPlan,
     ContentCrew,
     DirectionScript,
+    repair_direction_script,
 )
 from guide_creator_flow.tools import lottie, music, musicgen, sfx, stock, tts
 
@@ -100,7 +102,7 @@ def _infer_intent(prompt: str) -> dict:
     import json as _json
     import re as _re
 
-    from guide_creator_flow.crews.content_crew.content_crew import llm
+    from guide_creator_flow.crews.content_crew.content_crew import fast_llm
 
     ask = (
         "Extract production settings from this video request. Respond with RAW JSON ONLY:\n"
@@ -117,7 +119,7 @@ def _infer_intent(prompt: str) -> dict:
         '- sfx: true ONLY when sound effects / whooshes / impacts are asked for.\n'
         f'Request: "{prompt[:600]}"'
     )
-    text = str(llm.call(ask)).strip()
+    text = str(fast_llm.call(ask)).strip()
     fence = _re.search(r"```(?:json)?\s*(.*?)```", text, _re.DOTALL)
     if fence:
         text = fence.group(1).strip()
@@ -314,8 +316,9 @@ class ContentFlow(Flow[ContentState]):
             result = None
         else:
             # A local model occasionally emits a directing script that fails
-            # validation; that's a dice roll, not a config problem, so one fresh
-            # attempt rescues the run instead of failing the whole generation.
+            # validation; that's a dice roll, not a config problem. First try
+            # to repair that one output with a cheap structured call; only if
+            # the text is beyond repair does a fresh crew run rescue it.
             script = None
             for attempt in (1, 2):
                 result = (
@@ -337,6 +340,15 @@ class ContentFlow(Flow[ContentState]):
                         script = task_output.pydantic
                 if script is not None:
                     break
+                raw = next(
+                    (t.raw for t in result.tasks_output
+                     if "directing" in (t.name or "")),
+                    result.tasks_output[2].raw if len(result.tasks_output) > 2 else "",
+                )
+                script = repair_direction_script(raw)
+                if script is not None:
+                    print("Directing output failed validation; repaired it with the fast model")
+                    break
                 print(f"Directing task did not produce a valid DirectionScript (attempt {attempt})")
             if script is None:
                 raise RuntimeError("Directing task did not produce a valid DirectionScript")
@@ -348,6 +360,15 @@ class ContentFlow(Flow[ContentState]):
         # in `scene.visual`, which we leave untouched.
         for scene in script.scenes:
             scene.narration = tts.sanitize_narration(scene.narration)
+
+        # Emojis are banned from generated content unless the prompt explicitly
+        # asks for them. User-edited scripts (result is None) are the user's
+        # own words and pass through untouched.
+        if result is not None and "emoji" not in self.state.prompt.lower():
+            script.metadata.title = tts.strip_emojis(script.metadata.title)
+            for scene in script.scenes:
+                scene.narration = tts.strip_emojis(scene.narration)
+                scene.on_screen_text = tts.strip_emojis(scene.on_screen_text)
 
         # Director-guessed durations are fiction; retime from the narration
         # (word-count estimate until real TTS audio lengths replace it).
@@ -405,25 +426,31 @@ class ContentFlow(Flow[ContentState]):
         voice_id = self.state.voice or tts.DEFAULT_VOICE_ID
         print(f"Generating narration audio ({voice_id}) for {len(self.state.script['scenes'])} scenes")
         audio_dir = Path("output/audio")
-        done = 0
         for scene in self.state.script["scenes"]:
             scene["audio"] = None
-            if not tts.clean_narration(scene["narration"]):
-                continue  # visual-only beat: no audio, minimum duration applies
+        # Visual-only beats get no audio; a minimum duration applies instead.
+        jobs = [s for s in self.state.script["scenes"] if tts.clean_narration(s["narration"])]
+
+        def _speak(scene):
             out_path = audio_dir / f"scene_{scene['index']}.wav"
             try:
                 audio_len, words = tts.synthesize(scene["narration"], out_path, voice_id=voice_id)
             except Exception as e:
                 out_path.unlink(missing_ok=True)
                 print(f"  scene {scene['index']}: TTS failed ({e}); keeping word-count estimate")
-                continue
+                return
             scene["audio"] = {
                 "src": str(out_path),
                 "duration_s": round(audio_len, 2),
                 "words": words,
             }
             scene["duration_seconds"] = max(3, math.ceil(audio_len + 0.6))
-            done += 1
+
+        # The OpenAI path is pure network wait, so scenes synthesize
+        # concurrently; the Kokoro path serializes on its own pipeline lock.
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            list(pool.map(_speak, jobs))
+        done = sum(1 for s in self.state.script["scenes"] if s["audio"])
         self.state.script["metadata"]["total_duration_seconds"] = sum(
             s["duration_seconds"] for s in self.state.script["scenes"]
         )
@@ -526,8 +553,6 @@ class ContentFlow(Flow[ContentState]):
                 stock_ok = False
 
         # Downloads are pure network wait — run them concurrently.
-        from concurrent.futures import ThreadPoolExecutor
-
         def _fetch(job):
             entry, scene = job
             hit = hits.get(entry["scene_index"])
@@ -630,17 +655,6 @@ class ContentFlow(Flow[ContentState]):
         ken_burns_all = bool(media_policy.get("ken_burns_all"))
         theme_bias = bundle.get("theme") or {}
         guidance = bundle.get("guidance") or {}
-        try:
-            plan = ir_builder.compile_render_plan(
-                scene_facts, ken_burns_all=ken_burns_all, guidance=guidance.get("director", "")
-            )
-        except Exception as e:
-            print(f"Technical Director failed ({e}); using default treatment")
-            plan = ir_builder.RenderPlan(
-                scenes=[ir_builder.default_scene_plan(f, ken_burns_all=ken_burns_all)
-                        for f in scene_facts]
-            )
-
         graphic_indexes = {
             e["scene_index"] for e in self.state.asset_plan if e["media_type"] == "graphic"
         }
@@ -655,14 +669,34 @@ class ContentFlow(Flow[ContentState]):
             if scene["index"] in graphic_indexes
         ]
         print(f"Designing graphics for {len(graphic_facts)} scenes")
-        graphics = ir_builder.design_graphics(graphic_facts, guidance=guidance.get("director", ""))
 
-        theme = ir_builder.build_theme(
-            self.state.prompt,
-            mood_pool=theme_bias.get("mood_pool"),
-            font_pool=theme_bias.get("font_pool"),
-            guidance=guidance.get("design", ""),
-        )
+        # The render plan, the graphics, and the theme don't feed each other —
+        # three independent LLM round-trips, so they run concurrently.
+        with ThreadPoolExecutor(max_workers=3) as pool:
+            plan_future = pool.submit(
+                ir_builder.compile_render_plan,
+                scene_facts, ken_burns_all=ken_burns_all, guidance=guidance.get("director", ""),
+            )
+            graphics_future = pool.submit(
+                ir_builder.design_graphics, graphic_facts, guidance=guidance.get("director", ""),
+            )
+            theme_future = pool.submit(
+                ir_builder.build_theme,
+                self.state.prompt,
+                mood_pool=theme_bias.get("mood_pool"),
+                font_pool=theme_bias.get("font_pool"),
+                guidance=guidance.get("design", ""),
+            )
+            try:
+                plan = plan_future.result()
+            except Exception as e:
+                print(f"Technical Director failed ({e}); using default treatment")
+                plan = ir_builder.RenderPlan(
+                    scenes=[ir_builder.default_scene_plan(f, ken_burns_all=ken_burns_all)
+                            for f in scene_facts]
+                )
+            graphics = graphics_future.result()
+            theme = theme_future.result()
         # Music ladder: honour the decision (user chip > Director brief); when
         # music is wanted, use the fetched track, else synthesise a bed.
         brief = (self.state.script or {}).get("music") or {}
@@ -744,7 +778,50 @@ class ContentFlow(Flow[ContentState]):
             json.dump(self.state.asset_plan, f, indent=2, ensure_ascii=False)
         print("Saved output/direction_script.json and output/render_ir.json")
         self._sync_renderer()
+        self._critique_and_refine(output_dir)
         _mark("end")  # flush the final stage's timing
+
+    def _critique_and_refine(self, output_dir: Path):
+        """The visual feedback loop (on by default when a vision model is
+        reachable; DESIGN_CRITIQUE=false opts out). Runs after the IR + media
+        are on disk and synced, so still renders show the real video.
+
+        1. Per-scene: render → critique → revise → re-render → verify.
+        2. Whole-video: contact-sheet review; its per-scene flags drive one
+           more targeted revision pass, and the report lands in
+           metadata.critique.
+        Any failure is swallowed — the saved IR is never made worse."""
+        try:
+            from guide_creator_flow import critique
+            if not critique.enabled():
+                return
+            theme = (self.state.render_ir.get("metadata") or {}).get("theme")
+
+            def sync(ir):
+                # Persist between rounds so the next still renders the revision.
+                self.state.render_ir = ir
+                with open(output_dir / "render_ir.json", "w") as f:
+                    json.dump(ir, f, indent=2, ensure_ascii=False)
+                self._sync_renderer()
+
+            print("Critique loop: the designer reviews its own rendered frames…")
+            ir, revised = critique.refine_ir(
+                self.state.render_ir, theme, sync_fn=sync
+            )
+            report = critique.review_video(ir, theme)
+            if report and report.get("scene_notes"):
+                steer = {n["scene"]: n["issue"] for n in report["scene_notes"]}
+                ir, more = critique.refine_ir(
+                    ir, theme, sync_fn=sync, steer=steer, rounds=1
+                )
+                revised += more
+            sync(ir)  # persist the final IR + the metadata.critique report
+            if revised:
+                print(f"Critique loop: revised {revised} scene(s) and re-synced.")
+            else:
+                print("Critique loop: no changes needed.")
+        except Exception as e:
+            print(f"Critique pass skipped ({e}); keeping the original IR.")
 
     def _sync_renderer(self):
         renderer_public = Path("../renderer/public")

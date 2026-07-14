@@ -5,6 +5,7 @@ import { navigate } from '../lib/router.js';
 import { createProject, previewScript, listProjects, getProject, thumbSrc, listPresets, createPreset, deletePreset } from '../lib/api.js';
 import ScriptReview from './ScriptReview.jsx';
 import LoadingScreen from './LoadingScreen.jsx';
+import { VOICES, playSample, stopSample, onSampleChange } from '../lib/voices.js';
 
 /**
  * Squook Home — a faithful React port of `Squook Home.dc.html`: the logged-in
@@ -23,6 +24,8 @@ const grotesk = "'Schibsted Grotesk',sans-serif";
 
 const INITIAL = {
   prompt: '', assets: [], format: '16:9', lengthSec: 30,
+  voice: '',           // narration voice id ('' = auto, 'none' = no voiceover)
+  playingVoice: null,  // which voice sample is previewing right now
   generating: false, genStage: '', genProgress: 0, note: '',
   previewing: false, review: null, // review = { script, asset_plan } once the script is written
   projects: null, // null = loading; [] = loaded-empty
@@ -140,7 +143,10 @@ export default function SquookHome({ userName = 'Alex' }) {
     toastT.current = setTimeout(() => setState({ note: '' }), 2600);
   }, [setState]);
 
-  useEffect(() => () => { clearTimeout(toastT.current); clearInterval(pollRef.current); }, []);
+  useEffect(() => () => { clearTimeout(toastT.current); clearInterval(pollRef.current); stopSample(); }, []);
+
+  // Track which voice sample is playing so its chip can show ■ instead of ▶.
+  useEffect(() => onSampleChange((id) => setState({ playingVoice: id })), [setState]);
 
   // Load the caller's real projects (drafts + finished videos).
   useEffect(() => {
@@ -264,7 +270,7 @@ export default function SquookHome({ userName = 'Alex' }) {
     setState({ previewing: true });
     previewScript({
       prompt: S0.prompt.trim(), format: S0.format, duration: S0.lengthSec, genre: S0.genre,
-      uploadNames: (S0.assets || []).map((a) => a.name).filter(Boolean),
+      voice: S0.voice, uploadNames: (S0.assets || []).map((a) => a.name).filter(Boolean),
     })
       .then((r) => { setState({ previewing: false, review: r }); window.scrollTo({ top: 0 }); })
       .catch((err) => { setState({ previewing: false }); toast('Couldn’t write the script — ' + (err.message || err)); });
@@ -276,7 +282,8 @@ export default function SquookHome({ userName = 'Alex' }) {
     const files = (S0.assets || []).map((a) => a.file).filter(Boolean);
     setState({ generating: true, genStage: 'directing', genProgress: 0 });
     createProject({
-      prompt: S0.prompt.trim(), format: S0.format, duration: S0.lengthSec, genre: S0.genre, files,
+      prompt: S0.prompt.trim(), format: S0.format, duration: S0.lengthSec, genre: S0.genre,
+      voice: S0.voice, files,
       editedScript, assetPlan: S0.review?.asset_plan,
     })
       .then((p) => pollProject(p.id))
@@ -441,7 +448,7 @@ export default function SquookHome({ userName = 'Alex' }) {
                 return (
                   <Box key={p.id} t="button" onClick={() => setState({ genre: p.id })} title={p.description || ''}
                     s={`cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:${on ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.03)'};border:1px solid ${on ? 'var(--accent)' : 'rgba(255,255,255,0.1)'};border-radius:99px;padding:7px 13px;font-size:12.5px;color:${on ? '#F4F3F0' : 'rgba(244,243,240,0.72)'};transition:border-color .15s,color .15s`} sh="border-color:var(--accent);color:#F4F3F0">
-                    <span aria-hidden style={{ fontSize: 13 }}>{p.icon || '🎨'}</span>{p.label}
+                    {p.icon && <span aria-hidden style={{ fontSize: 13 }}>{p.icon}</span>}{p.label}
                     {!p.builtin && (
                       <Box t="span" onClick={(e) => { e.stopPropagation(); removePreset(p.id); }} title="Delete preset" s="cursor:pointer;color:rgba(244,243,240,0.45);font-size:12px;line-height:1;margin-left:1px" sh="color:#F4F3F0">✕</Box>
                     )}
@@ -450,6 +457,31 @@ export default function SquookHome({ userName = 'Alex' }) {
               })}
               <Box t="button" onClick={() => setState((s) => ({ presetForm: s.presetForm ? null : { ...EMPTY_PRESET_FORM } }))} title="Create your own preset"
                 s="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:transparent;border:1px dashed rgba(255,255,255,0.22);border-radius:99px;padding:7px 13px;font-size:12.5px;color:rgba(244,243,240,0.6)" sh="border-color:var(--accent);color:#F4F3F0">＋ New preset</Box>
+            </div>
+          </div>
+
+          {/* voice picker: Auto / the 6 narrators (each previewable) / None */}
+          <div style={css('display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-top:12px')}>
+            <span style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.4)', marginRight: 2, marginTop: 8 }}>VOICE</span>
+            <div style={css('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}>
+              {[{ id: '', label: 'Auto' }, ...VOICES, { id: 'none', label: 'No voiceover' }].map((v) => {
+                const on = S.voice === v.id;
+                const chip = `cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:${on ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.03)'};border:1px solid ${on ? 'var(--accent)' : 'rgba(255,255,255,0.1)'};border-radius:99px;padding:7px 13px;font-size:12.5px;color:${on ? '#F4F3F0' : 'rgba(244,243,240,0.72)'};transition:border-color .15s,color .15s`;
+                return (
+                  <Box key={v.id || 'auto'} t="button" onClick={() => setState({ voice: v.id })} title={v.desc || ''}
+                    s={chip} sh="border-color:var(--accent);color:#F4F3F0">
+                    {v.label}
+                    {v.desc && (
+                      <Box t="span" onClick={(e) => { e.stopPropagation(); playSample(v.id); }}
+                        title={`Preview ${v.label}`}
+                        s={`cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;border-radius:50%;font-size:8.5px;line-height:1;border:1px solid ${S.playingVoice === v.id ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};color:${S.playingVoice === v.id ? 'var(--accent)' : 'rgba(244,243,240,0.6)'}`}
+                        sh="border-color:var(--accent);color:var(--accent)">
+                        {S.playingVoice === v.id ? '■' : '▶'}
+                      </Box>
+                    )}
+                  </Box>
+                );
+              })}
             </div>
           </div>
 

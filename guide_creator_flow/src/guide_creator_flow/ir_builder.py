@@ -18,7 +18,11 @@ from typing import Literal
 from crewai import Agent
 from pydantic import BaseModel
 
-from guide_creator_flow.crews.content_crew.content_crew import llm
+from guide_creator_flow.crews.content_crew.content_crew import (
+    DESIGN_LLM_IS_STRONG,
+    design_llm,
+    fast_llm,
+)
 from guide_creator_flow.tools import icons
 
 FPS = 30
@@ -122,6 +126,16 @@ MOOD_DEFAULT_FONT = {
     "nature":  "geometric_sans",
 }
 
+# Deliberate type scale, chosen by the Design Director from the topic instead of
+# a per-render dice roll. Hierarchy should express intent: an editorial explainer
+# packed with on-screen text wants restrained type; a punchy ad wants few big
+# words. (caption = lower-third / body size, title = headline size, in px.)
+TYPE_SCALES = {
+    "compact":  {"caption": 42, "title": 78},   # dense, editorial, lots of text
+    "balanced": {"caption": 48, "title": 90},   # the default middle ground
+    "bold":     {"caption": 54, "title": 104},  # punchy, ad-like, few big words
+}
+
 
 def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "") -> dict:
     """Prompt decides the mood (LLM); a seed decides the concrete design
@@ -143,17 +157,30 @@ def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "")
 
     mood, music_mood = default_mood, "calm"
     font_style = default_font
+    variant_idx = None          # model's palette-variant choice; None -> seeded RNG
+    type_scale = "balanced"     # model's hierarchy choice; falls back to the middle
     try:
         agent = Agent(
             role="Design Director",
             goal="Choose the art direction that fits a video topic",
             backstory=(
                 "You set the art direction for short explainer and ad videos: "
-                "you read the topic and choose the emotional register and the "
-                "typographic voice the visuals, type, and music should live in."
+                "you read the topic and choose the emotional register, the "
+                "typographic voice, the exact color pairing, and the type "
+                "weight the visuals, type, and music should live in. Every "
+                "choice is deliberate — nothing is left to chance."
             ),
-            llm=llm,
+            llm=design_llm,
             verbose=True,
+        )
+        # Show the concrete accent pairings so the director picks a palette by
+        # how the colors fit the topic, not by a coin-flip.
+        variant_menu = "\n".join(
+            f"  {m}: " + ", ".join(
+                f"[{i}] {v['accent']}+{v['accent2']}"
+                for i, v in enumerate(PALETTES[m])
+            )
+            for m in moods
         )
         result = agent.kickoff(
             "Choose the art direction for a short video about:\n"
@@ -164,7 +191,14 @@ def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "")
             "font (the typographic personality that best fits this topic — "
             f"e.g. a serif reads editorial/premium, a mono reads technical): "
             f"one of {list(fonts)}\n"
-            'Respond with RAW JSON ONLY: {"mood": "...", "music": "...", "font": "..."}'
+            "variant (the accent-color pairing that fits the topic — give the "
+            "index for your chosen mood from this menu):\n"
+            f"{variant_menu}\n"
+            "type_scale (typographic weight): 'compact' (dense/editorial, lots "
+            "of on-screen text), 'balanced' (default), or 'bold' (punchy/ad-"
+            "like, few big words)\n"
+            'Respond with RAW JSON ONLY: {"mood": "...", "variant": 0, '
+            '"music": "...", "font": "...", "type_scale": "..."}'
         )
         text = result.raw.strip()
         fence = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
@@ -177,20 +211,31 @@ def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "")
         # fall back to the mood's default font (original behaviour).
         font_fallback = fonts[0] if font_pool else MOOD_DEFAULT_FONT.get(mood, default_font)
         font_style = _pick(data.get("font"), fonts, font_fallback)
+        try:
+            variant_idx = int(data.get("variant"))
+        except (TypeError, ValueError):
+            variant_idx = None
+        type_scale = _pick(data.get("type_scale"), tuple(TYPE_SCALES), "balanced")
     except Exception as e:
         print(f"Design Director failed ({e}); using {default_mood} defaults")
 
     seed = os.getenv("DESIGN_SEED")
     rng = random.Random(int(seed) if seed else secrets.randbits(32))
-    palette = rng.choice(PALETTES[mood])
+    variants = PALETTES[mood]
+    # Intentional palette pick; only fall back to a seeded choice when the
+    # director didn't give a usable variant (keeps DESIGN_SEED reproducible).
+    if variant_idx is None or not (0 <= variant_idx < len(variants)):
+        variant_idx = rng.randrange(len(variants))
+    palette = variants[variant_idx]
+    sizes = TYPE_SCALES[type_scale]
     theme = {
         "mood": mood,
         "palette": palette,
         "font": {
             "family": FONT_STYLES[font_style],
             "style": font_style,
-            "caption_size": rng.randint(40, 52),
-            "title_size": rng.randint(80, 100),
+            "caption_size": sizes["caption"],
+            "title_size": sizes["title"],
         },
         "music": {
             "mood": music_mood,
@@ -199,8 +244,8 @@ def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "")
         },
     }
     print(
-        f"Theme: mood={mood} font={font_style} "
-        f"accent={palette['accent']} music={music_mood}"
+        f"Theme: mood={mood} variant={variant_idx} scale={type_scale} "
+        f"font={font_style} accent={palette['accent']} music={music_mood}"
     )
     return theme
 
@@ -318,7 +363,9 @@ def compile_render_plan(scene_facts: list[dict], ken_burns_all: bool = False,
             "clip is shorter than its scene, how photos move (Ken Burns), where "
             "on-screen text sits and how it enters, and how scenes transition."
         ),
-        llm=llm,
+        # Structured pick-from-a-menu work — the fast model handles it and the
+        # big writer's latency is the pipeline's bottleneck.
+        llm=fast_llm,
         verbose=True,
     )
     prompt = (
@@ -359,7 +406,19 @@ def compile_render_plan(scene_facts: list[dict], ken_burns_all: bool = False,
 
 # ------------------------------------------------------- Pass 2b: graphics
 
-GRAPHIC_KINDS = ("node_graph", "bar_chart", "counter", "icon_row", "title_card", "annotate")
+# Emoji + pictograph ranges (incl. variation selector); kept in sync with the
+# no-emoji hard rule enforced in tts.strip_emojis and the renderer fallbacks.
+_EMOJI_RE = re.compile("[\\U0001F000-\\U0001FAFF\\u2600-\\u27BF\\uFE0F\\u200D]")
+
+GRAPHIC_KINDS = ("node_graph", "bar_chart", "counter", "icon_row", "title_card", "annotate", "custom")
+# Primitives + color tokens for the free-form "custom" graphic. The designer
+# authors shapes + keyframes as DATA (no generated code); resolve_ir emits them
+# as a `motion` layer that renderer/src/layers/MotionLayer.tsx interprets. This
+# mirrors the editor's compose_animation channel (server/src/directorAgent.js),
+# promoted into first-pass generation so videos aren't capped at the 6 fixed
+# templates.
+MOTION_SHAPE_KINDS = ("circle", "ring", "dot", "rect", "line", "text")
+_MOTION_COLOR_TOKENS = ("accent", "accent2", "text", "bg")
 # Concept vocabulary the Graphic Designer picks from for icon_row scenes. These
 # are resolved to real Iconify SVGs at build time (tools/icons.py); the list is
 # a menu of well-supported concepts, but any word resolves via Iconify search.
@@ -376,7 +435,7 @@ ICON_NAMES = (
 
 class GraphicSpec(BaseModel):
     scene_index: int
-    kind: Literal["node_graph", "bar_chart", "counter", "icon_row", "title_card", "annotate"]
+    kind: Literal["node_graph", "bar_chart", "counter", "icon_row", "title_card", "annotate", "custom"]
     title: str = ""
     subtitle: str = ""
     labels: list[str] = []
@@ -388,14 +447,127 @@ class GraphicSpec(BaseModel):
     suffix: str = ""
     label: str = ""
     annotation: Literal["arrow", "circle", "underline"] = "circle"
+    # Free-form vector composition (kind == "custom"). Sanitized motion shapes +
+    # optional background token; empty for the six template kinds.
+    shapes: list[dict] = []
+    bg: str = ""
+
+
+def _sanitize_motion(raw_shapes, raw_bg=None) -> dict | None:
+    """Whitelist + clamp a model-authored vector-animation spec into a `motion`
+    layer, mirroring the editor's sanitizeMotion (server/src/directorAgent.js).
+    A malformed spec yields fewer shapes or None — never anything that can crash
+    the renderer. Returns a layer dict {type, shapes, bg?} or None."""
+    def finn(v):
+        try:
+            f = float(v)
+        except (TypeError, ValueError):
+            return None
+        return f if math.isfinite(f) else None
+
+    def clamp(v, lo, hi):
+        return None if v is None else max(lo, min(hi, v))
+
+    def color(v):
+        if not isinstance(v, str):
+            return None
+        if v in _MOTION_COLOR_TOKENS:
+            return v
+        return v if (len(v) <= 30 and not re.search(r"[<>;{}]", v)) else None
+
+    shapes: list[dict] = []
+    for s in (raw_shapes if isinstance(raw_shapes, list) else [])[:48]:
+        if not isinstance(s, dict) or s.get("kind") not in MOTION_SHAPE_KINDS:
+            continue
+        out: dict = {"kind": s["kind"]}
+
+        def put(key, v, lo, hi, _out=out):
+            n = clamp(finn(v), lo, hi)
+            if n is not None:
+                _out[key] = n
+
+        put("x", s.get("x"), -20, 120)
+        put("y", s.get("y"), -20, 120)
+        put("x2", s.get("x2"), -20, 120)
+        put("y2", s.get("y2"), -20, 120)
+        put("r", s.get("r"), 0, 60)
+        put("w", s.get("w"), 0, 120)
+        put("h", s.get("h"), 0, 120)
+        # Floor at legible: sub-28px text in a 1080p frame is unreadable noise.
+        put("size", s.get("size"), 28, 300)
+        put("stroke_width", s.get("stroke_width"), 0, 40)
+        put("opacity", s.get("opacity"), 0, 1)
+        if isinstance(s.get("text"), str):
+            out["text"] = s["text"][:48]
+        f = color(s.get("fill"))
+        if f:
+            out["fill"] = f
+        st = color(s.get("stroke"))
+        if st:
+            out["stroke"] = st
+        if isinstance(s.get("keyframes"), list):
+            kfs: list[dict] = []
+            for k in s["keyframes"][:24]:
+                if not isinstance(k, dict) or finn(k.get("t")) is None:
+                    continue
+                kf: dict = {"t": max(0.0, finn(k.get("t")))}
+
+                def putk(key, v, lo, hi, _kf=kf):
+                    n = clamp(finn(v), lo, hi)
+                    if n is not None:
+                        _kf[key] = n
+
+                putk("x", k.get("x"), -20, 120)
+                putk("y", k.get("y"), -20, 120)
+                putk("r", k.get("r"), 0, 60)
+                putk("scale", k.get("scale"), 0, 8)
+                putk("rotate", k.get("rotate"), -360, 360)
+                putk("opacity", k.get("opacity"), 0, 1)
+                kfs.append(kf)
+            if kfs:
+                out["keyframes"] = sorted(kfs, key=lambda k: k["t"])
+        if out["kind"] == "text":
+            # HARD RULE: no emojis in generated video output.
+            out["text"] = _EMOJI_RE.sub("", out.get("text", "")).strip()
+            words = out["text"].split()
+            # A text shape longer than a short label is a narration dump — the
+            # voice-over already speaks it and the lower-third already shows it.
+            if not words or len(words) > 5:
+                continue
+            # Text is middle-anchored; keep its center in the safe area so a
+            # label authored at the frame edge doesn't render half-clipped.
+            out["x"] = clamp(out.get("x", 50.0), 10, 90)
+            out["y"] = clamp(out.get("y", 50.0), 8, 92)
+        if out["kind"] == "rect" and (out.get("w", 10) < 1 or out.get("h", 10) < 1):
+            continue  # authored with a zero dimension — renders as nothing
+        shapes.append(out)
+
+    if not shapes:
+        return None
+    layer: dict = {"type": "motion", "shapes": shapes}
+    bg = color(raw_bg)
+    if bg:
+        layer["bg"] = bg
+    return layer
 
 
 def fallback_graphic(fact: dict) -> GraphicSpec:
-    title = fact.get("on_screen_text") or " ".join(fact["visual"].split()[:6])
+    """Last-resort card. Prefer words meant for the audience — the scene's
+    on-screen text, then the narration's opening clause. The director's
+    internal shot description is the final resort only: on screen it reads
+    like a stage direction ("3-D brain model highlighting the…")."""
+    title = (fact.get("on_screen_text") or "").strip()
+    if not title:
+        clause = re.split(r"[.,;:!?—–]", (fact.get("narration") or "").strip())[0]
+        words = clause.split()
+        if 2 <= len(words):
+            title = " ".join(words[:8])
+    if not title:
+        title = " ".join(fact["visual"].split()[:6])
     return GraphicSpec(scene_index=fact["index"], kind="title_card", title=title)
 
 
-def _sanitize_graphic(entry: dict, fact: dict) -> GraphicSpec:
+def _sanitize_graphic(entry: dict, fact: dict, allow_custom: bool = True) -> GraphicSpec:
     def clean(v, limit):
         # JSON null and the model literally writing "None"/"null" both mean empty.
         if v is None or str(v).strip().lower() in ("none", "null"):
@@ -436,6 +608,20 @@ def _sanitize_graphic(entry: dict, fact: dict) -> GraphicSpec:
         label=clean(entry.get("label"), 60),
         annotation=_pick(entry.get("annotation"), ("arrow", "circle", "underline"), "circle"),
     )
+    # A custom graphic carries a free-form vector composition instead of the
+    # scalar params. Sanitize the shapes; if none survive, degrade to a card so
+    # the scene is never blank.
+    if spec.kind == "custom":
+        # A weak designer's freehand drawings are worse than any template —
+        # coerce to a card rather than render a malformed composition.
+        if not allow_custom:
+            return fallback_graphic(fact)
+        motion = _sanitize_motion(entry.get("shapes"), entry.get("bg"))
+        if not motion:
+            return fallback_graphic(fact)
+        spec.shapes = motion["shapes"]
+        spec.bg = motion.get("bg", "")
+        return spec
     # Kind-specific minimums so components always have something to draw.
     if spec.kind == "node_graph" and not spec.node_layers:
         spec.node_layers = [3, 4, 2]
@@ -456,53 +642,176 @@ def _sanitize_graphic(entry: dict, fact: dict) -> GraphicSpec:
     return spec
 
 
-def design_graphics(graphic_facts: list[dict], guidance: str = "") -> dict[int, GraphicSpec]:
+def _graphics_entries(raw: str) -> list:
+    """Parse the designer's reply into a list of graphic entries. When the
+    reply is complete JSON, use it whole; when it's truncated mid-object (a
+    hard output-token cap does this), salvage every complete
+    {"scene_index": ...} entry instead of throwing the entire design away."""
+    text = (raw or "").strip()
+    fence = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
+    if fence:
+        text = fence.group(1).strip()
+    try:
+        data = json.loads(text)
+        entries = data.get("graphics", data) if isinstance(data, dict) else data
+        return entries if isinstance(entries, list) else []
+    except json.JSONDecodeError:
+        pass
+    dec = json.JSONDecoder()
+    entries, i = [], 0
+    while True:
+        j = text.find("{", i)
+        if j < 0:
+            break
+        try:
+            obj, end = dec.raw_decode(text, j)
+        except json.JSONDecodeError:
+            i = j + 1
+            continue
+        if isinstance(obj, dict) and "scene_index" in obj:
+            entries.append(obj)
+            i = end
+        else:
+            i = j + 1  # a wrapper or nested object — keep scanning inside it
+    if entries:
+        print(f"Graphic Designer reply was truncated; salvaged {len(entries)} complete scene(s)")
+    return entries
+
+
+def design_graphics(graphic_facts: list[dict], guidance: str = "",
+                    allow_custom: bool | None = None) -> dict[int, GraphicSpec]:
     """Design animated graphics for scenes the curator flagged as 'graphic'.
     Returns {scene_index: spec}; falls back to title cards on any failure.
-    `guidance` adds an optional one-line genre steer to the prompt."""
+    `guidance` adds an optional one-line genre steer to the prompt.
+
+    `allow_custom` gates the free-form vector mode. Default: only when the
+    design LLM is a frontier model — the local model's freehand compositions
+    come out malformed (sentence dumps, clipped labels, zero-size shapes), and
+    the hand-built templates always look better than its drawings."""
     if not graphic_facts:
         return {}
-    agent = Agent(
-        role="Motion Graphics Designer",
-        goal="Design the animated graphic for each scene using a fixed component vocabulary",
-        backstory=(
-            "You design explainer-video motion graphics. You express each scene "
-            "through one of six components: node_graph (layered network diagram), "
-            "bar_chart (animated bars), counter (big animated number), icon_row "
-            "(icons with labels), title_card (headline), annotate (arrow/circle/"
-            "underline with a label). You pick the component that best teaches "
-            "the scene's idea and fill in its parameters."
-        ),
-        llm=llm,
-        verbose=True,
-    )
-    prompt = (
-        (f"{guidance}\n" if guidance else "")
-        + "For EVERY scene below choose ONE graphic component and its parameters.\n"
-        "Components and their parameters:\n"
+    if allow_custom is None:
+        allow_custom = DESIGN_LLM_IS_STRONG
+    template_menu = (
+        "TEMPLATE components (pick one + its params):\n"
         "- node_graph: node_layers (list of 2-5 ints, nodes per layer), labels "
         "(optional, one per layer), pulse ('forward'|'backward'|'none')\n"
         "- bar_chart: values (2-8 numbers), labels (one per value), title\n"
         "- counter: number, suffix (e.g. 'M', '%'), label\n"
         f"- icon_row: icons (2-6 from: {', '.join(ICON_NAMES)}), labels (one per icon)\n"
         "- title_card: title (short headline), subtitle (optional)\n"
-        "- annotate: annotation ('arrow'|'circle'|'underline'), label (the callout text)\n"
-        "Respond with RAW JSON ONLY, no markdown fences, as "
-        '{"graphics": [{"scene_index": 1, "kind": "node_graph", ...}, ...]} '
-        "covering every scene.\n\n"
-        f"Scenes:\n{json.dumps(graphic_facts, indent=2)}"
+        "- annotate: annotation ('arrow'|'circle'|'underline'), label (the callout text)\n\n"
+    )
+    if allow_custom:
+        backstory = (
+            "You are a senior motion designer for explainer videos. You have six "
+            "ready-made components — node_graph (layered network), bar_chart, "
+            "counter (big number), icon_row, title_card, annotate — and, more "
+            "powerfully, a 'custom' mode where you draw the idea yourself as "
+            "animated vector shapes with keyframes. You reach for a template only "
+            "when it genuinely fits the data (a real statistic → counter, a real "
+            "comparison → bar_chart); for everything conceptual — a process, a "
+            "flow, a mechanism, a metaphor, a transformation — you compose a "
+            "custom illustration, because that is what makes a video feel designed "
+            "rather than assembled. You obsess over hierarchy, whitespace, "
+            "restraint, and motion that reveals meaning."
+        )
+        goal = ("Design a distinctive animated graphic for each scene — reaching "
+                "for a bespoke vector composition whenever a template would be generic")
+        body = (
+            "Design the graphic for EVERY scene below. Prefer a 'custom' vector "
+            "composition for conceptual scenes; use a template only when the data "
+            "truly matches it.\n\n"
+            + template_menu +
+            "CUSTOM composition (kind='custom') — draw the scene yourself:\n"
+            "  shapes: 3-16 primitives, each: {kind, x, y, ...props, keyframes:[...]}\n"
+            "  - kind: 'circle'|'ring'|'dot'|'rect'|'line'|'text'\n"
+            "  - x,y: center in 0..100 (% of frame; 50,50 = middle). line uses x,y→x2,y2\n"
+            "  - r: circle/ring/dot radius (% of min side). w,h: rect size (%). size: text px\n"
+            "  - text: the label string (for kind='text'). stroke_width: px for ring/line\n"
+            "  - fill / stroke: use TOKENS 'accent'|'accent2'|'text'|'bg' (NOT raw hex) so "
+            "the scene matches the video's palette\n"
+            "  - keyframes: [{t, x?, y?, r?, scale?, rotate?, opacity?}] — t is SECONDS "
+            "into the scene; props animate smoothly between keyframes\n"
+            "  - bg (optional): background token for the composition\n\n"
+            "HARD LAYOUT RULES (violations get deleted by the renderer):\n"
+            "  - Keep every element's center inside x 10-90, y 10-90 (16:9 safe area).\n"
+            "  - Text shapes are SHORT LABELS: 1-4 words, size 32-90. NEVER put the "
+            "narration or any sentence into the composition — the narration is spoken "
+            "aloud and on_screen_text is already rendered separately as a lower third.\n"
+            "  - rect needs w >= 2 AND h >= 2. Every shape must have a real, visible size.\n"
+            "  - Don't place text on top of another shape unless that shape is its badge "
+            "(then keep contrast: 'text' fill on an 'accent' shape).\n"
+            "  - Keep y < 78 for text — the lower third belongs to captions.\n\n"
+            "DESIGN PRINCIPLES (apply to custom scenes):\n"
+            "  1. ONE idea per scene. Compose around a single focal point; don't crowd.\n"
+            "  2. Hierarchy: one dominant element, supporting elements smaller/dimmer.\n"
+            "  3. Restraint: 3-8 shapes usually beats 16. Whitespace is design.\n"
+            "  4. Palette: 'accent' for the hero, 'accent2' sparingly, 'text' for labels. "
+            "Two accent colors max.\n"
+            "  5. Motion reveals meaning — stagger entrances (opacity 0→1), let elements "
+            "arrive/connect in the order the narration explains them, avoid everything "
+            "moving at once.\n"
+            "  6. Anchor to the narration: draw the noun the scene is about.\n\n"
+            "EXAMPLE custom scene (two ideas merging into one):\n"
+            '{"scene_index": 1, "kind": "custom", "shapes": [\n'
+            '  {"kind":"circle","x":30,"y":50,"r":9,"fill":"accent",'
+            '"keyframes":[{"t":0,"x":30,"opacity":0},{"t":0.6,"x":42,"opacity":1}]},\n'
+            '  {"kind":"circle","x":70,"y":50,"r":9,"fill":"accent2",'
+            '"keyframes":[{"t":0,"x":70,"opacity":0},{"t":0.6,"x":58,"opacity":1}]},\n'
+            '  {"kind":"line","x":42,"y":50,"x2":58,"y2":50,"stroke":"text","stroke_width":3,'
+            '"keyframes":[{"t":0.6,"opacity":0},{"t":1.1,"opacity":1}]},\n'
+            '  {"kind":"text","x":50,"y":72,"text":"Unified","size":40,"fill":"text",'
+            '"keyframes":[{"t":1.2,"opacity":0},{"t":1.6,"opacity":1}]}\n'
+            "]}\n\n"
+            "Respond with COMPLETE, VALID RAW JSON ONLY (check every bracket pairs up), no markdown fences, as "
+            '{"graphics": [{"scene_index": 1, "kind": "custom", ...}, ...]} '
+            "covering every scene.\n\n"
+        )
+    else:
+        backstory = (
+            "You are a senior motion designer for explainer videos. You compose "
+            "each scene from six polished, hand-built components — node_graph "
+            "(layered network), bar_chart, counter (big number), icon_row, "
+            "title_card, annotate — choosing the one whose data shape genuinely "
+            "matches the scene: a real statistic → counter, a real comparison → "
+            "bar_chart, a set of concepts → icon_row, a flow or architecture → "
+            "node_graph, a single headline → title_card, a callout → annotate."
+        )
+        goal = "Pick the best-fitting graphic component and its params for each scene"
+        body = (
+            "Choose the graphic for EVERY scene below.\n\n"
+            + template_menu +
+            "RULES:\n"
+            "  - counter only for a real number from the scene (never 0 or invented).\n"
+            "  - bar_chart only for a real comparison with 2+ values from the scene.\n"
+            "  - labels are SHORT: 1-3 words. Never a sentence.\n"
+            "  - When unsure, title_card with a punchy title beats a forced chart.\n\n"
+            "Respond with COMPLETE, VALID RAW JSON ONLY (check every bracket pairs up), no markdown fences, as "
+            '{"graphics": [{"scene_index": 1, "kind": "icon_row", ...}, ...]} '
+            "covering every scene.\n\n"
+        )
+    agent = Agent(
+        role="Motion Graphics Designer",
+        goal=goal,
+        backstory=backstory,
+        llm=design_llm,
+        verbose=True,
     )
     facts_by_index = {f["index"]: f for f in graphic_facts}
     specs = {f["index"]: fallback_graphic(f) for f in graphic_facts}
-    try:
-        result = agent.kickoff(prompt)
-        text = result.raw.strip()
-        fence = re.search(r"```(?:json)?\s*(.*?)```", text, re.DOTALL)
-        if fence:
-            text = fence.group(1).strip()
-        data = json.loads(text)
-        entries = data.get("graphics", data) if isinstance(data, dict) else data
-        for entry in entries if isinstance(entries, list) else []:
+
+    def ask(facts_subset: list[dict]) -> set:
+        """One design round for these scenes; returns the indexes that got a
+        usable entry (missing/malformed ones keep their fallback)."""
+        subset_prompt = (
+            (f"{guidance}\n" if guidance else "")
+            + body
+            + f"Scenes:\n{json.dumps(facts_subset, indent=2)}"
+        )
+        result = agent.kickoff(subset_prompt)
+        applied: set = set()
+        for entry in _graphics_entries(result.raw):
             if not isinstance(entry, dict):
                 continue
             try:
@@ -511,13 +820,31 @@ def design_graphics(graphic_facts: list[dict], guidance: str = "") -> dict[int, 
                 continue
             fact = facts_by_index.get(index)
             if fact:
-                specs[index] = _sanitize_graphic(entry, fact)
+                specs[index] = _sanitize_graphic(entry, fact, allow_custom=allow_custom)
+                applied.add(index)
+        return applied
+
+    try:
+        applied = ask(graphic_facts)
+        # The model sometimes drops or mangles individual entries (malformed
+        # JSON, truncation). One retry scoped to just the missed scenes turns
+        # a lost design into a second chance instead of a stage-direction card.
+        missing = [f for f in graphic_facts if f["index"] not in applied]
+        if missing:
+            print(f"Graphic Designer: retrying {len(missing)} missed scene(s)")
+            ask(missing)
     except Exception as e:
         print(f"Graphic Designer failed ({e}); using title-card fallbacks")
     return specs
 
 
 def _graphic_layer(spec: GraphicSpec, theme: dict | None = None, scene_idx: int = 0) -> dict:
+    # Free-form vector composition → a `motion` layer (no fixed template).
+    if spec.kind == "custom":
+        layer: dict = {"type": "motion", "shapes": spec.shapes}
+        if spec.bg:
+            layer["bg"] = spec.bg
+        return layer
     params: dict = {}
     if spec.kind == "node_graph":
         params = {"node_layers": spec.node_layers, "labels": spec.labels, "pulse": spec.pulse}
@@ -528,7 +855,8 @@ def _graphic_layer(spec: GraphicSpec, theme: dict | None = None, scene_idx: int 
     elif spec.kind == "icon_row":
         params = {"icons": spec.icons, "labels": spec.labels}
         # Resolve each concept to a real Iconify SVG, recoloured to the accent.
-        # icon_srcs[i] is null when a fetch fails → renderer falls back to emoji.
+        # icon_srcs[i] is null when a fetch fails → renderer draws a neutral
+        # accent-ring mark (emojis are banned from generated output).
         accent = (theme or {}).get("palette", {}).get("accent", "#ffffff")
         srcs: list = []
         for i, concept in enumerate(spec.icons):

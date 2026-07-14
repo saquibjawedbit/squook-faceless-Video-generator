@@ -7,7 +7,7 @@ import { extname, resolve } from 'node:path';
 import { config, authEnabled, persistenceEnabled, UPLOADS_DIR } from './config.js';
 import { requireAuth } from './auth.js';
 import { ensureBucket } from './supabaseAdmin.js';
-import { enqueueProject, enqueueRerender } from './jobs.js';
+import { enqueueProject, enqueueRerender, enqueueRevoice } from './jobs.js';
 import { getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
 import { runDirectorChat, runDirectorChatStream } from './directorAgent.js';
 import { appendChat, readChat, clearChat } from './chatStore.js';
@@ -311,6 +311,22 @@ app.post('/api/projects/:id/render', requireAuth, async (req, res) => {
   }
   const quality = req.body?.quality === 'hd' ? 'hd' : 'draft';
   const job = await enqueueRerender(p.id, quality);
+  if (!job) return res.status(404).json({ error: 'not found' });
+  res.status(202).json(publicView(job));
+});
+
+// Change the narration voice: re-synthesize every scene's voiceover into the
+// project snapshot (queued — TTS is heavy). No render; the editor previews
+// from the snapshot and re-renders when ready.
+const VOICE_IDS = ['nova', 'atlas', 'juno', 'ryan', 'sonia', 'guy']; // mirrors tts.VOICES
+app.post('/api/projects/:id/revoice', requireAuth, async (req, res) => {
+  const p = await ownedProject(req, res);
+  if (!p) return;
+  const voice = String(req.body?.voice || '').trim().toLowerCase();
+  if (!VOICE_IDS.includes(voice)) return res.status(400).json({ error: 'unknown voice' });
+  if (!(await hasSnapshot(p.id))) return res.status(404).json({ error: 'no editable source for this project' });
+  if (p.status === 'running' || p.status === 'queued') return res.status(409).json({ error: 'busy' });
+  const job = await enqueueRevoice(p.id, voice);
   if (!job) return res.status(404).json({ error: 'not found' });
   res.status(202).json(publicView(job));
 });

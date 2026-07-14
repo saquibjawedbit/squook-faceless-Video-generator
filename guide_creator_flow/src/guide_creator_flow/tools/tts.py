@@ -130,6 +130,27 @@ def _strip_ui_references(text: str) -> str:
     return scrubbed.strip() or text.strip()
 
 
+# Emoji + pictograph ranges (misc symbols, dingbats, emoticons, transport,
+# supplemental pictographs, flags) plus the joiners that glue them together.
+# Local models sprinkle these into titles/captions; the product rule is
+# NO emojis unless the user's prompt explicitly asks.
+_EMOJI_RE = re.compile(
+    "["
+    "\U0001F000-\U0001FAFF"   # emoticons, pictographs, transport, supplemental
+    "\U00002600-\U000027BF"   # misc symbols + dingbats (☀★✅❌…)
+    "\U0001F1E6-\U0001F1FF"   # regional indicators (flags)
+    "\U00002B00-\U00002BFF"   # arrows/stars rendered as emoji (⬆⭐…)
+    "\\uFE0F\\u200D"          # variation selector + zero-width joiner
+    "]+"
+)
+
+
+def strip_emojis(text: str) -> str:
+    """Remove emojis/pictographs and collapse the whitespace they leave."""
+    cleaned = _EMOJI_RE.sub("", text or "")
+    return re.sub(r"[ \t]{2,}", " ", cleaned).strip()
+
+
 def sanitize_narration(text: str) -> str:
     """Return only what the voice-over should speak. Strips markdown emphasis,
     bracketed stage cues, a leading section label ('Hook —', 'CTA:',
@@ -156,6 +177,10 @@ import threading
 
 _PIPELINES: dict[str, object] = {}
 _PIPELINE_LOCK = threading.Lock()
+# KPipeline is not documented as thread-safe, and every scene shares one
+# instance — so concurrent scene synthesis (main.generate_narration's pool)
+# serializes through this lock. Only the OpenAI path runs truly in parallel.
+_KOKORO_INFER_LOCK = threading.Lock()
 
 
 def _pipeline(lang_code: str):
@@ -204,7 +229,9 @@ def _kokoro_synthesize(
     chunks: list[np.ndarray] = []
     words: list[dict] = []
     offset = 0.0
-    for result in pipeline(text, voice=voice, speed=speed):
+    with _KOKORO_INFER_LOCK:
+        results = list(pipeline(text, voice=voice, speed=speed))
+    for result in results:
         audio = result.audio
         samples = audio.detach().cpu().numpy() if hasattr(audio, "detach") else np.asarray(audio)
         for tok in result.tokens or []:

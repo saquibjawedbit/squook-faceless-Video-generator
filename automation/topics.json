@@ -1,0 +1,40 @@
+{
+  "topics": [
+    {
+      "prompt": "How do solar panels turn sunlight into electricity?",
+      "duration": 60,
+      "youtube": {
+        "title": "How Solar Panels Actually Work",
+        "tags": ["solar energy", "science", "explainer"]
+      }
+    },
+    {
+      "prompt": "Why does compound interest grow so fast? Explain with a simple example.",
+      "duration": 60,
+      "youtube": {
+        "title": "The Real Power of Compound Interest",
+        "tags": ["finance", "investing", "explainer"]
+      }
+    },
+    {
+      "prompt": "How does GPS know exactly where you are?",
+      "duration": 60
+    },
+    {
+      "prompt": "Why is the sky blue but sunsets red?",
+      "duration": 60
+    },
+    {
+      "prompt": "How do noise-cancelling headphones cancel noise?",
+      "duration": 60
+    },
+    {
+      "prompt": "What happens inside your body during the first hour of sleep?",
+      "duration": 60
+    },
+    {
+      "prompt": "Why do lithium-ion batteries degrade over time?",
+      "duration": 60
+    }
+  ]
+}

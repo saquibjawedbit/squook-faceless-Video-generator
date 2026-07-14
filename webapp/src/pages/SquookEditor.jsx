@@ -3,8 +3,9 @@ import Box from '../lib/Box.jsx';
 import { css } from '../lib/css.js';
 import { Markdown } from '../lib/markdown.jsx';
 import { currentQuery } from '../lib/router.js';
-import { getProject, getPlaybackUrl, getIR, putIR, rerenderProject, directorChatStream, getChatLog, chatNote, clearChat, searchStock, fetchAsset, uploadAsset, createPreset } from '../lib/api.js';
+import { getProject, getPlaybackUrl, getIR, putIR, rerenderProject, revoiceProject, directorChatStream, getChatLog, chatNote, clearChat, searchStock, fetchAsset, uploadAsset, createPreset } from '../lib/api.js';
 import { deriveView, retimeLocal, uiTf, irTfPatch, primaryVisualIx, selRefOf, sceneGrad, stageRegions, regionAt } from '../lib/irView.js';
+import { VOICES, playSample, stopSample, onSampleChange } from '../lib/voices.js';
 
 /**
  * Squook Editor — a faithful React port of the `Squook Editor.dc.html` design
@@ -24,15 +25,30 @@ import { deriveView, retimeLocal, uiTf, irTfPatch, primaryVisualIx, selRefOf, sc
 const mono = "'JetBrains Mono',monospace";
 const grotesk = "'Schibsted Grotesk',sans-serif";
 
+// Which narrator a real project currently uses: re-voiced wavs are suffixed
+// scene_N.<voice>.wav; a first-generation wav has no suffix (→ null, unknown).
+const VOICE_ID_SET = new Set(VOICES.map((v) => v.id));
+function currentVoiceOf(ir) {
+  for (const sc of ir?.scenes || []) {
+    for (const l of sc.layers || []) {
+      const m = l.type === 'audio' && /\/audio\/scene_\d+\.([a-z]+)\.wav$/.exec(l.src || '');
+      if (m && VOICE_ID_SET.has(m[1])) return m[1];
+    }
+  }
+  return null;
+}
+
 const INITIAL = {
   leftTab: 'layers', rightTab: 'director', tool: 'select',
   sel: { type: 'clip', id: 'c1' },
+  multi: [], // extra selected items ({type,id}, same kind as sel) from shift/⌘-click — real IR projects only
   playing: false, time: 0.1, format: '16:9', draft: 2, note: '',
   thinking: false, agentStatus: '', streamText: '', input: '', commentInput: '', cropOn: false,
   // Real backend project (when opened as #/editor?id=…).
   projId: null, projTitle: '', videoUrl: null, vTime: 0, vDur: 0,
   ir: null, irPast: [], irFuture: [], saveState: 'saved',
   rendering: false, renderPct: 0, renderStage: '',
+  revoicing: false, playingVoice: null, voiceMenu: false, // narration voice change + sample preview
   inkLive: null, hoverHit: null, dev: false,
   // "Replace footage" panel (real IR projects only).
   replace: { open: false, tab: 'search', q: '', results: [], loading: false, err: '', busy: false, url: '' },
@@ -158,6 +174,7 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
   const videoRef = useRef(null);
   const saveT = useRef(null);
   const pollIv = useRef(null);
+  const revoiceIv = useRef(null);       // voice-change job poll (separate from render's)
   const drawing = useRef(false);
   const lastMut = useRef('');
   const delRef = useRef(null);          // latest del() for the keyboard shortcut
@@ -189,11 +206,16 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
       clearTimeout(thinkT.current);
       clearTimeout(saveT.current);
       clearInterval(pollIv.current);
+      clearInterval(revoiceIv.current);
+      stopSample();
       // Flush any pending autosave on the way out (fire-and-forget).
       const s = stateRef.current;
       if (s.projId && s.ir && s.saveState !== 'saved') putIR(s.projId, s.ir).catch(() => {});
     };
   }, []);
+
+  // Track which voice sample is previewing so its row shows ■ instead of ▶.
+  useEffect(() => onSampleChange((id) => setState({ playingVoice: id })), [setState]);
 
   // Auto-scroll the Director chat to the newest message — on send and as the
   // reply streams in — but only while the user is already near the bottom, so
@@ -330,7 +352,7 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
         retimeLocal(ir);
         const dur = ir.metadata.total_duration_seconds;
         const greeting = { role: 'director', text: `I directed “${p.title || 'your video'}” — ${ir.scenes.length} scenes over ${Math.round(dur)}s. Ask me anything about the cut or tell me what to change; everything autosaves, and Re-render bakes changes into the video.` };
-        setState({ ir, sel: { type: 'clip', id: 'sc0' }, chat: [greeting] });
+        setState({ ir, sel: { type: 'clip', id: 'sc0' }, multi: [], chat: [greeting] });
         // Restore the persistent Director conversation (server-side session).
         getChatLog(id).then((msgs) => {
           if (!ok || !msgs.length) return;
@@ -382,23 +404,46 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
     }
   };
 
-  const selectLayer = (type, id) => {
+  const selectLayer = (type, id, e) => {
     const s = stateRef.current;
+    // Shift/⌘/Ctrl-click builds a multi-selection of same-kind items (real
+    // projects only — batch edits need the IR). Clicking a different kind
+    // starts a fresh selection; re-clicking a member drops it out.
+    if (e && (e.shiftKey || e.metaKey || e.ctrlKey) && s.ir && s.sel) {
+      if (s.sel.type !== type) { setState({ sel: { type, id }, multi: [] }); return; }
+      if (s.sel.id === id) {
+        const [first, ...rest] = s.multi;
+        setState(first ? { sel: first, multi: rest } : { multi: [] });
+        return;
+      }
+      const has = s.multi.some((m) => m.id === id);
+      setState({ multi: has ? s.multi.filter((m) => m.id !== id) : s.multi.concat([{ type, id }]) });
+      return;
+    }
     const v = viewOf(s);
     const st = startsOf(v.clips);
     let jump = tlTimeOf(s);
     if (type === 'clip') jump = (st[id] ?? 0) + 0.15;
     if (type === 'text') { const t = v.texts.find((x) => x.id === id); if (t) jump = t.start + 0.15; }
     if (type === 'audio') { const a = v.audio.find((x) => x.id === id); if (a && a.start != null) jump = a.start + 0.05; }
-    setState({ sel: { type, id }, rightTab: s.rightTab === 'comments' ? 'inspect' : s.rightTab });
+    setState({ sel: { type, id }, multi: [], rightTab: s.rightTab === 'comments' ? 'inspect' : s.rightTab });
     seekTo(jump);
   };
 
   // Select a component by clicking it on the video — no seek (it's already on
   // screen), and the current right-rail tab stays put so select → comment flows.
   const pickFromStage = (r) => {
-    setState({ sel: r.sel, hoverHit: null });
+    setState({ sel: r.sel, multi: [], hoverHit: null });
     toast('Selected ' + r.label);
+  };
+
+  // The full selection (anchor + shift-clicked extras) as live view items.
+  const selItemsOf = (s) => {
+    if (!s.sel) return [];
+    const v = viewOf(s);
+    const pool = s.sel.type === 'clip' ? v.clips : s.sel.type === 'text' ? v.texts : v.audio;
+    const ids = new Set([s.sel.id, ...(s.multi || []).filter((m) => m.type === s.sel.type).map((m) => m.id)]);
+    return pool.filter((x) => ids.has(x.id));
   };
 
   const play = () => {
@@ -518,6 +563,46 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
       const created = await createPreset({ fromProjectId: id });
       toast('▸ Saved this style as a preset — “' + created.label + '”');
     } catch (e) { toast('▸ Could not save preset — ' + (e.message || e)); }
+  };
+
+  // Change the narration voice: the server re-synthesizes every scene's
+  // voiceover into the project snapshot (queued job), then we adopt the
+  // rewritten IR as one undoable step. The player previews the new voice
+  // immediately; Re-render bakes it into the MP4.
+  const doRevoice = async (voiceId, voiceLabel) => {
+    const s0 = stateRef.current;
+    if (!s0.projId || !s0.ir) { toast('Voice change needs a generated project — this is the demo timeline.'); return; }
+    if (s0.rendering || s0.revoicing) { toast('Busy — hang tight.'); return; }
+    clearTimeout(saveT.current);
+    setState({ revoicing: true });
+    try {
+      // Push local edits first so the server re-voices the IR the user sees.
+      if (s0.saveState !== 'saved') await putIR(s0.projId, s0.ir);
+      await revoiceProject(s0.projId, voiceId);
+      toast('▸ Re-voicing every scene with ' + voiceLabel + '…');
+      clearInterval(revoiceIv.current);
+      revoiceIv.current = setInterval(async () => {
+        try {
+          const p = await getProject(s0.projId);
+          if (p.status === 'done') {
+            clearInterval(revoiceIv.current);
+            const ir = await getIR(s0.projId);
+            retimeLocal(ir);
+            lastMut.current = '';
+            setState((s) => ({
+              revoicing: false, ir,
+              irPast: s.irPast.concat([s.ir]).slice(-60), irFuture: [],
+              saveState: 'saved', // the snapshot IS this IR now
+            }));
+            toast('✓ Voice changed to ' + voiceLabel + ' — Re-render to bake it into the video');
+          } else if (p.status === 'failed') {
+            clearInterval(revoiceIv.current);
+            setState({ revoicing: false });
+            toast('Voice change failed — ' + (p.error || 'unknown error'));
+          }
+        } catch { /* transient poll error — keep polling */ }
+      }, 1500);
+    } catch (e) { setState({ revoicing: false }); toast('Voice change failed — ' + (e.message || e)); }
   };
 
   // Re-render the edited IR into a new draft, polling progress into the header.
@@ -829,7 +914,7 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
         const [x] = ir.scenes.splice(c.sceneIx, 1);
         ir.scenes.splice(j, 0, x);
       });
-      setState({ sel: { type: 'clip', id: 'sc' + j } });
+      setState({ sel: { type: 'clip', id: 'sc' + j }, multi: [] });
       return;
     }
     setState((st) => {
@@ -1033,7 +1118,7 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
       if (vi >= 0) layers[vi] = footageLayer(src, layers[vi], trim);
       else layers.unshift(footageLayer(src, null, trim));
     });
-    setState({ sel: { type: 'clip', id: cur.id }, rightTab: 'inspect' });
+    setState({ sel: { type: 'clip', id: cur.id }, multi: [], rightTab: 'inspect' });
     return true;
   };
 
@@ -1055,16 +1140,78 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
   const addStock = (item) => openPreview(item, 'media');
   const addUploadMedia = (file) => { if (file) addFootage(uploadAsset(stateRef.current.projId, file), file.name); };
 
+  // ——— Batch edits: apply one setting to every selected item (one undo step) ———
+
+  const batchTransition = (type) => {
+    const items = selItemsOf(stateRef.current);
+    mutateIr('', (ir) => {
+      for (const c of items) {
+        const sc = ir.scenes[c.sceneIx];
+        if (sc) sc.transition_out = { type, duration_s: type === 'cut' ? 0 : 0.4 };
+      }
+    });
+    toast(`Transition → ${type} on ${items.length} scenes`);
+  };
+
+  const batchNudge = (d) => {
+    const items = selItemsOf(stateRef.current);
+    mutateIr('', (ir) => {
+      for (const c of items) {
+        const sc = ir.scenes[c.sceneIx];
+        if (sc) sc.duration_s = Math.max(1, +(sc.duration_s + d).toFixed(1));
+      }
+    });
+    toast(`${d > 0 ? '+' : ''}${d}s on ${items.length} scenes`);
+  };
+
+  const batchVolume = (v) => {
+    const items = selItemsOf(stateRef.current);
+    mutateIr('batchvol', (ir) => {
+      for (const a of items) {
+        if (a.id === 'music') { if (ir.metadata.music) ir.metadata.music.volume = v / 100; }
+        else {
+          const l = ir.scenes[a.sceneIx]?.layers?.[a.layerIx];
+          if (l?.type === 'audio') l.volume = v / 100;
+        }
+      }
+    });
+  };
+
+  const batchDelete = () => {
+    const s = stateRef.current;
+    const items = selItemsOf(s);
+    if (s.sel?.type === 'clip') {
+      if (s.ir.scenes.length - items.length < 1) { toast('Keep at least one scene'); return; }
+      // Splice bottom-up so earlier indexes stay valid.
+      mutateIr('', (ir) => {
+        for (const c of [...items].sort((a, b) => b.sceneIx - a.sceneIx)) ir.scenes.splice(c.sceneIx, 1);
+      });
+      setState({ sel: { type: 'clip', id: 'sc0' }, multi: [] });
+    } else if (s.sel?.type === 'text') {
+      mutateIr('', (ir) => {
+        for (const t of [...items].sort((a, b) => (b.sceneIx - a.sceneIx) || (b.layerIx - a.layerIx))) {
+          ir.scenes[t.sceneIx]?.layers?.splice(t.layerIx, 1);
+        }
+      });
+      setState({ sel: null, multi: [] });
+    } else {
+      toast('Audio tracks can’t be removed — set volume to 0');
+      return;
+    }
+    toast(`Deleted ${items.length} ${s.sel.type === 'clip' ? 'scenes' : 'layers'}`);
+  };
+
   const del = () => {
     const s = stateRef.current;
     const sel = s.sel;
+    if (s.ir && (s.multi || []).length) { batchDelete(); return; }
     if (s.ir) {
       const v = viewOf(s);
       if (sel?.type === 'clip') {
         if (s.ir.scenes.length <= 1) { toast('Keep at least one scene'); return; }
         const c = v.clips.find((x) => x.id === sel.id); if (!c) return;
         mutateIr('', (ir) => { ir.scenes.splice(c.sceneIx, 1); });
-        setState({ sel: { type: 'clip', id: 'sc0' } });
+        setState({ sel: { type: 'clip', id: 'sc0' }, multi: [] });
       } else if (sel?.type === 'text') {
         const t = v.texts.find((x) => x.id === sel.id); if (!t) return;
         mutateIr('', (ir) => {
@@ -1072,7 +1219,7 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
           if (!layers) return false;
           layers.splice(t.layerIx, 1);
         });
-        setState({ sel: null });
+        setState({ sel: null, multi: [] });
       } else if (sel?.type === 'audio') {
         toast('Audio tracks can’t be removed — set volume to 0');
         return;
@@ -1082,9 +1229,9 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
     }
     if (sel.type === 'clip') {
       if (s.clips.length <= 1) { toast('Keep at least one clip'); return; }
-      setState((st) => ({ clips: st.clips.filter((c) => c.id !== sel.id), sel: { type: 'clip', id: st.clips.find((c) => c.id !== sel.id).id } }));
+      setState((st) => ({ clips: st.clips.filter((c) => c.id !== sel.id), sel: { type: 'clip', id: st.clips.find((c) => c.id !== sel.id).id }, multi: [] }));
     } else if (sel.type === 'text') {
-      setState((st) => ({ texts: st.texts.filter((t) => t.id !== sel.id), sel: null }));
+      setState((st) => ({ texts: st.texts.filter((t) => t.id !== sel.id), sel: null, multi: [] }));
     } else if (sel.type === 'audio') {
       toast('Audio tracks can’t be removed — set volume to 0');
       return;
@@ -1104,6 +1251,10 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
         const k = e.key.toLowerCase();
         if (k === 'z') { e.preventDefault(); (e.shiftKey ? redoRef : undoRef).current?.(); return; }
         if (k === 'y') { e.preventDefault(); redoRef.current?.(); return; }
+      }
+      if (e.key === 'Escape' && !inField && stateRef.current.multi?.length) {
+        setState({ multi: [] });
+        return;
       }
       if (e.key !== 'Delete' && e.key !== 'Backspace') return;
       if (inField) return;
@@ -1134,12 +1285,12 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
           transition_out: { type: 'crossfade', duration_s: 0.4 },
         });
       });
-      setState({ sel: { type: 'clip', id: 'sc' + at }, rightTab: 'inspect' });
+      setState({ sel: { type: 'clip', id: 'sc' + at }, multi: [], rightTab: 'inspect' });
       toast('Added a “' + item.label + '” card — Re-render to see it in the video');
       return;
     }
     const nc = { id: uid('m'), scene: item.scene, label: item.label, alts: [item.label], srcIx: 0, src: item.src, dur: 3.0, grad: item.grad };
-    setState((st) => ({ clips: st.clips.concat([nc]), tf: { ...st.tf, [nc.id]: { scale: 100, x: 0, y: 0, rot: 0, op: 100 } }, sel: { type: 'clip', id: nc.id }, rightTab: 'inspect' }));
+    setState((st) => ({ clips: st.clips.concat([nc]), tf: { ...st.tf, [nc.id]: { scale: 100, x: 0, y: 0, rot: 0, op: 100 } }, sel: { type: 'clip', id: nc.id }, multi: [], rightTab: 'inspect' }));
     toast('Added “' + item.label + '” to the timeline');
   };
 
@@ -1163,13 +1314,13 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
           exit: { anim: 'fade', at_s: +Math.min(cur.dur - 0.3, rel + 3).toFixed(2) },
         });
       });
-      setState({ sel: { type: 'text', id: `ly${si}_${li}` }, rightTab: 'inspect' });
+      setState({ sel: { type: 'text', id: `ly${si}_${li}` }, multi: [], rightTab: 'inspect' });
       toast('Added a text layer to scene ' + (si + 1));
       return;
     }
     setState((st) => {
       const nt = { id: uid('t'), content: 'New caption', start: Math.min(st.time, totalOf(st.clips) - 2), dur: 3, size: 38, ax: 0, ay: 0 };
-      return { texts: st.texts.concat([nt]), tf: { ...st.tf, [nt.id]: { scale: 100, x: 0, y: 0, rot: 0, op: 100 } }, sel: { type: 'text', id: nt.id }, rightTab: 'inspect' };
+      return { texts: st.texts.concat([nt]), tf: { ...st.tf, [nt.id]: { scale: 100, x: 0, y: 0, rot: 0, op: 100 } }, sel: { type: 'text', id: nt.id }, multi: [], rightTab: 'inspect' };
     });
     toast('Added a text layer');
   };
@@ -1270,6 +1421,12 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
   const L = getLayerIn({ clips, texts, audio }, sel);
   const selRef = S.ir ? selRefOf(S.ir, { clips, texts, audio }, sel) : null;
 
+  // Multi-selection: anchor + same-kind extras. inSel drives every highlight.
+  const multiIds = new Set((S.multi || []).filter((m) => m.type === sel?.type).map((m) => m.id));
+  const inSel = (type, id) => !!sel && sel.type === type && (sel.id === id || multiIds.has(id));
+  const multiCount = sel ? selItemsOf(S).length : 0;
+  const multiOn = S.ir && multiCount > 1;
+
   // Real-video transport (when a rendered project is loaded into the stage).
   const realVideo = !!S.videoUrl;
   const transTime = realVideo ? S.vTime : S.time;
@@ -1281,21 +1438,21 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
 
   const layerRows = [];
   clips.forEach((c) => {
-    const on = sel && sel.type === 'clip' && sel.id === c.id;
+    const on = inSel('clip', c.id);
     layerRows.push({ key: c.id, label: c.label, sub: c.scene + ' · ' + c.src, len: c.dur.toFixed(1) + 's',
-      select: () => selectLayer('clip', c.id),
+      select: (e) => selectLayer('clip', c.id, e),
       dotStyle: 'width:8px;height:22px;border-radius:3px;flex:none;background:' + c.grad, style: rowStyle(on) });
   });
   texts.forEach((t) => {
-    const on = sel && sel.type === 'text' && sel.id === t.id;
+    const on = inSel('text', t.id);
     layerRows.push({ key: t.id, label: t.kind === 'text' || !t.kind ? '“' + t.content + '”' : t.content, sub: (t.kind ? t.kind.toUpperCase() : 'TEXT') + ' · ' + fmt(t.start), len: t.dur.toFixed(1) + 's',
-      select: () => selectLayer('text', t.id),
+      select: (e) => selectLayer('text', t.id, e),
       dotStyle: 'width:8px;height:22px;border-radius:3px;flex:none;background:rgba(244,243,240,0.55)', style: rowStyle(on) });
   });
   audio.forEach((a) => {
-    const on = sel && sel.type === 'audio' && sel.id === a.id;
+    const on = inSel('audio', a.id);
     layerRows.push({ key: a.id, label: a.label, sub: (a.kind === 'music' ? 'MUSIC' : 'VOICEOVER') + ' · ' + a.vol + '%', len: '',
-      select: () => selectLayer('audio', a.id),
+      select: (e) => selectLayer('audio', a.id, e),
       dotStyle: 'width:8px;height:22px;border-radius:3px;flex:none;background:' + (a.kind === 'music' ? '#5B7CFF' : '#00C2A8'), style: rowStyle(on) });
   });
 
@@ -1368,23 +1525,23 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
   const trackW = (d) => (d / total * 100);
   let acc2 = 0;
   const clipBlocks = clips.map((c) => {
-    const on = sel && sel.type === 'clip' && sel.id === c.id;
+    const on = inSel('clip', c.id);
     const left = acc2 / total * 100; acc2 += c.dur;
-    return { key: c.id, label: c.label, showWave: false, select: () => selectLayer('clip', c.id),
+    return { key: c.id, label: c.label, showWave: false, select: (e) => selectLayer('clip', c.id, e),
       style: 'position:absolute;top:3px;bottom:3px;border-radius:6px;background:' + c.grad + ';cursor:pointer;overflow:hidden;display:flex;align-items:center;color:#fff;transition:box-shadow .15s;left:calc(' + left + '% + 1px);width:calc(' + trackW(c.dur) + '% - 2px);border:1.5px solid ' + (on ? 'var(--accent)' : 'rgba(255,255,255,0.12)') + ';box-shadow:' + (on ? '0 0 0 2px color-mix(in oklab, var(--accent) 40%, transparent)' : 'none') };
   });
   const textBlocks = texts.map((t) => {
-    const on = sel && sel.type === 'text' && sel.id === t.id;
-    return { key: t.id, label: t.content, showWave: false, select: () => selectLayer('text', t.id),
+    const on = inSel('text', t.id);
+    return { key: t.id, label: t.content, showWave: false, select: (e) => selectLayer('text', t.id, e),
       style: 'position:absolute;top:3px;bottom:3px;border-radius:6px;background:rgba(244,243,240,0.14);cursor:pointer;overflow:hidden;display:flex;align-items:center;color:rgba(244,243,240,0.92);transition:box-shadow .15s;left:calc(' + (t.start / total * 100) + '% + 1px);width:calc(' + trackW(t.dur) + '% - 2px);border:1.5px solid ' + (on ? 'var(--accent)' : 'rgba(255,255,255,0.14)') };
   });
   const audioBlocks = audio.map((a) => {
-    const on = sel && sel.type === 'audio' && sel.id === a.id;
+    const on = inSel('audio', a.id);
     const isMusic = a.kind === 'music';
     const left = isMusic ? 0 : (a.start / total * 100);
     const w = isMusic ? 100 : trackW(a.dur);
     const col = isMusic ? '#5B7CFF' : '#00C2A8';
-    return { key: a.id, label: a.label, showWave: true, select: () => selectLayer('audio', a.id),
+    return { key: a.id, label: a.label, showWave: true, select: (e) => selectLayer('audio', a.id, e),
       waveStyle: 'position:absolute;inset:0;opacity:0.4;pointer-events:none;background:repeating-linear-gradient(90deg, transparent 0 3px, ' + col + ' 3px 4px)',
       style: 'position:absolute;top:3px;bottom:3px;border-radius:6px;background:color-mix(in oklab, ' + col + ' 22%, #141419);cursor:pointer;overflow:hidden;display:flex;align-items:center;color:#fff;transition:box-shadow .15s;left:calc(' + left + '% + 1px);width:calc(' + w + '% - 2px);border:1.5px solid ' + (on ? 'var(--accent)' : 'color-mix(in oklab, ' + col + ' 50%, transparent)') };
   });
@@ -1509,9 +1666,31 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
         setState((st) => ({ audio: st.audio.map((a) => a.id === sel.id ? { ...a, vol: v } : a) }));
       },
       audioPickLabel: isAudioL && L.kind === 'music' ? 'TRACK' : 'VOICE',
-      audioOptions: isAudioL ? (L.alts || []).map((opt, ix) => ({ key: ix, label: opt, pick: () => { setState((st) => ({ audio: st.audio.map((a) => a.id === sel.id ? { ...a, srcIx: ix, label: opt } : a) })); toast('Set to “' + opt + '”'); },
-        style: 'cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:9px;font-size:12.5px;transition:border-color .15s;text-align:left;' + (ix === L.srcIx ? 'background:color-mix(in oklab, var(--accent) 12%, transparent);border:1px solid var(--accent);color:#F4F3F0' : 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:rgba(244,243,240,0.8)'),
-        dot: 'width:12px;height:12px;border-radius:50%;flex:none;' + (ix === L.srcIx ? 'background:var(--accent)' : 'border:1px solid rgba(255,255,255,0.25)') })) : [],
+      audioOptions: (() => {
+        if (!isAudioL) return [];
+        const optStyle = (on) => 'cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 12px;border-radius:9px;font-size:12.5px;transition:border-color .15s;text-align:left;' + (on ? 'background:color-mix(in oklab, var(--accent) 12%, transparent);border:1px solid var(--accent);color:#F4F3F0' : 'background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);color:rgba(244,243,240,0.8)');
+        const dotStyle = (on) => 'width:12px;height:12px;border-radius:50%;flex:none;' + (on ? 'background:var(--accent)' : 'border:1px solid rgba(255,255,255,0.25)');
+        // Real project voiceover → the actual narrator catalog: ▶ previews a
+        // sample; picking one re-voices every scene's narration on the server.
+        if (S.ir && L.kind === 'vo') {
+          // SFX layers (whoosh/impact) are also type "audio" in the IR — they
+          // get a volume slider but not the narrator picker.
+          const src = S.ir.scenes[L.sceneIx]?.layers?.[L.layerIx]?.src || '';
+          if (src.includes('/sfx/')) return [];
+          const cur = currentVoiceOf(S.ir);
+          return VOICES.map((v) => ({
+            key: v.id, label: v.label, desc: v.desc,
+            pick: () => doRevoice(v.id, v.label),
+            preview: () => playSample(v.id), playing: S.playingVoice === v.id,
+            style: optStyle(v.id === cur) + (S.revoicing ? ';opacity:0.55;pointer-events:none' : ''),
+            dot: dotStyle(v.id === cur),
+          }));
+        }
+        // Demo timeline (and demo music track): the prototype's mock alts.
+        return (L.alts || []).map((opt, ix) => ({ key: ix, label: opt, pick: () => { setState((st) => ({ audio: st.audio.map((a) => a.id === sel.id ? { ...a, srcIx: ix, label: opt } : a) })); toast('Set to “' + opt + '”'); },
+          style: optStyle(ix === L.srcIx), dot: dotStyle(ix === L.srcIx) }));
+      })(),
+      revoicing: !!S.revoicing,
       deleteLayer: () => del(),
     };
   }
@@ -1600,6 +1779,51 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
               </Box>
             </div>
             <Box t="button" onClick={doSavePreset} title="Save this video's look as a reusable preset" s="cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:8px 12px;font-size:13px;color:rgba(244,243,240,0.85);transition:border-color .15s" sh="border-color:rgba(255,255,255,0.3)">★ Save style</Box>
+            {/* Global narration-voice picker: one place to re-voice the whole video. */}
+            <div style={css('position:relative')}>
+              {(() => {
+                const curVoice = S.ir ? currentVoiceOf(S.ir) : null;
+                const curLabel = VOICES.find((v) => v.id === curVoice)?.label;
+                return (
+                  <Box t="button" onClick={() => setState((s) => ({ voiceMenu: !s.voiceMenu }))}
+                    title="Change the narration voice for the whole video"
+                    s={'cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:8px 12px;font-size:13px;display:inline-flex;align-items:center;gap:7px;transition:border-color .15s;' + (S.revoicing ? 'color:var(--accent)' : 'color:rgba(244,243,240,0.85)')} sh="border-color:rgba(255,255,255,0.3)">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="2" width="6" height="12" rx="3" /><path d="M5 10v1a7 7 0 0 0 14 0v-1" /><path d="M12 18v4" /></svg>
+                    {S.revoicing ? 'Voicing…' : (curLabel || 'Voice')}
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round"><path d="M6 9l6 6 6-6" /></svg>
+                  </Box>
+                );
+              })()}
+              {S.voiceMenu && (
+                <>
+                  <div onClick={() => { setState({ voiceMenu: false }); stopSample(); }} style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+                  <div style={css('position:absolute;right:0;top:calc(100% + 9px);z-index:41;width:300px;background:#141418;border:1px solid rgba(255,255,255,0.13);border-radius:13px;padding:6px;box-shadow:0 18px 44px rgba(0,0,0,0.55)')}>
+                    <div style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.14em', color: 'rgba(244,243,240,0.4)', padding: '9px 11px 7px' }}>NARRATION VOICE — WHOLE VIDEO</div>
+                    {VOICES.map((v) => {
+                      const on = S.ir && currentVoiceOf(S.ir) === v.id;
+                      return (
+                        <Box key={v.id} t="button" onClick={() => { setState({ voiceMenu: false }); stopSample(); doRevoice(v.id, v.label); }}
+                          s={'cursor:pointer;width:100%;text-align:left;background:none;border:none;border-radius:9px;padding:10px 11px;display:flex;align-items:center;justify-content:space-between;gap:10px;transition:background .12s' + (S.revoicing ? ';opacity:0.5;pointer-events:none' : '')} sh="background:rgba(255,255,255,0.05)">
+                          <span>
+                            <div style={{ fontSize: 13.5, fontWeight: 600, color: on ? 'var(--accent)' : '#F4F3F0' }}>{v.label}</div>
+                            <div style={{ fontSize: 11.5, color: 'rgba(244,243,240,0.5)', marginTop: 2 }}>{v.desc}</div>
+                          </span>
+                          <span style={css('display:flex;align-items:center;gap:9px;flex:none')}>
+                            <Box t="span" onClick={(e) => { e.stopPropagation(); playSample(v.id); }} title="Preview voice"
+                              s={`cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:21px;height:21px;border-radius:50%;font-size:9.5px;line-height:1;border:1px solid ${S.playingVoice === v.id ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};color:${S.playingVoice === v.id ? 'var(--accent)' : 'rgba(244,243,240,0.6)'}`}
+                              sh="border-color:var(--accent);color:var(--accent)">
+                              {S.playingVoice === v.id ? '■' : '▶'}
+                            </Box>
+                            <span style={css('width:12px;height:12px;border-radius:50%;flex:none;' + (on ? 'background:var(--accent)' : 'border:1px solid rgba(255,255,255,0.25)'))} />
+                          </span>
+                        </Box>
+                      );
+                    })}
+                    <div style={{ fontFamily: mono, fontSize: 9.5, color: 'rgba(244,243,240,0.35)', padding: '7px 11px 9px', lineHeight: 1.5 }}>Re-narrates every scene. Undo-able · Re-render to bake into the video.</div>
+                  </div>
+                </>
+              )}
+            </div>
             <Box t="button" onClick={doRender} s={'cursor:pointer;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:8px 14px;font-size:13px;transition:border-color .15s;' + (S.rendering ? 'color:var(--accent)' : 'color:rgba(244,243,240,0.85)')} sh="border-color:rgba(255,255,255,0.3)">{S.rendering ? `Rendering ${S.renderPct}%` : 'Re-render'}</Box>
             <div style={css('position:relative')}>
               <Box t="button" onClick={() => setState({ exportMenu: !S.exportMenu })} s="cursor:pointer;border:none;border-radius:9px;padding:8px 16px;background:var(--accent);color:#0B0B0E;font-size:13.5px;font-weight:600;display:inline-flex;align-items:center;gap:6px;transition:filter .15s" sh="filter:brightness(1.12)">
@@ -2169,9 +2393,53 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
             {S.rightTab === 'inspect' && (
               <div className="sq-scroll" style={css('flex:1;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:0')}>
                 {nothingSelected && (
-                  <div style={css('margin-top:40px;text-align:center;color:rgba(244,243,240,0.4);font-size:13px;line-height:1.6;padding:0 20px')}>Select a clip, text layer, or audio track<br />to edit its properties.</div>
+                  <div style={css('margin-top:40px;text-align:center;color:rgba(244,243,240,0.4);font-size:13px;line-height:1.6;padding:0 20px')}>Select a clip, text layer, or audio track<br />to edit its properties.<br /><br /><span style={css('color:rgba(244,243,240,0.3);font-size:11.5px')}>Tip: shift-click to select several and edit them together.</span></div>
                 )}
-                {somethingSelected && insp && (
+                {multiOn && (() => {
+                  const kindName = sel.type === 'clip' ? 'scenes' : sel.type === 'text' ? 'text layers' : 'audio tracks';
+                  const btn = 'cursor:pointer;flex:1;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.12);border-radius:9px;padding:9px 10px;font-size:12.5px;color:rgba(244,243,240,0.85);transition:border-color .15s';
+                  const sec = { fontFamily: mono, fontSize: 9.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.45)' };
+                  return (
+                    <div style={css('display:flex;flex-direction:column;gap:18px')}>
+                      <div style={css('display:flex;flex-direction:column;gap:3px')}>
+                        <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.12em', color: 'var(--accent)' }}>MULTI-SELECT</span>
+                        <span style={{ fontSize: 15, fontWeight: 700, fontFamily: grotesk, letterSpacing: '-0.01em' }}>{multiCount} {kindName} selected</span>
+                        <span style={{ fontFamily: mono, fontSize: 10, color: 'rgba(244,243,240,0.4)' }}>Settings below apply to all · Esc clears</span>
+                      </div>
+                      {sel.type === 'clip' && (
+                        <>
+                          <div style={css('display:flex;flex-direction:column;gap:8px')}>
+                            <span style={sec}>TRANSITION OUT — ALL</span>
+                            <div style={css('display:flex;gap:8px')}>
+                              {['cut', 'crossfade', 'slide'].map((t) => (
+                                <Box key={t} t="button" onClick={() => batchTransition(t)} s={btn} sh="border-color:var(--accent)">{t}</Box>
+                              ))}
+                            </div>
+                          </div>
+                          <div style={css('display:flex;flex-direction:column;gap:8px')}>
+                            <span style={sec}>DURATION — ALL</span>
+                            <div style={css('display:flex;gap:8px')}>
+                              <Box t="button" onClick={() => batchNudge(-0.5)} s={btn} sh="border-color:var(--accent)">−0.5s each</Box>
+                              <Box t="button" onClick={() => batchNudge(0.5)} s={btn} sh="border-color:var(--accent)">+0.5s each</Box>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      {sel.type === 'audio' && (
+                        <div style={css('display:flex;flex-direction:column;gap:8px')}>
+                          <span style={sec}>VOLUME — ALL</span>
+                          <input type="range" min="0" max="100" step="1" defaultValue={L?.vol ?? 100}
+                            onChange={(e) => batchVolume(+e.target.value)} style={{ width: '100%', accentColor: 'var(--accent)' }} />
+                        </div>
+                      )}
+                      {sel.type !== 'audio' && (
+                        <Box t="button" onClick={batchDelete} s="cursor:pointer;background:none;border:1px solid rgba(255,90,90,0.3);border-radius:9px;padding:9px;font-size:12px;color:rgba(255,120,120,0.9);transition:background .15s" sh="background:rgba(255,90,90,0.1)">Delete all {multiCount}</Box>
+                      )}
+                      <span style={{ fontFamily: mono, fontSize: 9.5, color: 'rgba(244,243,240,0.35)', lineHeight: 1.5 }}>Each batch edit is one undo step — Re-render to bake into the video.</span>
+                    </div>
+                  );
+                })()}
+                {somethingSelected && insp && !multiOn && (
                   <div style={css('display:flex;flex-direction:column;gap:18px')}>
                     {/* header */}
                     <div style={css('display:flex;align-items:flex-start;justify-content:space-between;gap:10px')}>
@@ -2274,12 +2542,28 @@ export default function SquookEditor({ accent = '#FF5A2D', grain = true, vignett
                             <span style={{ fontFamily: mono, fontSize: 9.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.45)' }}>{insp.audioPickLabel}</span>
                             <div style={css('display:flex;flex-direction:column;gap:6px')}>
                               {insp.audioOptions.map((ao) => (
-                                <Box key={ao.key} t="button" onClick={ao.pick} s={ao.style}><span>{ao.label}</span><span style={css(ao.dot)} /></Box>
+                                <Box key={ao.key} t="button" onClick={ao.pick} s={ao.style}>
+                                  <span style={css('display:flex;flex-direction:column;gap:2px;text-align:left')}>
+                                    <span>{ao.label}</span>
+                                    {ao.desc && <span style={{ fontFamily: mono, fontSize: 9.5, color: 'rgba(244,243,240,0.45)' }}>{ao.desc}</span>}
+                                  </span>
+                                  <span style={css('display:flex;align-items:center;gap:9px;flex:none')}>
+                                    {ao.preview && (
+                                      <Box t="span" onClick={(e) => { e.stopPropagation(); ao.preview(); }} title="Preview voice"
+                                        s={`cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;border-radius:50%;font-size:9px;line-height:1;border:1px solid ${ao.playing ? 'var(--accent)' : 'rgba(255,255,255,0.25)'};color:${ao.playing ? 'var(--accent)' : 'rgba(244,243,240,0.6)'}`}
+                                        sh="border-color:var(--accent);color:var(--accent)">
+                                        {ao.playing ? '■' : '▶'}
+                                      </Box>
+                                    )}
+                                    <span style={css(ao.dot)} />
+                                  </span>
+                                </Box>
                               ))}
                             </div>
                           </div>
                         )}
-                        {S.ir && <span style={{ fontFamily: mono, fontSize: 9.5, color: 'rgba(244,243,240,0.35)', lineHeight: 1.5 }}>Volume saves to the edit — Re-render to hear it.</span>}
+                        {insp.revoicing && <span style={{ fontFamily: mono, fontSize: 9.5, color: 'var(--accent)', lineHeight: 1.5 }}>Re-voicing every scene — the preview updates when it finishes…</span>}
+                        {S.ir && !insp.revoicing && <span style={{ fontFamily: mono, fontSize: 9.5, color: 'rgba(244,243,240,0.35)', lineHeight: 1.5 }}>{insp.audioPickLabel === 'VOICE' ? 'Picking a voice re-narrates the whole video. ' : ''}Volume saves to the edit — Re-render to hear it.</span>}
                       </div>
                     )}
 

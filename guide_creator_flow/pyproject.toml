@@ -9,6 +9,10 @@ dependencies = [
     "kokoro>=0.9.4",
     "pyloudnorm>=0.2.0",
     "soundfile>=0.14.0",
+    # Optional: only used by the opt-in render→vision-critique pass (critique.py)
+    # and the DESIGN_LLM_PROVIDER=claude design steps. Lazy-imported, so the
+    # default local (gpt-oss) pipeline runs even if this isn't installed yet.
+    "anthropic>=0.40.0",
 ]
 
 [project.scripts]
@@ -17,6 +21,7 @@ run_crew = "guide_creator_flow.main:kickoff"
 plot = "guide_creator_flow.main:plot"
 run_with_trigger = "guide_creator_flow.main:run_with_trigger"
 master = "guide_creator_flow.tools.mastering:run"
+revoice = "guide_creator_flow.revoice:run"
 
 [build-system]
 requires = ["hatchling"]
