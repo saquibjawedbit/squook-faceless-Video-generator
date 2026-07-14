@@ -84,12 +84,15 @@ def upload(topic: dict) -> None:
     yt = build("youtube", "v3", credentials=creds)
 
     meta = topic.get("youtube") or {}
+    description = meta.get("description", f"{topic['prompt']}\n\nGenerated automatically.")
+    # 9:16 videos under 3 minutes are auto-classified as Shorts; the hashtag
+    # just makes the intent explicit to YouTube's classifier.
+    if topic.get("preset") == "reel" and "#shorts" not in description.lower():
+        description += "\n\n#Shorts"
     body = {
         "snippet": {
             "title": (meta.get("title") or topic["prompt"])[:100],
-            "description": meta.get(
-                "description", f"{topic['prompt']}\n\nGenerated automatically."
-            ),
+            "description": description,
             "tags": meta.get("tags", []),
             # 27 = Education
             "categoryId": str(meta.get("categoryId", "27")),

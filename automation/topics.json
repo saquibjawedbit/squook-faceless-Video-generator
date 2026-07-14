@@ -5,36 +5,58 @@
       "duration": 60,
       "youtube": {
         "title": "How Solar Panels Actually Work",
-        "tags": ["solar energy", "science", "explainer"]
-      }
+        "tags": [
+          "solar energy",
+          "science",
+          "explainer"
+        ]
+      },
+      "preset": "reel",
+      "genre": "footage"
     },
     {
       "prompt": "Why does compound interest grow so fast? Explain with a simple example.",
       "duration": 60,
       "youtube": {
         "title": "The Real Power of Compound Interest",
-        "tags": ["finance", "investing", "explainer"]
-      }
+        "tags": [
+          "finance",
+          "investing",
+          "explainer"
+        ]
+      },
+      "preset": "reel",
+      "genre": "footage"
     },
     {
       "prompt": "How does GPS know exactly where you are?",
-      "duration": 60
+      "duration": 60,
+      "preset": "reel",
+      "genre": "footage"
     },
     {
       "prompt": "Why is the sky blue but sunsets red?",
-      "duration": 60
+      "duration": 60,
+      "preset": "reel",
+      "genre": "footage"
     },
     {
       "prompt": "How do noise-cancelling headphones cancel noise?",
-      "duration": 60
+      "duration": 60,
+      "preset": "reel",
+      "genre": "footage"
     },
     {
       "prompt": "What happens inside your body during the first hour of sleep?",
-      "duration": 60
+      "duration": 60,
+      "preset": "reel",
+      "genre": "footage"
     },
     {
       "prompt": "Why do lithium-ion batteries degrade over time?",
-      "duration": 60
+      "duration": 60,
+      "preset": "reel",
+      "genre": "footage"
     }
   ]
 }
