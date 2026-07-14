@@ -10,5 +10,9 @@
   {
     "title": "How does GPS know exactly where you are?",
     "prompt": "How does GPS know exactly where you are?"
+  },
+  {
+    "title": "Why a Tiny Kernel Pops Into Fluffy Popcorn in Seconds",
+    "prompt": "Create a 45\u201160 second vertical explainer on the surprising physics behind popcorn popping. Open with the hook: \"Ever wonder why a tiny, hard kernel can burst into a fluffy cloud in seconds?\" Then show stock footage of raw kernels, steam, a close\u2011up of a kernel exploding, and the resulting fluffy popcorn. Explain that each kernel holds just 14% water; when heated, that water turns to super\u2011heated steam, building pressure until the hull ruptures, instantly turning starch into the airy foam we eat. End with a quick visual of popcorn spilling out of a bowl while the narrator asks, \"Now you know the pop\u2011secret behind your snack!\""
   }
 ]
