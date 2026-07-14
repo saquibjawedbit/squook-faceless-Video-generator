@@ -85,6 +85,9 @@ jobs:
           LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
           LLM_MODEL: ${{ vars.LLM_MODEL || 'openai/gpt-oss-120b' }}
           LLM_FAST_MODEL: ${{ vars.LLM_FAST_MODEL || 'openai/gpt-oss-20b' }}
+          # 'ai' (default): the LLM invents a fresh viral-Shorts topic daily,
+          # avoiding automation/history.json. 'list': rotate topics.json.
+          TOPIC_MODE: ${{ vars.TOPIC_MODE || 'ai' }}
           # Optional providers — leave the secrets unset to skip them.
           # OPENAI_API_KEY also switches TTS from local Kokoro to OpenAI,
           # ANTHROPIC_API_KEY routes the design steps to Claude (paid).
@@ -117,14 +120,14 @@ jobs:
           if-no-files-found: ignore
           retention-days: 7
 
-      - name: Commit topic rotation state
+      - name: Commit topic state
         if: always()
         run: |
-          if ! git diff --quiet automation/state.json; then
+          if ! git diff --quiet automation/state.json automation/history.json; then
             git config user.name "github-actions[bot]"
             git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add automation/state.json
-            git commit -m "chore: advance daily topic index [skip ci]"
+            git add automation/state.json automation/history.json
+            git commit -m "chore: record consumed daily topic [skip ci]"
             git pull --rebase origin "$GITHUB_REF_NAME"
             git push
           fi

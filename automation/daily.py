@@ -32,7 +32,30 @@ GUIDE = ROOT / "guide_creator_flow"
 RENDERER = ROOT / "renderer"
 TOPICS = Path(__file__).with_name("topics.json")
 STATE = Path(__file__).with_name("state.json")
+HISTORY = Path(__file__).with_name("history.json")
 FINAL = RENDERER / "out" / "final.mp4"
+
+IDEA_SYSTEM_PROMPT = """\
+You are a YouTube Shorts strategist for a faceless channel of 45-60 second
+vertical explainers built entirely from real stock footage and photographs
+(no presenter, no animation). Invent ONE new video topic with maximum viral
+potential.
+
+What performs: a curiosity gap the viewer must close ("why X does Y"),
+mass-appeal subjects (space, the human body, animals, money, food, machines,
+weather, history's oddities), a hook stateable in one breath, and visuals
+that plainly exist as stock footage. Avoid: niche jargon, current-events or
+dated references, anything needing charts or diagrams to explain, and
+anything on the used-topics list or too similar to it.
+
+Respond with ONLY a JSON object, no other text, no emojis anywhere:
+{
+  "prompt": "instruction for the video team: the topic, the surprising angle,
+             and the hook to open with in the first sentence",
+  "title": "click-worthy YouTube title, under 90 characters, no clickbait lies",
+  "description": "1-2 sentence YouTube description",
+  "tags": ["3-6", "search", "tags"]
+}"""
 
 # Payload keys run_with_trigger understands (see ContentFlow.plan_content).
 PAYLOAD_KEYS = ("prompt", "preset", "genre", "music", "voice", "duration")
@@ -41,6 +64,58 @@ PAYLOAD_KEYS = ("prompt", "preset", "genre", "music", "voice", "duration")
 def sh(cmd: list[str], cwd: Path) -> None:
     print(f"+ {' '.join(cmd)}  (cwd={cwd})", flush=True)
     subprocess.run(cmd, cwd=cwd, check=True)
+
+
+def ai_topic() -> dict:
+    """Ask the pipeline's LLM for one fresh viral-Shorts topic, steering it
+    away from everything in history.json. Uses the same OpenAI-compatible
+    endpoint env the workflow already provides (LLM_BASE_URL/LLM_API_KEY/
+    LLM_MODEL). Raises on any failure; the caller falls back to the list."""
+    import urllib.request
+
+    base = os.environ["LLM_BASE_URL"].rstrip("/")
+    used = json.loads(HISTORY.read_text()) if HISTORY.exists() else []
+    used_titles = [u["title"] for u in used[-60:]]
+    req = urllib.request.Request(
+        f"{base}/chat/completions",
+        headers={
+            "Authorization": f"Bearer {os.environ['LLM_API_KEY']}",
+            "Content-Type": "application/json",
+        },
+        data=json.dumps({
+            "model": os.environ.get("LLM_MODEL", "openai/gpt-oss-120b"),
+            "temperature": 1.0,
+            "max_tokens": 2048,
+            "messages": [
+                {"role": "system", "content": IDEA_SYSTEM_PROMPT},
+                {"role": "user", "content": "Already-used topics (do not repeat or closely resemble):\n"
+                    + ("\n".join(f"- {t}" for t in used_titles) or "- (none yet)")},
+            ],
+        }).encode(),
+    )
+    with urllib.request.urlopen(req, timeout=120) as resp:
+        content = json.load(resp)["choices"][0]["message"]["content"] or ""
+    # Tolerate prose around the JSON object.
+    idea = json.loads(content[content.index("{"):content.rindex("}") + 1])
+    if not idea.get("prompt") or not idea.get("title"):
+        raise ValueError(f"LLM idea missing prompt/title: {idea}")
+    return {
+        "prompt": idea["prompt"],
+        "duration": 60,
+        "preset": "reel",
+        "genre": "footage",
+        "youtube": {
+            "title": idea["title"],
+            "description": idea.get("description", ""),
+            "tags": idea.get("tags", []),
+        },
+    }
+
+
+def record_history(topic: dict) -> None:
+    used = json.loads(HISTORY.read_text()) if HISTORY.exists() else []
+    used.append({"title": topic["youtube"]["title"], "prompt": topic["prompt"]})
+    HISTORY.write_text(json.dumps(used, indent=2) + "\n")
 
 
 def pick_topic() -> tuple[dict, int, int]:
@@ -118,15 +193,26 @@ def main() -> None:
     ap.add_argument("--prompt", help="one-off prompt; skips rotation and state bump")
     args = ap.parse_args()
 
+    topic, idx, is_ai = None, None, False
     if args.prompt:
-        topic, idx = {"prompt": args.prompt}, None
+        topic = {"prompt": args.prompt}
         print(f"One-off topic: {args.prompt}", flush=True)
-    else:
+    elif os.getenv("TOPIC_MODE", "ai").strip().lower() != "list":
+        try:
+            topic, is_ai = ai_topic(), True
+            print(f"AI topic: {topic['youtube']['title']}", flush=True)
+            print(f"  brief: {topic['prompt']}", flush=True)
+        except Exception as e:
+            print(f"AI topic generation failed ({e}); falling back to topics.json", flush=True)
+    if topic is None:
         topic, idx, total = pick_topic()
         print(f"Topic {idx + 1}/{total}: {topic['prompt']}", flush=True)
 
     generate(topic)
-    if idx is not None:
+    # Record consumption only after a successful generation, so failures retry.
+    if is_ai:
+        record_history(topic)
+    elif idx is not None:
         bump_state(idx)
 
     if args.no_upload:

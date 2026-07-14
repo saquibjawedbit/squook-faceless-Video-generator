@@ -63,7 +63,19 @@ repo secret (Settings -> Secrets and variables -> Actions) to the key for it.
 
 Leave any of these unset and the pipeline falls back gracefully.
 
-## Editing the topic queue
+## Topic selection
+
+Default (`TOPIC_MODE=ai`): each run asks the LLM to invent one fresh
+viral-optimized Shorts topic — a 45-60s vertical explainer tellable in stock
+footage, with a curiosity-gap hook, title, description, and tags. Every used
+idea is appended to `history.json` (committed back by the workflow) and fed
+to the next day's prompt so topics never repeat. If the idea call fails, the
+run falls back to rotating `topics.json`.
+
+Set the `TOPIC_MODE` repo variable to `list` to disable AI ideas and only
+rotate `topics.json`.
+
+## Editing the fallback topic queue
 
 Add entries to `topics.json`. Only `prompt` is required:
 
