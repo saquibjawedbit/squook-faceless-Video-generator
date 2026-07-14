@@ -1,4 +1,5 @@
 import {Config} from '@remotion/cli/config';
+import {cpus} from 'node:os';
 
 Config.setVideoImageFormat('jpeg');
 Config.setOverwriteOutput(true);
@@ -14,4 +15,6 @@ Config.setChromiumOpenGlRenderer('swangle');
 // (5m23s vs 2m28s — FFmpeg per-frame extraction loses to browser decode);
 // --gl=angle-egl 3m17s vs swangle 2m09s (GPU readback overhead, no shader
 // scenes to amortize it).
-Config.setConcurrency(4);
+// Clamped to the core count because Remotion refuses to start when the
+// configured value exceeds it (GitHub Actions private runners have 2).
+Config.setConcurrency(Math.min(4, cpus().length));
