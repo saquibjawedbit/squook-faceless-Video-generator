@@ -25,6 +25,12 @@ jobs:
   generate:
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    env:
+      # espeak-ng (used by Kokoro TTS) holds its data path in a fixed
+      # 160-byte buffer and silently ignores anything longer, then exit(1)s
+      # on a nonexistent baked-in path. The repo rename made the in-checkout
+      # venv path 166 chars, so keep the venv at a short fixed path instead.
+      UV_PROJECT_ENVIRONMENT: /home/runner/flow-venv
     steps:
       - uses: actions/checkout@v4
 

@@ -183,11 +183,40 @@ _PIPELINE_LOCK = threading.Lock()
 _KOKORO_INFER_LOCK = threading.Lock()
 
 
+def _shorten_espeak_data_path() -> None:
+    """espeak-ng keeps its data path in a fixed 160-byte buffer; a longer
+    path is silently ignored and espeak exit(1)s on the wheel's nonexistent
+    build-time path, killing the whole process. misaki points it at the
+    venv's espeakng_loader data at import time, which can blow the limit on
+    deep checkouts (e.g. CI) — re-route it through a short symlink. Must run
+    after the kokoro/misaki import (misaki resets the path) and before
+    KPipeline instantiation (which initializes espeak)."""
+    try:
+        import shutil
+        import tempfile
+
+        import espeakng_loader
+        from phonemizer.backend.espeak.wrapper import EspeakWrapper
+
+        data_path = str(espeakng_loader.get_data_path())
+        if len(data_path) < 140:
+            return
+        # A real copy, not a symlink: phonemizer resolve()s the path before
+        # handing it to espeak, so a symlink would round-trip to the long one.
+        # tempfile honours TMPDIR, which may itself be long — force /tmp.
+        copy = Path(tempfile.mkdtemp(prefix="esng-", dir="/tmp")) / "espeak-ng-data"
+        shutil.copytree(data_path, copy)
+        EspeakWrapper.set_data_path(str(copy))
+    except Exception as e:
+        print(f"  espeak data-path shortening skipped ({e})")
+
+
 def _pipeline(lang_code: str):
     with _PIPELINE_LOCK:
         if lang_code not in _PIPELINES:
             from kokoro import KPipeline
 
+            _shorten_espeak_data_path()
             _PIPELINES[lang_code] = KPipeline(lang_code=lang_code, repo_id="hexgrad/Kokoro-82M")
         return _PIPELINES[lang_code]
 
