@@ -18,6 +18,13 @@ writing_task:
     end with a memorable takeaway. Avoid jargon unless you explain it.
     Keep the total length to roughly {word_count} words — this narration
     must fit the video's target runtime of {runtime}.
+    WRITE FOR THE EAR, NOT THE PAGE. A speech engine reads this literally, and
+    punctuation is the only thing telling it how to breathe — so punctuation is
+    performance, not grammar. Vary sentence length and let short ones land.
+    Use commas and em-dashes where you want the voice to pause, and end every
+    sentence with real punctuation. Avoid clauses so long the listener loses
+    the thread, parentheses (a voice cannot speak them), and semicolons.
+    LANGUAGE — {language_rule}
     CRITICAL — write ONLY the words the narrator will speak aloud to the
     viewer, about the SUBJECT itself. Do NOT write section labels or headings
     (no "Hook:", "Problem:", "Solution:", "Call to Action:"), no bullet points,
@@ -32,7 +39,8 @@ writing_task:
     {writer_guidance}
   expected_output: >
     Narration-ready markdown content of roughly {word_count} words about
-    "{prompt}", suitable for reading aloud as a video voiceover.
+    "{prompt}", written in {language}, suitable for reading aloud as a video
+    voiceover.
   agent: writer
 
 directing_task:
@@ -83,6 +91,11 @@ directing_task:
     NEVER be in narration.
     NO EMOJIS: the title, on_screen_text, and narration must never contain
     emojis unless the original request explicitly asks for them.
+    LANGUAGE — the viewer-facing fields ("narration", "on_screen_text", and the
+    metadata "title") must all be written in {language}. {language_rule}
+    The "visual" field is the ONE exception: it is a production note read by the
+    stock-footage search and the graphics designer downstream, not by the viewer,
+    so ALWAYS write it in English no matter what language the narration is in.
     {director_guidance}
   expected_output: >
     A JSON object with a "metadata" object (title, prompt, total_duration_seconds,
@@ -102,6 +115,9 @@ asset_task:
     media_type "upload" and set the query to the EXACT uploaded filename
     (e.g. "demo-screen.mp4"). Only use the media_type rules below for scenes
     that no uploaded file fits.
+    EVERY query you write is in ENGLISH, always — even when the video's
+    narration is in another language. Stock libraries index English keywords
+    only, so a translated query returns nothing and the scene loses its visual.
     media_type rules: "graphic" when the visual describes a diagram,
     chart, network, counter, animated number, title card, or annotation —
     these are rendered as data-driven motion graphics; "lottie" when the

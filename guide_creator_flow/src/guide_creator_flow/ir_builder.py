@@ -44,6 +44,12 @@ SFX_IMPACT_VOLUME = 0.50
 SFX_POP_VOLUME = 0.45
 SFX_RISER_VOLUME = 0.32
 WORDS_PER_SECOND = 2.5
+# Per-language speaking rate for the pre-TTS duration estimate. Hindi measures a
+# touch faster than English at Kokoro's pace (pooled 2.57 wps over four clips —
+# see LANG_WORDS_PER_SECOND in main.py for the numbers). Real audio lengths
+# replace these estimates once TTS runs; they only stand on their own when the
+# voiceover is disabled.
+LANG_WORDS_PER_SECOND = {"en": WORDS_PER_SECOND, "hi": 2.6}
 SCENE_PADDING_S = 0.8
 MIN_SCENE_S = 3
 TRIM_SKIP_FRACTION = 0.15
@@ -115,6 +121,36 @@ FONT_STYLES = {
     "editorial_display": "DM Serif Display",
 }
 
+# The same typographic vocabulary, rendered in faces that actually cover the
+# script the narration is written in. Only Poppins in the Latin catalog above
+# ships a devanagari subset — every other family would render Hindi captions as
+# tofu boxes, and the render environment has no Indic system font to fall back
+# on. Fewer Devanagari families exist than Latin ones, so several style keys
+# share a face; the keys are what matter, because presets.py font_pool and
+# MOOD_DEFAULT_FONT index by style, and both must keep working in any language.
+FONT_STYLES_BY_LANG = {
+    "en": FONT_STYLES,
+    "hi": {
+        "geometric_sans":    "Poppins",
+        "condensed_sans":    "Anek Devanagari",
+        "grotesque_sans":    "Noto Sans Devanagari",
+        "light_sans":        "IBM Plex Sans Devanagari",
+        "editorial_serif":   "Noto Serif Devanagari",
+        "classic_serif":     "Tiro Devanagari Hindi",
+        "techno_mono":       "IBM Plex Sans Devanagari",
+        "techno_sans":       "Anek Devanagari",
+        "display_heavy":     "Noto Sans Devanagari",
+        "display_tall":      "Anek Devanagari",
+        "editorial_display": "Noto Serif Devanagari",
+    },
+}
+
+
+def font_family(font_style: str, language: str = "en") -> str:
+    """The concrete font family for a style key in a narration language."""
+    catalog = FONT_STYLES_BY_LANG.get(language, FONT_STYLES)
+    return catalog.get(font_style) or FONT_STYLES[font_style]
+
 # Fallback font per mood, so typography stays tied to meaning even when the LLM
 # doesn't name one (or is unavailable).
 MOOD_DEFAULT_FONT = {
@@ -137,7 +173,8 @@ TYPE_SCALES = {
 }
 
 
-def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "") -> dict:
+def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "",
+                language: str = "en") -> dict:
     """Prompt decides the mood (LLM); a seed decides the concrete design
     within that mood — so re-running the same prompt still varies.
     Set DESIGN_SEED for a reproducible look.
@@ -232,7 +269,7 @@ def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "")
         "mood": mood,
         "palette": palette,
         "font": {
-            "family": FONT_STYLES[font_style],
+            "family": font_family(font_style, language),
             "style": font_style,
             "caption_size": sizes["caption"],
             "title_size": sizes["title"],
@@ -252,15 +289,17 @@ def build_theme(prompt: str, mood_pool=None, font_pool=None, guidance: str = "")
 
 # ---------------------------------------------------------------- Pass 1
 
-def estimate_narration_seconds(narration: str) -> int:
-    """Speech time at ~2.5 wps + pause bonuses + breathing padding, ceil'd.
-    Erring slow is deliberate: a long scene holds the visual, a short one
-    cuts narration mid-word."""
+def estimate_narration_seconds(narration: str, language: str = "en") -> int:
+    """Speech time at the language's words-per-second + pause bonuses +
+    breathing padding, ceil'd. Erring slow is deliberate: a long scene holds
+    the visual, a short one cuts narration mid-word."""
     text = re.sub(r"[*_`#]", "", narration).strip()
     words = len(text.split())
-    sentence_pauses = len(re.findall(r"[.?!]", text))
+    # Devanagari ends sentences with a danda (।), not a full stop.
+    sentence_pauses = len(re.findall(r"[.?!।]", text))
     minor_pauses = len(re.findall(r"[,;:—–-]", text))
-    speech = words / WORDS_PER_SECOND + 0.3 * sentence_pauses + 0.15 * minor_pauses
+    wps = LANG_WORDS_PER_SECOND.get(language, WORDS_PER_SECOND)
+    speech = words / wps + 0.3 * sentence_pauses + 0.15 * minor_pauses
     return max(MIN_SCENE_S, math.ceil(speech + SCENE_PADDING_S))
 
 

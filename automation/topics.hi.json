@@ -1,0 +1,85 @@
+{
+  "_comment": "Fallback topic rotation for the Hindi channel, used only when TOPIC_MODE=list or when the AI idea step fails. Same schema as topics.json. Note the split: 'prompt' briefs the crew and drives the research step, so it stays English; 'youtube.title'/'tags' are viewer-facing and are Hindi. The narration itself is written natively in Hindi by the flow (see LANGUAGE_RULES in guide_creator_flow/main.py).",
+  "topics": [
+    {
+      "prompt": "Why is space completely silent? Explain that sound needs a medium to travel through, and there is almost nothing in a vacuum to carry it. Open with the hook that a rocket exploding right next to you in space would make no sound at all.",
+      "duration": 60,
+      "youtube": {
+        "title": "अंतरिक्ष में आवाज़ क्यों नहीं सुनाई देती",
+        "tags": [
+          "अंतरिक्ष",
+          "साइंस",
+          "space",
+          "science",
+          "hindi explainer"
+        ]
+      },
+      "preset": "reel",
+      "genre": "footage"
+    },
+    {
+      "prompt": "Why does cutting an onion make you cry? Explain the sulfur compound released when cells rupture, which reacts with the water in your eyes to form a mild acid. Open with the hook that the onion is actually defending itself against you.",
+      "duration": 60,
+      "youtube": {
+        "title": "प्याज़ काटते समय आँसू क्यों आते हैं",
+        "tags": [
+          "साइंस",
+          "प्याज़",
+          "science",
+          "kitchen science",
+          "hindi explainer"
+        ]
+      },
+      "preset": "reel",
+      "genre": "footage"
+    },
+    {
+      "prompt": "Why is the ocean salty when the rivers feeding it are not? Explain that rivers carry tiny amounts of dissolved minerals from rock, the water evaporates, and over millions of years the salt stays behind and concentrates. Open with the hook that every river is quietly delivering salt to the sea right now.",
+      "duration": 60,
+      "youtube": {
+        "title": "समुद्र का पानी खारा क्यों होता है",
+        "tags": [
+          "समुद्र",
+          "साइंस",
+          "ocean",
+          "science",
+          "hindi explainer"
+        ]
+      },
+      "preset": "reel",
+      "genre": "footage"
+    },
+    {
+      "prompt": "Why do we get goosebumps? Explain that tiny muscles pull each hair upright, a leftover reflex from ancestors with thick fur that made them look bigger and trapped warmth. Open with the hook that goosebumps are a leftover from a body we no longer have.",
+      "duration": 60,
+      "youtube": {
+        "title": "डर लगने पर रोंगटे क्यों खड़े हो जाते हैं",
+        "tags": [
+          "शरीर",
+          "साइंस",
+          "human body",
+          "science",
+          "hindi explainer"
+        ]
+      },
+      "preset": "reel",
+      "genre": "footage"
+    },
+    {
+      "prompt": "Why does time feel faster as you get older? Explain that each year is a smaller fraction of the life you have already lived, and that novelty creates dense memories while routine creates almost none. Open with the hook that childhood summers felt endless for a reason.",
+      "duration": 60,
+      "youtube": {
+        "title": "उम्र बढ़ने पर वक़्त तेज़ी से क्यों बीतता है",
+        "tags": [
+          "दिमाग",
+          "साइंस",
+          "psychology",
+          "brain",
+          "hindi explainer"
+        ]
+      },
+      "preset": "reel",
+      "genre": "footage"
+    }
+  ]
+}

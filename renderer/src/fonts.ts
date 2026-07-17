@@ -18,6 +18,39 @@ import {loadFont as playfair} from '@remotion/google-fonts/PlayfairDisplay';
 import {loadFont as lora} from '@remotion/google-fonts/Lora';
 import {loadFont as dmSerif} from '@remotion/google-fonts/DMSerifDisplay';
 import {loadFont as jetbrains} from '@remotion/google-fonts/JetBrainsMono';
+// Devanagari-capable faces, for Hindi narration's captions and titles. Of the
+// Latin catalog above only Poppins ships a devanagari subset, so without these
+// a Hindi caption renders as tofu boxes — the render environment has no Indic
+// system font to fall back on either.
+import {loadFont as notoSansDevLoad} from '@remotion/google-fonts/NotoSansDevanagari';
+import {loadFont as notoSerifDevLoad} from '@remotion/google-fonts/NotoSerifDevanagari';
+import {loadFont as anekDevLoad} from '@remotion/google-fonts/AnekDevanagari';
+import {loadFont as plexSansDevLoad} from '@remotion/google-fonts/IBMPlexSansDevanagari';
+import {loadFont as tiroDevLoad} from '@remotion/google-fonts/TiroDevanagariHindi';
+
+// The Devanagari faces are loaded EXPLICITLY, unlike the Latin catalog above: a
+// bare loadFont() pulls every weight × every subset, so five more families that
+// way would add ~130 font fetches to every render — English ones included —
+// each a delayRender the render then waits on. Asking only for the weights the
+// layers actually use keeps it near 24.
+//
+// `latin` rides along on purpose: Hindi copy routinely carries Latin brand
+// names and numerals, and those should render in the same face rather than drop
+// to system-ui mid-sentence.
+const DEV_SUBSETS: ['devanagari', 'latin'] = ['devanagari', 'latin'];
+// 400/700/800 are the weights the caption and title layers ask for; a family
+// that lacks one THROWS at import, so each list is intersected with what the
+// family actually ships. Missing bolds get a synthesised bold from the browser.
+const notoSansDev = () =>
+  notoSansDevLoad('normal', {weights: ['400', '700', '800'], subsets: DEV_SUBSETS});
+const notoSerifDev = () =>
+  notoSerifDevLoad('normal', {weights: ['400', '700', '800'], subsets: DEV_SUBSETS});
+const anekDev = () =>
+  anekDevLoad('normal', {weights: ['400', '700', '800'], subsets: DEV_SUBSETS});
+const plexSansDev = () => // ships no 800
+  plexSansDevLoad('normal', {weights: ['400', '700'], subsets: DEV_SUBSETS});
+const tiroDev = () => // ships 400 only
+  tiroDevLoad('normal', {weights: ['400'], subsets: DEV_SUBSETS});
 
 // Fallback stack appended to every resolved family so a missing glyph or a
 // still-loading webfont degrades to a sane system face, never a serif surprise.
@@ -39,6 +72,11 @@ const LOADED: Record<string, string> = {
   [lora().fontFamily]: lora().fontFamily + SERIF,
   [dmSerif().fontFamily]: dmSerif().fontFamily + SERIF,
   [jetbrains().fontFamily]: jetbrains().fontFamily + MONO,
+  [notoSansDev().fontFamily]: notoSansDev().fontFamily + SANS,
+  [notoSerifDev().fontFamily]: notoSerifDev().fontFamily + SERIF,
+  [anekDev().fontFamily]: anekDev().fontFamily + SANS,
+  [plexSansDev().fontFamily]: plexSansDev().fontFamily + SANS,
+  [tiroDev().fontFamily]: tiroDev().fontFamily + SERIF,
 };
 
 // Names the AI may use in edits ("use Playfair for the captions"). Exact,

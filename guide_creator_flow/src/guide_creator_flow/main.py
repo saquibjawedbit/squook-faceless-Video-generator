@@ -53,6 +53,55 @@ PRESETS = {
     },
 }
 
+# Narration languages the pipeline can write, direct, and speak, mapped to the
+# name the crew prompts refer to them by.
+LANGUAGES = {"en": "English", "hi": "Hindi (हिन्दी)"}
+DEFAULT_LANGUAGE = "en"
+
+# (min, max) words per second of finished narration, used to turn an explicit
+# runtime target into a word budget for the writer.
+#
+# Hindi is very slightly FASTER than English here, which is the opposite of what
+# "Hindi words carry more syllables" suggests: spoken Hindi leans on a lot of
+# short function words (है, ये, कि, ही) that more than cancel the longer content
+# words out. Measured over four ~13s Kokoro clips on the hf_alpha voice: 2.40,
+# 2.55, 2.61, 2.73 wps, pooled 2.57 — so the band is the English one nudged up,
+# not down. Re-measure before trusting a third language's numbers to intuition.
+LANG_WORDS_PER_SECOND = {"en": (2.0, 2.6), "hi": (2.1, 2.7)}
+
+# Rides the crew prompts as {language_rule} (see the content crew's tasks.yaml).
+# Everything language-specific about the spoken word lives here: which language
+# to write, which script to write it in, and the orthography rules that only
+# make sense in that language. The surrounding write-for-the-ear guidance in
+# tasks.yaml is language-neutral and stays there.
+#
+# NOTE: stock-footage search queries stay English in every language (see
+# asset_task) — Pexels and Pixabay index English keywords only.
+LANGUAGE_RULES = {
+    "en": (
+        'Write in English. Prefer contractions ("it\'s", "doesn\'t") the way a '
+        "person actually speaks. Spell out anything whose pronunciation is "
+        'ambiguous: write "about 60 percent", not "~60%", and "1990s", not '
+        "\"90's\"."
+    ),
+    "hi": (
+        "Write in HINDI, in the Devanagari script. Never write romanised Hindi "
+        "(no \"kya baat hai\"), and never fall back to English sentences. Do NOT "
+        "write in English and translate — think and write in Hindi from the "
+        "first word, so the hook lands like something a Hindi speaker would "
+        "actually say.\n"
+        "Use natural, everyday spoken Hindi (सहज बोलचाल की हिंदी), not literary "
+        "or heavily Sanskritised Hindi. Keep the common English loanwords a real "
+        "speaker uses — मोबाइल, स्पेस, एनर्जी, साइंटिस्ट — instead of reaching for "
+        "rare equivalents nobody says out loud, but always spell them in "
+        "Devanagari so the speech engine can read them.\n"
+        "Spell numbers and units the way they are spoken: write \"साठ प्रतिशत\", not "
+        "\"~60%\", and \"1990 के दशक\", not \"90's\".\n"
+        "The ban on section labels applies to Hindi labels too — never write "
+        "\"हुक:\", \"समस्या:\", \"समाधान:\" or any heading."
+    ),
+}
+
 
 class ContentState(BaseModel):
     prompt: str = ""
@@ -65,6 +114,7 @@ class ContentState(BaseModel):
     direction_script: str = ""
     # Production settings — explicit (payload/CLI) or inferred from the prompt.
     music: str = ""              # beat | warm | score | none | "" (no music)
+    language: str = DEFAULT_LANGUAGE  # narration language (en | hi) — see LANGUAGES
     voice: str = ""              # tts voice id (nova | atlas | juno | …)
     duration_s: int = 0          # target runtime; 0 = the preset's default
     sfx: bool = False            # transition/impact sound design — prompt opt-in
@@ -179,10 +229,6 @@ class ContentFlow(Flow[ContentState]):
     def plan_content(self, crewai_trigger_payload: dict = None):
         _mark("plan_content")
         print("Planning content")
-        # Warm Kokoro (torch + weights, ~10s) in the background while the
-        # crew writes — narration then starts instantly.
-        import threading
-        threading.Thread(target=tts.warmup, daemon=True).start()
 
         # Fresh workspace: previous runs' media otherwise accumulates in
         # output/ and gets re-copied to the renderer on every save (measured
@@ -210,6 +256,7 @@ class ContentFlow(Flow[ContentState]):
             self.state.genre = (crewai_trigger_payload.get("genre") or presets.DEFAULT_GENRE).lower()
             custom_bundle = crewai_trigger_payload.get("preset_bundle") or {}
             self.state.music = (crewai_trigger_payload.get("music") or "").lower()
+            self.state.language = (crewai_trigger_payload.get("language") or "").lower()
             self.state.voice = (crewai_trigger_payload.get("voice") or "").lower()
             # Legacy payloads carried duration as "15s"/"30s".
             d = str(crewai_trigger_payload.get("duration") or "")
@@ -233,8 +280,23 @@ class ContentFlow(Flow[ContentState]):
             for arg in sys.argv[2:]:
                 if arg in PRESETS:
                     explicit_preset = arg
+                elif arg in LANGUAGES:
+                    self.state.language = arg
                 elif arg in presets.PRESETS:
                     self.state.genre = arg
+
+        # An unknown language would silently narrate in the wrong one; pin it to
+        # the default instead, and do it before the warmup so the right Kokoro
+        # pipeline is the one that gets preloaded.
+        if self.state.language not in LANGUAGES:
+            if self.state.language:
+                print(f"Unknown language '{self.state.language}'; using {DEFAULT_LANGUAGE}")
+            self.state.language = DEFAULT_LANGUAGE
+
+        # Warm Kokoro (torch + weights, ~10s) in the background while the
+        # crew writes — narration then starts instantly.
+        import threading
+        threading.Thread(target=tts.warmup, args=(self.state.language,), daemon=True).start()
 
         # Resolve the active content preset once; a custom bundle (already the
         # full shape) wins, else the built-in for the genre, else auto.
@@ -259,8 +321,22 @@ class ContentFlow(Flow[ContentState]):
         self.state.voice = self.state.voice or (self.state.preset_bundle.get("voice_default") or "")
         self.state.music = self.state.music or (self.state.preset_bundle.get("music_default") or "")
 
+        # A voice encodes its own language (see tts.VOICES), so a voice from the
+        # wrong language would push the script through the wrong G2P and narrate
+        # gibberish. Every layer above can name a voice without knowing the
+        # language — the payload, the prompt-inferred intent, the preset bundle —
+        # so this is the one place that can catch the mismatch. "none" (no
+        # voiceover) is a mode, not a voice, and passes through.
+        speakable = tts.voices_for(self.state.language)
+        if self.state.voice and self.state.voice != "none" and self.state.voice not in speakable:
+            fallback = tts.default_voice(self.state.language)
+            print(f"Voice '{self.state.voice}' does not speak "
+                  f"{LANGUAGES[self.state.language]}; using '{fallback}'")
+            self.state.voice = fallback
+
         print(
             f"Prompt: {self.state.prompt} | Preset: {self.state.preset}"
+            + f" | lang={self.state.language}"
             + (f" | genre={self.state.genre}" if self.state.genre != presets.DEFAULT_GENRE else "")
             + (f" | ~{self.state.duration_s}s" if self.state.duration_s else "")
             + (f" | voice={self.state.voice}" if self.state.voice else "")
@@ -271,13 +347,14 @@ class ContentFlow(Flow[ContentState]):
     def generate_content(self):
         _mark("generate_content")
         print(f"Generating content for: {self.state.prompt}")
+        lang = self.state.language
         preset = dict(PRESETS[self.state.preset])
         # A prompt-specified runtime overrides the preset's default targets.
-        # Narration lands around 2.0–2.6 words/second at Kokoro's pace.
         if self.state.duration_s:
             d = self.state.duration_s
+            lo, hi = LANG_WORDS_PER_SECOND[lang]
             preset["runtime"] = f"about {d} seconds"
-            preset["word_count"] = f"{int(d * 2.0)}-{int(d * 2.6)}"
+            preset["word_count"] = f"{int(d * lo)}-{int(d * hi)}"
             print(f"Runtime target from prompt: ~{d}s → {preset['word_count']} words")
 
         # Tell the crew about the user's own footage so the writer can lean on
@@ -328,6 +405,8 @@ class ContentFlow(Flow[ContentState]):
                         "prompt": self.state.prompt,
                         "word_count": preset["word_count"],
                         "runtime": preset["runtime"],
+                        "language": LANGUAGES[lang],
+                        "language_rule": LANGUAGE_RULES[lang],
                         "uploads": uploads_brief,
                         "music": music_brief,
                         "writer_guidance": writer_guidance,
@@ -373,7 +452,8 @@ class ContentFlow(Flow[ContentState]):
         # Director-guessed durations are fiction; retime from the narration
         # (word-count estimate until real TTS audio lengths replace it).
         for scene in script.scenes:
-            scene.duration_seconds = ir_builder.estimate_narration_seconds(scene.narration)
+            scene.duration_seconds = ir_builder.estimate_narration_seconds(
+                scene.narration, language=lang)
         script.metadata.prompt = self.state.prompt
         script.metadata.scene_count = len(script.scenes)
         script.metadata.total_duration_seconds = sum(
@@ -423,7 +503,7 @@ class ContentFlow(Flow[ContentState]):
             for scene in self.state.script["scenes"]:
                 scene["audio"] = None
             return
-        voice_id = self.state.voice or tts.DEFAULT_VOICE_ID
+        voice_id = self.state.voice or tts.default_voice(self.state.language)
         print(f"Generating narration audio ({voice_id}) for {len(self.state.script['scenes'])} scenes")
         audio_dir = Path("output/audio")
         for scene in self.state.script["scenes"]:
@@ -686,6 +766,7 @@ class ContentFlow(Flow[ContentState]):
                 mood_pool=theme_bias.get("mood_pool"),
                 font_pool=theme_bias.get("font_pool"),
                 guidance=guidance.get("design", ""),
+                language=self.state.language,
             )
             try:
                 plan = plan_future.result()

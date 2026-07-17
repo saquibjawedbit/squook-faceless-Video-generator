@@ -7,17 +7,29 @@ Run this LOCALLY (it opens a browser for Google OAuth consent):
     python3 automation/get_youtube_token.py <client_id> <client_secret>
 
 Prerequisites (one-time, in Google Cloud Console):
-  1. Create a project and enable "YouTube Data API v3".
+  1. Create a project and enable "YouTube Data API v3" AND
+     "YouTube Analytics API".
   2. OAuth consent screen: External, add your own Google account as a test user.
   3. Credentials -> Create OAuth client ID -> type "Desktop app".
 
 Store the printed value as the YT_REFRESH_TOKEN repo secret, together with
 YT_CLIENT_ID and YT_CLIENT_SECRET.
+
+A token minted before the analytics scopes were added only carries
+youtube.upload, and Google will not widen an existing grant — re-run this to
+mint a fresh token and replace the secret, otherwise automation/analytics.py
+skips every fetch.
 """
 
 import sys
 
-SCOPES = ["https://www.googleapis.com/auth/youtube.upload"]
+SCOPES = [
+    "https://www.googleapis.com/auth/youtube.upload",
+    # Per-video lifetime metrics (views, retention, watch time).
+    "https://www.googleapis.com/auth/yt-analytics.readonly",
+    # Video metadata (publish time, duration) the analytics API does not return.
+    "https://www.googleapis.com/auth/youtube.readonly",
+]
 
 
 def main() -> None:

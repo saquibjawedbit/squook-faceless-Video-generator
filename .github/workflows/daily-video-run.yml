@@ -1,0 +1,216 @@
+# This is the whole daily pipeline, parameterised by narration language. It is
+# not scheduled itself — daily-video.yml (English) and daily-video-hindi.yml
+# (Hindi) are thin callers that own the cron and the channel's secrets.
+#
+# One body, two channels, on purpose: everything here (disk, deps, render,
+# upload, state commit) is identical across languages, and a forked copy would
+# drift the moment either side is touched. `lang` picks the narration language
+# AND the channel's state files — see channel_file() in automation/daily.py.
+#
+# Secrets are declared rather than inherited so each caller passes ITS OWN
+# channel's YouTube credentials. That matters: an inherited-and-defaulted token
+# would quietly publish Hindi videos to the English channel, whereas a missing
+# one just fails the upload.
+name: daily-video-run
+
+on:
+  workflow_call:
+    inputs:
+      lang:
+        description: Narration language / channel (en | hi)
+        required: true
+        type: string
+      prompt:
+        description: One-off prompt (skips topic rotation)
+        required: false
+        type: string
+      # A string, not a boolean, so the caller can forward workflow_dispatch's
+      # input verbatim: a scheduled run has no inputs at all, and only the
+      # literal "false" suppresses the upload. Comparing a null input against a
+      # boolean in a GitHub expression coerces through NaN and quietly picks the
+      # wrong branch, so the decision is left to the shell below.
+      upload:
+        description: 'Upload to YouTube; only the literal "false" disables it'
+        required: false
+        type: string
+        default: ''
+    secrets:
+      # Shared across channels — same providers, same quotas.
+      LLM_API_KEY:
+        required: false
+      ANTHROPIC_API_KEY:
+        required: false
+      OPENAI_API_KEY:
+        required: false
+      CLOUDFLARE_ACCOUNT_ID:
+        required: false
+      CLOUDFLARE_API_TOKEN:
+        required: false
+      PEXELS_API_KEY:
+        required: false
+      PIXABAY_API_KEY:
+        required: false
+      LOGO_DEV_TOKEN:
+        required: false
+      # Per-channel: the refresh token is what selects the YouTube channel, so
+      # each caller must pass the one minted for its own (automation/get_youtube_token.py).
+      YT_CLIENT_ID:
+        required: false
+      YT_CLIENT_SECRET:
+        required: false
+      YT_REFRESH_TOKEN:
+        required: false
+
+concurrency:
+  group: daily-video-${{ inputs.lang }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    env:
+      # espeak-ng (used by Kokoro TTS) holds its data path in a fixed
+      # 160-byte buffer and silently ignores anything longer, then exit(1)s
+      # on a nonexistent baked-in path. The repo rename made the in-checkout
+      # venv path 166 chars, so keep the venv at a short fixed path instead.
+      UV_PROJECT_ENVIRONMENT: /home/runner/flow-venv
+      # Picks the narration language, the voice, the caption font catalog, and
+      # this channel's topic/history/analytics files.
+      VIDEO_LANG: ${{ inputs.lang }}
+    steps:
+      - uses: actions/checkout@v4
+
+      # uv.lock pins the CUDA build of torch (a Kokoro dependency), which
+      # installs ~5GB of NVIDIA wheels the CPU-only runner can't use. Clear
+      # the biggest preinstalled toolchains so the disk survives it.
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: System deps (Kokoro phonemizer + audio tools)
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends espeak-ng ffmpeg
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: renderer/package-lock.json
+
+      # No uv cache: the CUDA torch wheels alone would blow the 10GB Actions
+      # cache limit and double the disk footprint. Downloads are fast enough.
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: false
+
+      # Keyed by language: the base model is shared but each language pulls its
+      # own voice weights, and a cache saved by the other channel would miss
+      # them on every run.
+      - name: Cache TTS model weights
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/huggingface
+          key: kokoro-hf-cache-v1-${{ inputs.lang }}
+
+      - name: Install renderer deps
+        working-directory: renderer
+        run: |
+          npm ci
+          npx remotion browser ensure
+
+      - name: Install flow deps
+        working-directory: guide_creator_flow
+        run: uv sync
+
+      - name: Install uploader deps
+        run: pip install --quiet google-api-python-client google-auth google-auth-httplib2
+
+      # Refresh the performance cache before the idea step reads it. Best-effort
+      # by design: a stale or missing cache just means the idea step falls back
+      # to the default format, which is exactly the pre-analytics behaviour.
+      - name: Refresh channel analytics
+        continue-on-error: true
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+        run: python3 automation/analytics.py
+
+      - name: Generate and upload
+        env:
+          # LLM: any OpenAI-compatible endpoint serving the gpt-oss models the
+          # pipeline uses locally via Ollama (see _make_pipeline_llm in
+          # content_crew.py). Defaults to Groq's free tier; override the repo
+          # VARIABLES to point elsewhere, e.g. Cloudflare Workers AI:
+          #   LLM_BASE_URL  = https://api.cloudflare.com/client/v4/accounts/<id>/ai/v1
+          #   LLM_MODEL     = @cf/openai/gpt-oss-120b
+          #   LLM_FAST_MODEL= @cf/openai/gpt-oss-20b
+          # with the LLM_API_KEY secret set to the matching API key.
+          LLM_PROVIDER: openai-compat
+          LLM_BASE_URL: ${{ vars.LLM_BASE_URL || 'https://api.groq.com/openai/v1' }}
+          LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+          LLM_MODEL: ${{ vars.LLM_MODEL || 'openai/gpt-oss-120b' }}
+          LLM_FAST_MODEL: ${{ vars.LLM_FAST_MODEL || 'openai/gpt-oss-20b' }}
+          # 'ai' (default): the LLM invents a fresh viral-Shorts topic daily,
+          # avoiding this channel's history. 'list': rotate the topics file.
+          TOPIC_MODE: ${{ vars.TOPIC_MODE || 'ai' }}
+          # Optional providers — leave the secrets unset to skip them.
+          # OPENAI_API_KEY also switches TTS from local Kokoro to OpenAI,
+          # ANTHROPIC_API_KEY routes the design steps to Claude (paid).
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+          PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+          LOGO_DEV_TOKEN: ${{ secrets.LOGO_DEV_TOKEN }}
+          # YouTube upload (see automation/get_youtube_token.py).
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          YT_PRIVACY: public
+          ONE_OFF_PROMPT: ${{ inputs.prompt }}
+          DO_UPLOAD: ${{ inputs.upload }}
+        run: |
+          args=()
+          [ -n "$ONE_OFF_PROMPT" ] && args+=(--prompt "$ONE_OFF_PROMPT")
+          [ "$DO_UPLOAD" = "false" ] && args+=(--no-upload)
+          python3 automation/daily.py "${args[@]}"
+
+      - name: Keep a copy of the video
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: final-video-${{ inputs.lang }}
+          path: renderer/out/final.mp4
+          if-no-files-found: ignore
+          retention-days: 7
+
+      - name: Commit topic state
+        if: always()
+        run: |
+          # Stage first and diff the index: performance.json is untracked until
+          # the first successful analytics fetch, and plain `git diff` on the
+          # worktree would never see a brand-new file. Add the files one at a
+          # time — a single `git add` over a path that doesn't exist yet fails
+          # on the whole pathspec and would silently drop the topic state too.
+          # Only this channel's files: English owns the unsuffixed names, every
+          # other language a '.<lang>' sibling (channel_file() in daily.py).
+          suffix=""
+          [ "$VIDEO_LANG" != "en" ] && suffix=".$VIDEO_LANG"
+          for f in state history performance; do
+            [ -e "automation/$f$suffix.json" ] && git add -- "automation/$f$suffix.json"
+          done
+          if ! git diff --cached --quiet; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "chore: record daily topic and channel analytics ($VIDEO_LANG) [skip ci]"
+            # Both channels commit to the same branch; they touch disjoint files,
+            # so a rebase resolves any overlap with the other's run.
+            git pull --rebase origin "$GITHUB_REF_NAME"
+            git push
+          fi

@@ -11,25 +11,59 @@ import soundfile as sf
 TARGET_LUFS = -16.0
 SAMPLE_RATE = 24_000  # Kokoro's native output rate
 
+# Do NOT split narration into per-sentence synthesis calls to add pauses.
+# Measured: Kokoro already leaves 0.34-0.38s at sentence boundaries within a
+# single call, which is a natural read. Splitting makes it pad every chunk
+# separately — the same line went 7.83s/0.36s gaps as one call, but
+# 9.12s/0.8s gaps per sentence, before adding any silence of our own.
+
 # Voice catalog. Each composer voice id maps to a Kokoro voice (the default
 # backend — local, Apache-2.0, commercial-safe, with real word-level timings)
 # and an OpenAI tts-1-hd voice (used when OPENAI_API_KEY is set). Kokoro voice
-# prefixes pick the G2P language: a* = American, b* = British. `speed` tunes
-# the read pace (1.0 = native).
+# prefixes pick the G2P language: a* = American, b* = British, h* = Hindi —
+# see _pipeline(). A voice therefore *is* a language choice, which is why every
+# entry declares `lang`: callers pick the language, `default_voice()` picks the
+# voice, and nothing downstream has to know about Kokoro's naming. `speed`
+# tunes the read pace (1.0 = native).
+#
+# The OpenAI column is language-agnostic on purpose: tts-1-hd detects the
+# language from the text itself, so the Hindi ids just name a voice whose
+# timbre matches its Kokoro counterpart.
 VOICES = {
-    "nova":  {"label": "Nova",  "kokoro": "af_heart",   "openai": "nova",    "speed": 1.0},
-    "atlas": {"label": "Atlas", "kokoro": "am_michael", "openai": "onyx",    "speed": 0.97},
-    "juno":  {"label": "Juno",  "kokoro": "af_bella",   "openai": "shimmer", "speed": 1.03},
-    "ryan":  {"label": "Ryan",  "kokoro": "bm_george",  "openai": "echo",    "speed": 1.0},
-    "sonia": {"label": "Sonia", "kokoro": "bf_emma",    "openai": "fable",   "speed": 1.0},
-    "guy":   {"label": "Guy",   "kokoro": "am_puck",    "openai": "alloy",   "speed": 0.98},
+    # English
+    "nova":   {"label": "Nova",   "kokoro": "af_heart",   "openai": "nova",    "speed": 1.0,  "lang": "en"},
+    "atlas":  {"label": "Atlas",  "kokoro": "am_michael", "openai": "onyx",    "speed": 0.97, "lang": "en"},
+    "juno":   {"label": "Juno",   "kokoro": "af_bella",   "openai": "shimmer", "speed": 1.03, "lang": "en"},
+    "ryan":   {"label": "Ryan",   "kokoro": "bm_george",  "openai": "echo",    "speed": 1.0,  "lang": "en"},
+    "sonia":  {"label": "Sonia",  "kokoro": "bf_emma",    "openai": "fable",   "speed": 1.0,  "lang": "en"},
+    "guy":    {"label": "Guy",    "kokoro": "am_puck",    "openai": "alloy",   "speed": 0.98, "lang": "en"},
+    # Hindi
+    "ananya": {"label": "Ananya", "kokoro": "hf_alpha",   "openai": "nova",    "speed": 1.0,  "lang": "hi"},
+    "isha":   {"label": "Isha",   "kokoro": "hf_beta",    "openai": "shimmer", "speed": 1.0,  "lang": "hi"},
+    "aarav":  {"label": "Aarav",  "kokoro": "hm_omega",   "openai": "onyx",    "speed": 1.0,  "lang": "hi"},
+    "vihaan": {"label": "Vihaan", "kokoro": "hm_psi",     "openai": "echo",    "speed": 1.0,  "lang": "hi"},
 }
 DEFAULT_VOICE_ID = "nova"
+# The voice a language falls back to when the caller names no specific one.
+DEFAULT_VOICE_BY_LANG = {"en": "nova", "hi": "ananya"}
 OPENAI_TTS_MODEL = "tts-1-hd"
 
 
 def _voice(voice_id: str) -> dict:
     return VOICES.get((voice_id or "").strip().lower(), VOICES[DEFAULT_VOICE_ID])
+
+
+def default_voice(lang: str) -> str:
+    """The default voice id for a narration language."""
+    return DEFAULT_VOICE_BY_LANG.get((lang or "").strip().lower(), DEFAULT_VOICE_ID)
+
+
+def voices_for(lang: str) -> tuple[str, ...]:
+    """The voice ids that actually speak `lang`. Picking an English voice for a
+    Hindi script would route the text through the English G2P and produce
+    gibberish, so callers must constrain their choices to this set."""
+    want = (lang or "").strip().lower()
+    return tuple(k for k, v in VOICES.items() if v["lang"] == want)
 
 
 def _openai_key() -> str | None:
@@ -45,6 +79,9 @@ _SECTION_LABELS = (
     "intro", "introduction", "outro", "cta", "call to action",
     "the ask", "show and tell", "setup", "payoff", "recap",
     "conclusion", "takeaway", "closing", "opening",
+    # Hindi equivalents — a Hindi script's labels leak the same way, and an
+    # unstripped one gets read aloud.
+    "हुक", "समस्या", "समाधान", "परिचय", "निष्कर्ष", "सारांश", "अंत", "शुरुआत",
 )
 # Words in a multi-word label may be joined by a space or any hyphen/dash
 # variant ("call to action", "call-to-action", "call‑to‑action" with U+2011).
@@ -61,7 +98,7 @@ _LABEL_RE = re.compile(
     r"^\s*(?:" + "|".join(_label_pattern(w) for w in _SECTION_LABELS) + r")\s*" + _SEP + r"\s+",
     re.IGNORECASE,
 )
-_SCENE_RE = re.compile(r"^\s*scene\s*\d+\s*" + _SEP + r"\s+", re.IGNORECASE)
+_SCENE_RE = re.compile(r"^\s*(?:scene|दृश्य)\s*\d+\s*" + _SEP + r"\s+", re.IGNORECASE)
 _BRACKET_RE = re.compile(r"\[[^\]]*\]")  # bracketed stage cues: [cut to…], [upbeat music]
 
 # ── In-prose UI leaks ────────────────────────────────────────────────────────
@@ -221,12 +258,13 @@ def _pipeline(lang_code: str):
         return _PIPELINES[lang_code]
 
 
-def warmup() -> None:
-    """Preload torch + the American-English pipeline (the default voice's).
+def warmup(lang: str = "en") -> None:
+    """Preload torch + the pipeline the run's language will actually use.
     Called from a background thread at flow start so the ~10s load happens
-    while the crew is still writing."""
+    while the crew is still writing. Warming the wrong language would just
+    pay the load twice, so this keys off the language's default voice."""
     try:
-        _pipeline("a")
+        _pipeline(_voice(default_voice(lang))["kokoro"][0])
     except Exception as e:
         print(f"  TTS warmup skipped ({e})")
 
@@ -254,7 +292,7 @@ def _kokoro_synthesize(
 ) -> tuple[float, list[dict]]:
     """Synthesize locally with Kokoro-82M; return (duration, word timings).
     The English G2P emits per-token timestamps, so captions get real timings."""
-    pipeline = _pipeline(voice[0])  # 'a' → American English, 'b' → British
+    pipeline = _pipeline(voice[0])  # 'a' → American English, 'b' → British, 'h' → Hindi
     chunks: list[np.ndarray] = []
     words: list[dict] = []
     offset = 0.0
@@ -268,7 +306,10 @@ def _kokoro_synthesize(
             # as their own timed tokens; captions only want spoken words).
             if tok.start_ts is None or tok.end_ts is None:
                 continue
-            if not re.search(r"[A-Za-z0-9]", tok.text):
+            # Any script's letters/digits count, not just Latin — Hindi tokens
+            # are Devanagari. (`[^\W_]` = word char minus underscore; str
+            # patterns are Unicode-aware by default.)
+            if not re.search(r"[^\W_]", tok.text):
                 continue
             words.append({
                 "word": tok.text,
@@ -302,14 +343,19 @@ def _estimate_word_timings(text: str, total_len: float) -> list[dict]:
     return out
 
 
-def _openai_synthesize(text: str, out_path: Path, voice: str) -> tuple[float, list[dict]]:
+def _openai_synthesize(
+    text: str, out_path: Path, voice: str, speed: float = 1.0
+) -> tuple[float, list[dict]]:
     """Synthesize with OpenAI tts-1-hd. Raises on any failure so the caller can
     fall back to local Kokoro."""
     from openai import OpenAI
 
     client = OpenAI(api_key=_openai_key())
     with client.audio.speech.with_streaming_response.create(
-        model=OPENAI_TTS_MODEL, voice=voice, input=text, response_format="wav"
+        model=OPENAI_TTS_MODEL, voice=voice, input=text, response_format="wav",
+        # Without this the catalog's per-voice pace is silently dropped here,
+        # so the same voice id reads at a different speed than it does locally.
+        speed=speed,
     ) as resp:
         resp.stream_to_file(str(out_path))
     samples, sr = sf.read(str(out_path))
@@ -330,7 +376,7 @@ def synthesize(text: str, out_path: Path, voice_id: str = DEFAULT_VOICE_ID) -> t
     spec = _voice(voice_id)
     if _openai_key():
         try:
-            return _openai_synthesize(cleaned, out_path, spec["openai"])
+            return _openai_synthesize(cleaned, out_path, spec["openai"], spec["speed"])
         except Exception as e:
             print(f"  OpenAI TTS failed ({e}); falling back to Kokoro")
     return _kokoro_synthesize(cleaned, out_path, spec["kokoro"], spec["speed"])
