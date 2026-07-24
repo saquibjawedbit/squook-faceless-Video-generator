@@ -84,5 +84,14 @@
     "duration": 60,
     "generated_at": "2026-07-23T06:45:04+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why One Sock Always Disappears in the Dryer \u2013 The Real Reason",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage of a washing machine, dryer, socks, static sparks, and close\u2011ups of fabric. The surprising angle: the missing sock isn\u2019t a mystery at all \u2013 static electricity pulls it into the dryer\u2019s drum gaps and vent, where it can cling to the lint filter or get trapped in the dryer\u2019s pipe. Hook: \u201cEver wonder why one sock always vanishes in the dryer? The answer is a tiny static force you can\u2019t see.\u201d",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-24T06:33:58+00:00",
+    "video_id": null
   }
 ]
