@@ -93,5 +93,14 @@
     "duration": 60,
     "generated_at": "2026-07-24T06:33:58+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Hummingbirds Can Hover Upside\u2011Down \u2013 The Secret of Their Rapid Wing Beats",
+    "prompt": "Create a 45\u201160 second vertical explainer using stock footage of hummingbirds, close\u2011ups of rapid wing motion, and slow\u2011motion shots of a bird hovering. The surprising angle: the combination of ultra\u2011fast wing beats and a unique hinge joint lets hummingbirds generate lift on both the downstroke and upstroke, allowing them to hover and even flip upside\u2011down without falling. Open with the hook: \"Ever wondered how a tiny bird can literally hang upside\u2011down in mid\u2011air?\" Explain the wing\u2011beat frequency, the figure\u20118 wing path, and the tiny special muscles that lock the joints at the right moments, all visually shown via existing footage.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-25T06:25:45+00:00",
+    "video_id": null
   }
 ]
