@@ -78,5 +78,14 @@
     "generated_at": "2026-07-24T08:26:00+00:00",
     "video_id": "xAd9Rd0Y74k",
     "published_at": "2026-07-24T08:26:04+00:00"
+  },
+  {
+    "title": "\u0915\u0941\u0924\u094d\u0924\u0947 \u0915\u094d\u092f\u094b\u0902 \u091d\u0941\u0915\u093e \u0930\u0939\u0947 \u0939\u0948\u0902 \u0938\u093f\u0930? \u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0938\u0947 \u091c\u093e\u0928\u093f\u090f \u091a\u0941\u091f\u0940\u0932\u093e \u0915\u093e\u0930\u0923!",
+    "prompt": "Create a 45-60 second vertical explainer using only stock footage and photos. Topic: why dogs tilt their heads when you talk. Surprising angle: it's not just cuteness, it's a clever adaptation to better locate sounds and interpret human facial cues. Hook to open with in one breath: \"Ever wonder why dogs tilt their heads every time you speak?\"",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-26T08:23:59+00:00",
+    "video_id": null
   }
 ]
