@@ -102,5 +102,14 @@
     "duration": 60,
     "generated_at": "2026-07-25T06:25:45+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why a Plastic Bottle Floats but a Glass Jar Sinks \u2013 The Simple Science",
+    "prompt": "Create a 45\u201160 second vertical explainer showing the surprising reason a plastic bottle effortlessly floats on water while a glass jar sinks like a stone. Open with the hook: \"Ever wonder why a plastic bottle bobs on water but a glass jar disappears beneath the surface?\" Then illustrate real stock footage of a bottle drifting, a jar sinking, close\u2011ups of air bubbles, and a simple visual of density differences, narrating the concept of average density and trapped air without using diagrams or jargon.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-26T06:49:41+00:00",
+    "video_id": null
   }
 ]
