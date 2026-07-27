@@ -87,5 +87,14 @@
     "duration": 60,
     "generated_at": "2026-07-26T08:23:59+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u091a\u093e\u0930\u094d\u091c \u092a\u0930 \u092b\u094b\u0928 \u0907\u0938\u094d\u0924\u0947\u092e\u093e\u0932 \u0915\u0930\u0928\u0947 \u0938\u0947 \u092c\u0948\u091f\u0930\u0940 \u0915\u094d\u092f\u094b\u0902 \u091c\u0932\u094d\u0926\u0940 \u0916\u093c\u0924\u094d\u092e \u0939\u094b \u091c\u093e\u0924\u0940 \u0939\u0948? \u091c\u093e\u0928\u093f\u090f \u0915\u093e\u0930\u0923",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage of smartphones, charging cables, batteries, heat visuals, and close\u2011ups of battery indicators. Topic: Why does a phone\u2019s battery drain faster when you use it while it\u2019s charging? The surprising angle: the hidden heat and voltage stress that actually harms the battery, not just the power draw. Opening hook (one breath): \"\u0915\u094d\u092f\u093e \u0906\u092a\u0928\u0947 \u0915\u092d\u0940 \u0938\u094b\u091a\u093e \u0939\u0948 \u0915\u093f \u091a\u093e\u0930\u094d\u091c \u0915\u0930\u0924\u0947\u2011\u0938\u092e\u092f \u092b\u094b\u0928 \u0907\u0938\u094d\u0924\u0947\u092e\u093e\u0932 \u0915\u0930\u0928\u0947 \u0938\u0947 \u092c\u0948\u091f\u0930\u0940 \u091c\u0932\u094d\u0926\u0940 \u0916\u093c\u0924\u094d\u092e \u0915\u094d\u092f\u094b\u0902 \u0939\u094b \u091c\u093e\u0924\u0940 \u0939\u0948?\" The narration should explain in simple Hindi the concepts of heat buildup, voltage spikes, and chemical stress, ending with a practical tip to avoid this.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-27T09:25:39+00:00",
+    "video_id": null
   }
 ]
