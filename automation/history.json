@@ -111,5 +111,14 @@
     "duration": 60,
     "generated_at": "2026-07-26T06:49:41+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Stirring Your Coffee Makes It Cool Faster (The Hidden Science)",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage of coffee being poured, a hand stirring a mug, steam rising, thermometers, and close\u2011ups of swirling liquid. The surprising angle: stirring a hot drink creates internal convection that brings hot liquid to the surface faster, increasing heat loss and making the coffee cool noticeably quicker. Open with the hook: \"Ever notice your coffee cools faster the more you stir it? The reason is hidden in the physics of the liquid itself.\" Explain the simple mechanism in plain language, show the stirring action, then cut to visual of heat escaping (steam, radiating lines) and finish with a quick recap.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-27T07:09:10+00:00",
+    "video_id": null
   }
 ]
