@@ -120,5 +120,14 @@
     "duration": 60,
     "generated_at": "2026-07-27T07:09:10+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Cutting an Onion Makes You Cry \u2013 The Surprising Chemistry",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage of onions being sliced, close\u2011ups of water droplets, kitchen scenes, and slow\u2011motion of tears. Open with the hook: \"Ever wonder why chopping an onion makes you cry?\" Then reveal the surprising chemistry \u2013 how cutting releases the enzyme alliinase, creates sulfenic acids, and forms syn-Propanethial\u2011S\u2011oxide, the volatile gas that irritates your eyes, prompting tears to protect them.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-28T06:33:51+00:00",
+    "video_id": null
   }
 ]
