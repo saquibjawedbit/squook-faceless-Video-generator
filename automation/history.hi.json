@@ -96,5 +96,14 @@
     "duration": 60,
     "generated_at": "2026-07-27T09:25:39+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0939\u092e\u094d\u092e\u093f\u0902\u0917\u092c\u0930\u094d\u0921 \u0939\u0935\u093e \u092e\u0947\u0902 \u0915\u094d\u092f\u094b\u0902 \u0930\u0941\u0915\u0924\u093e \u0939\u0948? \u091c\u093e\u0928\u093f\u090f \u092a\u094d\u0930\u0915\u0943\u0924\u093f \u0915\u093e \u0930\u0939\u0938\u094d\u092f",
+    "prompt": "Create a 45\u201160 second vertical video explaining why hummingbirds can hover in mid\u2011air. Emphasize the surprising fact that they achieve this by beating their wings in a figure\u20118 pattern at around 80 beats per second, generating lift on both the upstroke and downstroke. Open with a single\u2011sentence hook that poses the curiosity gap: \u201cEver wonder how a hummingbird can stay perfectly still in the air?\u201d Use only stock footage of hummingbirds, close\u2011ups of wing motion, flowers, and natural scenery \u2013 no presenters, no animations, no charts.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-28T08:22:57+00:00",
+    "video_id": null
   }
 ]
