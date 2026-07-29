@@ -129,5 +129,14 @@
     "duration": 60,
     "generated_at": "2026-07-28T06:33:51+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why a Straight Straw Looks Bent in Water \u2013 The Simple Refraction Trick",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage and photos that shows a clear, everyday scene (a straw in a glass of water) and then reveals the hidden physics of light refraction that makes the straw appear broken. Open with the hook: 'Ever wonder why a straight straw looks bent when you dip it into a glass of water?'",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-29T06:37:05+00:00",
+    "video_id": null
   }
 ]
