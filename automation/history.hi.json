@@ -105,5 +105,14 @@
     "duration": 60,
     "generated_at": "2026-07-28T08:22:57+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0939\u0935\u093e\u0908 \u091c\u0939\u093e\u091c\u093c \u0915\u0947 \u092a\u0940\u091b\u0947 \u0938\u092b\u093c\u0947\u0926 \u0927\u0941\u0902\u0927 \u0915\u094d\u092f\u094b\u0902 \u092c\u0928\u0924\u0940 \u0939\u0948? \u0930\u0939\u0938\u094d\u092f \u0916\u0941\u0932\u093e!",
+    "prompt": "Create a 45\u201160 second vertical explainer about why airplanes leave white streaks (contrails) in the sky. Emphasize the surprising angle that these trails are actually ice crystals formed from water vapor in the hot engine exhaust mixing with the cold upper\u2011atmosphere, and that they can affect climate. Start with the hook: \"\u0915\u094d\u092f\u093e \u0906\u092a\u0928\u0947 \u0915\u092d\u0940 \u0938\u094b\u091a\u093e \u0939\u0948 \u0915\u093f \u0939\u093e\u0908 \u0938\u094d\u0915\u093e\u0908 \u092e\u0947\u0902 \u0939\u0935\u093e\u0908 \u091c\u0939\u093e\u091c\u093c \u0915\u0947 \u092a\u0940\u091b\u0947 \u0935\u094b \u0938\u092b\u093c\u0947\u0926 \u0927\u0941\u0902\u0927 \u0915\u094d\u092f\u094b\u0902 \u092c\u0928\u0924\u0940 \u0939\u0948?\" Use only real stock footage: planes taking off/ cruising, close\u2011up of engine exhaust, high\u2011altitude clouds, time\u2011lapse sky, and simple on\u2011screen captions. No presenters, animations, or charts.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-29T08:49:34+00:00",
+    "video_id": null
   }
 ]
