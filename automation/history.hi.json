@@ -114,5 +114,14 @@
     "duration": 60,
     "generated_at": "2026-07-29T08:49:34+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0917\u0930\u094d\u092e\u093f\u092f\u094b\u0902 \u092e\u0947\u0902 \u0938\u0921\u093c\u0915 \u092a\u0930 \u091c\u0932 \u091c\u0948\u0938\u093e \u0926\u093f\u0916\u0928\u0947 \u0935\u093e\u0932\u093e \u092e\u093f\u0930\u093e\u091c\u093c \u0915\u094d\u092f\u094b\u0902 \u092c\u0928\u0924\u093e \u0939\u0948?",
+    "prompt": "Create a 45\u201160 second vertical explainer about why mirages appear on hot roads. Use the surprising angle that mirages are optical tricks caused by light refraction through layers of hot and cool air, not actual water. Open with a hook that makes the viewer picture a shimmering water patch on a scorching highway and wonder why it isn\u2019t real. Gather stock footage of sun\u2011baked asphalt, heat waves, a car driving, close\u2011ups of light distortion, and a scientist or narrator (no presenter) explaining the refraction effect with simple narration.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-30T08:40:02+00:00",
+    "video_id": null
   }
 ]
