@@ -138,5 +138,14 @@
     "duration": 60,
     "generated_at": "2026-07-29T06:37:05+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Cats Always Land on Their Feet \u2013 The Hidden Physics of the Righting Reflex",
+    "prompt": "Create a 45\u201160 second vertical explainer using stock footage of cats falling, mid\u2011air twists, close\u2011ups of spine and inner ear. Emphasize the surprising combination of a flexible spine, a built\u2011in gyroscopic sense, and a rapid righting reflex that lets cats land on their feet. Open with the hook: \"Ever wondered why cats always land on their feet no matter how they fall?\"",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-30T06:42:13+00:00",
+    "video_id": null
   }
 ]
