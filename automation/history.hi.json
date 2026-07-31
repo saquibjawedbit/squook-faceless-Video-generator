@@ -123,5 +123,14 @@
     "duration": 60,
     "generated_at": "2026-07-30T08:40:02+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0909\u0921\u093c\u093e\u0928 \u092e\u0947\u0902 \u0915\u093e\u0928 \u092a\u0949\u092a \u0915\u094d\u092f\u094b\u0902 \u0915\u0930\u0924\u093e \u0939\u0948? \u092b\u093c\u094d\u0932\u093e\u0907\u091f \u0915\u093e \u0930\u0939\u0938\u094d\u092f",
+    "prompt": "Create a 45\u201160 second vertical explainer about why our ears pop during an airplane's ascent and descent. Start with the hook: \"Your ear pops in a plane \u2013 why?\" Explain the pressure difference between the cabin and the inner ear, the role of the eustachian tube in equalising pressure, and why the pop feels like a click. Use only stock footage and photographs: interior of a commercial aircraft, passengers looking uncomfortable, a close\u2011up of a pressure gauge, a clear stock image of the ear canal/eustachian tube, and shots of clouds/air at altitude. Narration should be in Hindi, simple everyday language, no charts or complex diagrams.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-31T08:46:49+00:00",
+    "video_id": null
   }
 ]
