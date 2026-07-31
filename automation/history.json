@@ -147,5 +147,14 @@
     "duration": 60,
     "generated_at": "2026-07-30T06:42:13+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Paper Towels Soak Up Spills Instantly \u2013 The Hidden Science",
+    "prompt": "Create a 45\u201160\u202fsecond vertical explainer using stock footage of coffee spills, paper towels, cloths, close\u2011ups of liquid absorption, and slow\u2011motion drops. The surprising angle: paper towels use capillary action and a huge surface\u2011area\u2011to\u2011mass ratio, letting them pull liquid up like a sponge, while ordinary cloths lack that structure. Open with the hook: \"Why does a simple paper towel soak up a coffee spill in seconds while a cloth just sits there?\" Then show the spill, the towel wicking, and end with the quick science behind it.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-07-31T06:58:57+00:00",
+    "video_id": null
   }
 ]
