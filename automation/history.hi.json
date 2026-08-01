@@ -132,5 +132,14 @@
     "duration": 60,
     "generated_at": "2026-07-31T08:46:49+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0911\u0915\u094d\u091f\u094b\u092a\u0938 \u0915\u093e \u0930\u0902\u0917 \u092c\u0926\u0932\u0928\u0947 \u0915\u093e \u0930\u093e\u091c: \u090f\u0915 \u091d\u091f\u0915\u0947 \u092e\u0947\u0902 \u0905\u0926\u0943\u0936\u094d\u092f \u0915\u094d\u092f\u094b\u0902?",
+    "prompt": "Create a 45\u201160 second faceless explainer using stock footage of octopuses, underwater scenes, close\u2011ups of skin patterns, and neural diagrams (as simple overlays). Focus on the surprising mechanism that lets an octopus change its color and texture in a split second \u2013 the hidden skin cells (chromatophores, iridophores, leucophores) and direct neural control. Open with the hook: \"Ever wondered why an octopus can disappear in a blink?\" Keep narration in Hindi, avoid technical jargon, and end with a quick \u201cnext time you see one, notice the instant color flash!\u201d",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-01T08:24:56+00:00",
+    "video_id": null
   }
 ]
