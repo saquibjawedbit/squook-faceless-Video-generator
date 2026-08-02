@@ -156,5 +156,14 @@
     "duration": 60,
     "generated_at": "2026-07-31T06:58:57+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Your Fingers Prune in Water \u2013 The Evolutionary Grip Trick",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage and photos. Topic: the strange wrinkling of human fingers when they stay in water. Surprising angle: it\u2019s not just skin absorbing water, but an ancient adaptation to improve grip on wet surfaces, a quick\u2011acting nervous system response. Hook (first sentence): \"Ever notice how your fingers turn pruney after a soak? That\u2019s not just soggy skin \u2013 it\u2019s a built\u2011in grip\u2011boost that\u2019s been in us for millions of years.\" Show close\u2011ups of hands in water, time\u2011lapse of wrinkling, underwater objects being grasped, and a brief cut to primate or early\u2011human hands for evolution context. Keep narration concise, no jargon, and let the visuals tell the story.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-02T06:45:20+00:00",
+    "video_id": null
   }
 ]
