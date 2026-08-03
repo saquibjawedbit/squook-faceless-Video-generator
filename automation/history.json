@@ -165,5 +165,14 @@
     "duration": 60,
     "generated_at": "2026-08-02T06:45:20+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why is the sky blue but sunsets red?",
+    "prompt": "Why is the sky blue but sunsets red?",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-03T07:13:59+00:00",
+    "video_id": null
   }
 ]
