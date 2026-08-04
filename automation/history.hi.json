@@ -150,5 +150,14 @@
     "duration": 60,
     "generated_at": "2026-08-02T08:32:35+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0917\u0942\u0926\u0921\u093c \u0915\u094d\u092f\u094b\u0902 \u0939\u094b\u0924\u0947 \u0939\u0948\u0902? \u0920\u0902\u0921 \u0914\u0930 \u092d\u093e\u0935\u0928\u093e\u0913\u0902 \u0915\u093e \u0906\u0936\u094d\u091a\u0930\u094d\u092f\u091c\u0928\u0915 \u0915\u093e\u0930\u0923",
+    "prompt": "Create a 45\u201160 second vertical explainer that reveals why humans get goosebumps (\u0930\u0942\u0926/\u0917\u0942\u0926\u0921\u093c) when they feel cold or experience strong emotions. Open with a one\u2011breath hook: \"Ever wondered why your skin prickles when you hear a moving song or a scary story?\" Use only real stock footage: close\u2011up of skin with goosebumps, people shivering, emotional moments, animals (cats, birds) raising fur, and a quick cut to an ancient human silhouette to hint at the survival instinct. No charts or animations needed.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-04T08:30:34+00:00",
+    "video_id": null
   }
 ]
