@@ -174,5 +174,14 @@
     "duration": 60,
     "generated_at": "2026-08-03T07:13:59+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Does Rain Smell So Good? The Hidden Chemistry of Petrichor",
+    "prompt": "Topic: The surprising reason why the air smells fresh after the first rain \u2013 the chemistry of petrichor. Surprising angle: It\u2019s not the rain itself, but plant oils and a soil bacterium that combine to create the scent. Hook: \"Ever wonder why the first rain after a dry spell smells like nature\u2019s perfume?\"",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-04T07:16:09+00:00",
+    "video_id": null
   }
 ]
