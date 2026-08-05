@@ -183,5 +183,14 @@
     "duration": 60,
     "generated_at": "2026-08-04T07:16:09+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Your Skin Gets Goosebumps When Music Moves You \u2013 The Real Reason",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage and photos about why human skin develops goosebumps when we hear music or feel an emotional chill. Emphasize the surprising evolutionary link to our ancestors' need to raise fur for warmth and intimidation, and show parallel footage of animals puffing up their coats. Open with the hook: \"Ever felt a shiver run down your spine when a song hits, and wonder why tiny bumps appear on your skin?\"",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-05T06:29:16+00:00",
+    "video_id": null
   }
 ]
