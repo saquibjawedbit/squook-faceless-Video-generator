@@ -159,5 +159,14 @@
     "duration": 60,
     "generated_at": "2026-08-04T08:30:34+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0928\u0940\u091a\u0947 \u0939\u0941\u0906 \u091a\u093e\u0901\u0926 \u0915\u094d\u092f\u094b\u0902 \u0932\u0917\u0924\u093e \u0939\u0948 \u092c\u0921\u093c\u093e? \u0938\u091a\u094d\u091a\u093e \u0915\u093e\u0930\u0923 \u092c\u0924\u093e\u090f\u0902",
+    "prompt": "Create a 45\u201160 second faceless explainer on why the Moon looks larger when it\u2019s near the horizon compared to when it\u2019s high in the sky. Emphasize that it\u2019s an optical illusion caused by our brain\u2019s perception of distance, not a real size change. Open the video with the hook: \"Ever wondered why the Moon looks huge when it\u2019s just above the horizon?\" Use only stock footage of the Moon at different positions, night skies, people looking up, and simple visual analogies (e.g., comparing known objects on the ground). No charts or diagrams needed.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-05T08:35:35+00:00",
+    "video_id": null
   }
 ]
