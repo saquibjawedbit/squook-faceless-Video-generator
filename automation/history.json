@@ -192,5 +192,14 @@
     "duration": 60,
     "generated_at": "2026-08-05T06:29:16+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Water Can Stay Liquid Below Freezing \u2013 The Supercooling Secret",
+    "prompt": "Create a 45\u201160 second vertical explainer about the surprising phenomenon of supercooled water. Open with the hook: \u201cEver seen water sit at \u20135\u00b0C and still stay liquid?\u201d Then reveal that pure water can remain liquid below its normal freezing point because it lacks nucleation sites, and that a tiny disturbance triggers instant ice formation. Use stock clips of clear water droplets, frost, scientific labs, and slow\u2011motion footage of water instantly turning to ice. No on\u2011screen narrator needed.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-06T06:45:43+00:00",
+    "video_id": null
   }
 ]
