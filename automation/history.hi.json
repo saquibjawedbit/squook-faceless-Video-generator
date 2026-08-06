@@ -168,5 +168,14 @@
     "duration": 60,
     "generated_at": "2026-08-05T08:35:35+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0930\u0917\u0921\u093c\u0924\u0947 \u0939\u0940 \u0917\u0941\u092c\u094d\u092c\u093e\u0930\u093e \u091b\u0924 \u0938\u0947 \u091a\u093f\u092a\u0915 \u091c\u093e\u0924\u093e \u0939\u0948? \u0915\u093e\u0930\u0923 \u091c\u093e\u0928\u093f\u090f!",
+    "prompt": "Create a 45\u201160 second vertical video explaining why a simple latex balloon, when rubbed against hair or a sweater, suddenly sticks to the ceiling. Emphasize the surprising role of static electricity and how everyday objects become charged, using vivid stock footage of kids rubbing balloons, floating balloons on ceilings, close\u2011ups of hair/sweater friction, and slow\u2011motion shots of the balloon attaching. Open with a single\u2011breath hook that asks the viewer why the balloon clings, creating a curiosity gap they must close.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-06T08:30:37+00:00",
+    "video_id": null
   }
 ]
