@@ -201,5 +201,14 @@
     "duration": 60,
     "generated_at": "2026-08-06T06:45:43+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Your Hair Stands Up: The Hidden Power of Static Electricity",
+    "prompt": "Explain why hair stands up when we generate static electricity \u2013 the surprising fact that rubbing objects transfers electrons, creating an invisible charge that repels hair strands. Hook: \"Ever wonder why your hair shoots up after you rub a balloon on your head?\"",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-07T05:36:21+00:00",
+    "video_id": null
   }
 ]
