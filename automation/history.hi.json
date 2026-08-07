@@ -177,5 +177,14 @@
     "duration": 60,
     "generated_at": "2026-08-06T08:30:37+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0915\u093e\u0930 \u0915\u0940 \u0916\u093f\u0921\u093c\u0915\u0940 \u0905\u0902\u0926\u0930 \u0938\u0947 \u0927\u0941\u0902\u0927 \u0915\u094d\u092f\u094b\u0902 \u092c\u0928\u0924\u0940 \u0939\u0948? \u0930\u0939\u0938\u094d\u092f \u0916\u0941\u0932\u093e!",
+    "prompt": "Create a 45\u201160 second vertical video explaining why a car\u2019s windshield fogs up from the inside. Use the curiosity gap: viewers wonder why the glass suddenly becomes hazy when they breathe inside a cold car. The surprising angle is that warm, moist breath meets the cold glass, causing condensation \u2013 a simple physics trick we all experience daily. Open with a single\u2011breath hook that poses the question directly. Use only stock footage: close\u2011ups of a fogged windshield, breath vapor, cold weather exterior, driver adjusting defroster, and a quick demo of wiping the glass. No charts, no presenter, no animation.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-07T07:15:22+00:00",
+    "video_id": null
   }
 ]
