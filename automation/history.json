@@ -219,5 +219,14 @@
     "duration": 60,
     "generated_at": "2026-08-08T05:04:23+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Bread Dough Rises: The Surprising Science of Yeast",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage and photos: wheat fields, grain being milled, flour being poured, dough being mixed, close\u2011ups of bubbling dough, microscopic shots of yeast cells, and a fresh loaf coming out of the oven. The surprising angle is that the dramatic rise of dough is just yeast performing a simple chemical feast\u2014eating sugars and spitting out carbon dioxide, which inflates the dough like a natural balloon. Open with the hook: \u201cEver wondered why a simple ball of dough can puff up into a fluffy loaf in minutes?\u201d",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-09T05:20:00+00:00",
+    "video_id": null
   }
 ]
