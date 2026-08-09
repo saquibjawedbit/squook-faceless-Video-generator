@@ -195,5 +195,14 @@
     "duration": 60,
     "generated_at": "2026-08-08T06:38:39+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u092a\u094d\u092f\u093e\u091c\u093c \u0915\u093e\u091f\u0924\u0947 \u0939\u0940 \u0906\u0901\u0938\u0942 \u0915\u094d\u092f\u094b\u0902 \u0906\u0924\u0947 \u0939\u0948\u0902? \u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0915\u093e \u0930\u0939\u0938\u094d\u092f",
+    "prompt": "Create a 45\u201160 second vertical explainer using only real stock footage and photographs about why cutting onions makes us cry. Emphasize the hidden chemical reaction where onion cells release propanethial S\u2011oxide, which reacts with water in our eyes to form a mild sulfuric acid, irritating nerves and triggering tears. Begin with a one\u2011sentence hook that asks the viewer why chopping a simple vegetable can turn your eyes into a waterfall.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-09T06:44:38+00:00",
+    "video_id": null
   }
 ]
