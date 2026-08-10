@@ -204,5 +204,14 @@
     "duration": 60,
     "generated_at": "2026-08-09T06:44:38+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u092b\u093c\u094b\u0928 \u0924\u0915\u093f\u092f\u0947 \u092a\u0930 \u091a\u093e\u0930\u094d\u091c \u0915\u0930\u0928\u0947 \u0938\u0947 \u091c\u093c\u094d\u092f\u093e\u0926\u093e \u0917\u0930\u092e \u0915\u094d\u092f\u094b\u0902 \u0939\u094b \u091c\u093e\u0924\u093e \u0939\u0948? | \u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0915\u093e \u0930\u093e\u091c",
+    "prompt": "Create a 45\u201160 second vertical explainer about why a smartphone gets noticeably hotter when it is charged on a soft surface like a pillow or blanket. Emphasize the hidden physics: trapped heat, reduced airflow, insulating properties of fabric, and the battery's chemical reactions accelerating with higher temperature. Open with a hook that makes viewers wonder if their charging habit is dangerous. Use only stock footage of phones, pillows, charging cables, heat waves, battery cells, and related close\u2011ups. No presenter or animation.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-10T07:17:05+00:00",
+    "video_id": null
   }
 ]
