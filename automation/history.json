@@ -228,5 +228,14 @@
     "duration": 60,
     "generated_at": "2026-08-09T05:20:00+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Spider Silk Is Stronger Than Steel (Nature\u2019s Super Fiber)",
+    "prompt": "Create a 45\u201160 second vertical explainer about spider silk. Highlight the surprising fact that a single strand of spider silk is tougher than steel of the same thickness, and explain the natural process that gives it this incredible strength \u2013 the protein molecules line up in a liquid crystal before being spun, forming a tightly packed, nano\u2011structured fiber. Open with a single\u2011breath hook that forces the viewer to wonder why nature can out\u2011engineer modern materials.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-11T05:33:58+00:00",
+    "video_id": null
   }
 ]
