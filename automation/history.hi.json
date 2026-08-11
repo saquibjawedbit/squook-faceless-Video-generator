@@ -213,5 +213,14 @@
     "duration": 60,
     "generated_at": "2026-08-10T07:17:05+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u090f\u0915 \u0939\u093e\u0908 \u0928\u094b\u091f \u0938\u0947 \u0915\u093e\u0901\u091a \u0915\u094d\u092f\u094b\u0902 \u091f\u0942\u091f \u091c\u093e\u0924\u093e \u0939\u0948? \u0938\u093e\u0909\u0902\u0921 \u0930\u0947\u091c\u093c\u094b\u0928\u0947\u0902\u0938 \u0915\u093e \u0930\u0939\u0938\u094d\u092f",
+    "prompt": "Produce a 45\u201160 second vertical explainer (no presenter, only stock footage) about why a glass can shatter when a singer hits a certain high pitch. Open with the hook: \"\u090f\u0915 \u0906\u0935\u093e\u091c\u093c \u0938\u0947 \u0915\u093e\u0901\u091a \u0915\u094d\u092f\u094b\u0902 \u091f\u0942\u091f \u0938\u0915\u0924\u093e \u0939\u0948?\" Show footage of a vocalist, a wine glass, close\u2011up of sound waves (stock visualization), and the moment the glass breaks. Explain the concept of acoustic resonance in simple Hindi without technical jargon. Use engaging background music and clear narration.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-11T06:45:32+00:00",
+    "video_id": null
   }
 ]
