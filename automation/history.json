@@ -237,5 +237,14 @@
     "duration": 60,
     "generated_at": "2026-08-11T05:33:58+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Dogs Tilt Their Heads \u2013 The Surprising Reason Explained",
+    "prompt": "Create a 45\u201160 second vertical explainer using stock footage of dogs, owners, close\u2011ups of ears and eyes. The angle: dogs tilt their heads not just because they're cute, but to improve sound localization and visual focus, revealing how their anatomy and brain work together. Open with the hook: \"Ever wondered why your dog suddenly tilts its head when you call its name?\" Then show the behavior, cut to footage of a dog's ear moving, a diagram\u2011free visual of sound waves (stock animation of ripples), and finish with the simple explanation that the tilt aligns the ear canals and eyes to pinpoint the sound source, a skill inherited from their wild ancestors.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-12T05:41:39+00:00",
+    "video_id": null
   }
 ]
