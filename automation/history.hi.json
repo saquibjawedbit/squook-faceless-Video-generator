@@ -222,5 +222,14 @@
     "duration": 60,
     "generated_at": "2026-08-11T06:45:32+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u092c\u093e\u0930\u093f\u0936 \u0915\u0947 \u092c\u093e\u0926 \u0915\u0940 \u091c\u093e\u0926\u0941\u0908 \u0916\u093c\u0941\u0936\u092c\u0942 \u0915\u094d\u092f\u094b\u0902 \u0906\u0924\u0940 \u0939\u0948? \u092a\u091f\u0930\u093f\u091a\u094b\u0930 \u0915\u093e \u0930\u0939\u0938\u094d\u092f",
+    "prompt": "Create a 45\u201160 second vertical explainer video using only real stock footage and photographs (no presenter, no animation) about why the ground emits a distinct scent after rain. Open with a one\u2011sentence hook that poses the curiosity gap, then briefly explain the science: plant\u2011derived oils, the compound geosmin released by soil microbes, and ozone formed by lightning, all creating the characteristic \u2018petrichor\u2019 smell. Narration must be in Hindi, simple everyday language, no heavy jargon.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-13T07:39:09+00:00",
+    "video_id": null
   }
 ]
