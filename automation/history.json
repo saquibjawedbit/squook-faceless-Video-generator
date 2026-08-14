@@ -255,5 +255,14 @@
     "duration": 60,
     "generated_at": "2026-08-13T05:37:54+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Some Sand Dunes Make a Bizarre, Loud Hum",
+    "prompt": "Topic: The mysterious 'singing' dunes that hum like a giant musical instrument. Surprising angle: It's not wind alone\u2014tiny sand grains colliding at just the right humidity create a resonant sound that can be louder than a train. Hook (first sentence): \"Ever heard a desert roar like a low\u2011pitched organ?\" Use stock footage of sweeping dunes, close\u2011ups of sand shifting, wind gusts, and people listening to the sound, plus brief shots of scientific field teams recording the phenomenon.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-14T05:39:26+00:00",
+    "video_id": null
   }
 ]
