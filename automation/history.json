@@ -264,5 +264,14 @@
     "duration": 60,
     "generated_at": "2026-08-14T05:39:26+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why the Moon Looks Huge at Sunrise and Tiny at Midnight \u2013 The Moon Illusion Explained",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage and photos that reveals the surprising brain trick behind the Moon Illusion. Hook the viewer in the first breath: \"The moon looks gigantic when it\u2019s just rising, then suddenly shrinks\u2014what\u2019s really happening?\" Show footage of the moon low on the horizon over cities, oceans, and forests, then cutting to the moon high overhead. Use simple text overlays to explain that the apparent size change is caused by visual context and perspective cues, not actual distance. End with a clear takeaway: our brains compare the moon to nearby objects, making it look larger near the horizon.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-15T04:19:42+00:00",
+    "video_id": null
   }
 ]
