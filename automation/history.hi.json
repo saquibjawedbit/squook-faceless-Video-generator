@@ -240,5 +240,14 @@
     "duration": 60,
     "generated_at": "2026-08-14T07:30:39+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u092a\u093e\u0928\u0940 \u092e\u0947\u0902 \u0921\u0941\u092c\u093e \u0938\u094d\u091f\u094d\u0930\u0949 \u0915\u094d\u092f\u094b\u0902 \u0926\u093f\u0916\u0924\u093e \u0939\u0948 \u091f\u0942\u091f\u093e? \u091c\u093e\u0928\u093f\u090f \u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0915\u093e \u0930\u093e\u091c!",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage and photos. Topic: the optical illusion where a straw looks broken or bent when placed in a glass of water \u2013 the refraction effect. Surprising angle: it's not the straw that\u2019s damaged, but light bending in water, something we see daily yet ignore. Hook (first sentence of narration): \"\u0915\u094d\u092f\u093e \u0906\u092a \u091c\u093e\u0928\u0924\u0947 \u0939\u0948\u0902 \u0915\u093f \u092a\u093e\u0928\u0940 \u092e\u0947\u0902 \u0921\u0941\u092c\u093e \u0938\u094d\u091f\u094d\u0930\u0949 \u0915\u094d\u092f\u094b\u0902 \u091f\u0942\u091f\u093e\u2011\u091f\u0942\u091f\u093e \u0926\u093f\u0916\u0924\u093e \u0939\u0948?\" Build the story: show a clear glass, a straw, the distorted view, then reveal the light\u2011bending principle with simple visuals of light rays in water. End with a quick recap inviting viewers to notice other everyday refraction tricks.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-15T06:26:42+00:00",
+    "video_id": null
   }
 ]
