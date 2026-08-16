@@ -273,5 +273,14 @@
     "duration": 60,
     "generated_at": "2026-08-15T04:19:42+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why a Drop of Oil on Water Turns into a Rainbow (Thin\u2011Film Magic)",
+    "prompt": "Create a 45\u201160 second vertical explainer about the surprising physics behind a tiny drop of oil spreading on water and instantly forming a rainbow. Emphasize thin\u2011film interference as the hidden mechanism, not chemistry or pollution. Open with a single\u2011breath hook: \"Ever wondered why a single drop of oil on water suddenly explodes into a rainbow?\" Show stock footage of oil droplets on a pond, close\u2011ups of shimmering colors, sunlight hitting the surface, and a simple visual of light waves bouncing inside the oil layer.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-16T04:42:59+00:00",
+    "video_id": null
   }
 ]
