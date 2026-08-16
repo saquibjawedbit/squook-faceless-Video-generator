@@ -249,5 +249,14 @@
     "duration": 60,
     "generated_at": "2026-08-15T06:26:42+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u0915\u0947\u0932\u0947 \u0915\u094b \u091b\u093f\u0932\u0924\u0947 \u0939\u0940 \u0915\u094d\u092f\u094b\u0902 \u0939\u094b \u091c\u093e\u0924\u093e \u0939\u0948 \u092d\u0942\u0930\u0947 \u0930\u0902\u0917 \u092e\u0947\u0902? \u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0915\u093e \u091c\u0935\u093e\u092c!",
+    "prompt": "Create a 45\u201160 second vertical video using only stock footage and photos that explains why a peeled banana quickly turns brown. Start with a hook that asks: \u201cYou peel a fresh banana and within minutes it\u2019s brown\u2014what\u2019s happening inside?\u201d Show close\u2011ups of a fresh banana, peeling, the browning process (time\u2011lapse), and macro shots of the fruit\u2019s surface. Narration should cover oxidation, the enzyme polyphenol oxidase, and exposure to air, using simple Hindi phrasing. End with a quick tip to slow the browning (e.g., lemon juice).",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-16T06:19:50+00:00",
+    "video_id": null
   }
 ]
