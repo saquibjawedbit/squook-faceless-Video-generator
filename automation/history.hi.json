@@ -258,5 +258,14 @@
     "duration": 60,
     "generated_at": "2026-08-16T06:19:50+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u092a\u0949\u092a\u0915\u0949\u0930\u094d\u0928 \u0915\u094d\u092f\u094b\u0902 \u092b\u0942\u091f\u0924\u093e \u0939\u0948? \u0930\u0939\u0938\u094d\u092f\u092e\u092f\u0940 \u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0938\u092e\u091d\u093e\u092f\u093e!",
+    "prompt": "Create a 45\u201160 second faceless explainer using only stock footage (corn kernels, microwaves, steam, close\u2011ups of popping kernels, kitchen scenes). Topic: Why popcorn kernels pop. Surprising angle: each kernel hides a tiny droplet of water; when heated it turns to steam, builds pressure until the hull bursts, turning the kernel inside\u2011out into fluffy popcorn. Hook (first sentence, one breath): \"Ever wondered why a tiny, hard corn suddenly explodes into fluffy popcorn?\"",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-17T06:28:01+00:00",
+    "video_id": null
   }
 ]
