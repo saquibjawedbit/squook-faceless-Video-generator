@@ -282,5 +282,14 @@
     "duration": 60,
     "generated_at": "2026-08-16T04:42:59+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Do Satellites Flash Like Shooting Stars?",
+    "prompt": "Create a 45\u201160 second vertical explainer about the mysterious bright flashes you sometimes see crossing the night sky that aren\u2019t meteors. Explain that they\u2019re caused by sunlight reflecting off flat, metallic panels on orbiting satellites (like Iridium and other megaconstellations), why they appear only at certain times, and why they seem to \u201cblink\u201d instantaneously. Open with the hook: \u201cEver wonder why a sudden, silent flash lights up the night sky even though no shooting star is falling?\u201d Use only stock footage of night skies, satellite passes, sunlit Earth, and simple on\u2011screen text to illustrate the timing and angle of the reflections.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-17T04:41:18+00:00",
+    "video_id": null
   }
 ]
