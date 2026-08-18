@@ -291,5 +291,14 @@
     "duration": 60,
     "generated_at": "2026-08-17T04:41:18+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Your Brain Burns 20% of Your Calories (Even Though It\u2019s Tiny)",
+    "prompt": "Create a 45\u201160 second vertical explainer using only stock footage and photos that reveals why the human brain, which is only about 2% of our body weight, consumes roughly 20% of our daily caloric energy. Open with a hook that instantly sparks curiosity and makes viewers want to know the answer.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-18T04:25:36+00:00",
+    "video_id": null
   }
 ]
