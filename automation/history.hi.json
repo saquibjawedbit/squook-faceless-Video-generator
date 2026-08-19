@@ -276,5 +276,14 @@
     "duration": 60,
     "generated_at": "2026-08-18T06:17:22+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u092a\u093e\u0928\u0940 \u092e\u0947\u0902 \u0939\u093e\u0925\u094b\u0902 \u0915\u0940 \u0909\u0901\u0917\u0932\u093f\u092f\u093e\u0901 \u0930\u093e\u0907\u2011\u0930\u093e\u0907 \u0915\u094d\u092f\u094b\u0902 \u0939\u094b\u0924\u0940 \u0939\u0948\u0902? \u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0915\u093e \u0930\u0939\u0938\u094d\u092f",
+    "prompt": "Create a 45\u201160 second vertical explainer using only real stock footage and photos. Topic: why fingers/skin on hands become wrinkly after staying in water for a while. Emphasize the surprising angle that the wrinkling is an active response controlled by the nervous system to improve grip, not simply skin absorbing water. Start with the hook sentence: 'Did you ever wonder why your fingers get all wrinkly after a long soak?' Show close\u2011up shots of hands before, during, after soaking, a person gripping a wet object, and a simple visual of nerves signaling blood vessels. End with the concise explanation of vasoconstriction and evolutionary benefit.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-19T06:40:56+00:00",
+    "video_id": null
   }
 ]
