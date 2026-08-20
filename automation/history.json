@@ -300,5 +300,14 @@
     "duration": 60,
     "generated_at": "2026-08-18T04:25:36+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why a Rainbow Is Actually a Full Circle (Not Just an Arc)",
+    "prompt": "Topic: The true shape of a rainbow \u2013 it\u2019s a full circle, not just an arc. Surprising angle: Explain how millions of water droplets create a cone of refracted light, why we only see an arc from ground level, and the rare conditions that reveal the complete circle. Hook (first sentence): \"Ever wondered why a rainbow is really a full circle, but we only ever see a smiling arc?\"",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-20T04:44:10+00:00",
+    "video_id": null
   }
 ]
