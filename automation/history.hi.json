@@ -285,5 +285,14 @@
     "duration": 60,
     "generated_at": "2026-08-19T06:40:56+00:00",
     "video_id": null
+  },
+  {
+    "title": "\u091a\u093e\u0901\u0926 \u0915\u094d\u0937\u093f\u0924\u093f\u091c \u092a\u0930 \u092c\u0921\u093c\u093e \u0915\u094d\u092f\u094b\u0902 \u0926\u093f\u0916\u0924\u093e \u0939\u0948? \u0935\u093f\u091c\u094d\u091e\u093e\u0928 \u0915\u093e \u0930\u0939\u0938\u094d\u092f",
+    "prompt": "Create a 45\u201160\u202fsecond vertical video explaining why the Moon looks unusually large when it\u2019s near the horizon (the Moon illusion). Open with a one\u2011breath hook: \u201c\u0915\u094d\u092f\u093e \u0906\u092a\u0928\u0947 \u0915\u092d\u0940 \u0926\u0947\u0916\u093e \u0939\u0948 \u0915\u093f \u0938\u0942\u0930\u094d\u092f\u093e\u0938\u094d\u0924 \u0915\u0947 \u092c\u093e\u0926 \u091a\u093e\u0901\u0926 \u092c\u0939\u0941\u0924 \u092c\u0921\u093c\u093e \u0932\u0917\u0924\u093e \u0939\u0948?\u201d Use stock footage of the Moon over city skylines, forests, seas, and people looking up, plus quick cuts of the same Moon higher in the sky. Explain the psychological perspective cues (comparing the Moon to familiar foreground objects) and the role of atmospheric depth perception, making clear that the Moon\u2019s actual size doesn\u2019t change. End with a simple takeaway: it\u2019s an optical illusion caused by our brain, not a real size difference.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-20T06:30:10+00:00",
+    "video_id": null
   }
 ]
