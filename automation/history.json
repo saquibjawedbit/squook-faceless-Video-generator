@@ -309,5 +309,14 @@
     "duration": 60,
     "generated_at": "2026-08-20T04:44:10+00:00",
     "video_id": null
+  },
+  {
+    "title": "Why Astronauts See 16 Sunrises a Day (The Space Station Secret)",
+    "prompt": "Create a 45\u201160 second vertical explainer about why astronauts aboard the International Space Station experience a sunrise (and sunset) every 90 minutes, resulting in about 16 sunrises a day. Emphasize the surprising fact that it's the station's speed and orbital path, not Earth's rotation, that causes this rapid day\u2011night cycle. Open with the hook: \"Ever wonder why astronauts get a sunrise every 90 minutes?\" Use only stock footage of the ISS exterior, Earth from space, sunrise timelapses, and interior shots of crew looking out windows. No charts or on\u2011screen text needed; let the narration carry the explanation.",
+    "preset": "reel",
+    "genre": "footage",
+    "duration": 60,
+    "generated_at": "2026-08-21T04:30:25+00:00",
+    "video_id": null
   }
 ]
