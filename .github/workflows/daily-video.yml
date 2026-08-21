@@ -1,42 +1,42 @@
-# The English channel's daily Short. The pipeline itself lives in
-# daily-video-run.yml, which the Hindi channel calls too — this file only owns
-# the schedule and which channel's credentials to hand it.
-name: daily-video
+# # The English channel's daily Short. The pipeline itself lives in
+# # daily-video-run.yml, which the Hindi channel calls too — this file only owns
+# # the schedule and which channel's credentials to hand it.
+# name: daily-video
 
-on:
-  schedule:
-    # 03:30 UTC = 09:00 IST. GitHub may delay scheduled runs by a few minutes.
-    - cron: "30 3 * * *"
-  workflow_dispatch:
-    inputs:
-      prompt:
-        description: One-off prompt (skips topic rotation)
-        required: false
-      upload:
-        description: Upload to YouTube
-        type: boolean
-        default: true
+# on:
+#   schedule:
+#     # 03:30 UTC = 09:00 IST. GitHub may delay scheduled runs by a few minutes.
+#     - cron: "30 3 * * *"
+#   workflow_dispatch:
+#     inputs:
+#       prompt:
+#         description: One-off prompt (skips topic rotation)
+#         required: false
+#       upload:
+#         description: Upload to YouTube
+#         type: boolean
+#         default: true
 
-permissions:
-  contents: write
+# permissions:
+#   contents: write
 
-jobs:
-  run:
-    uses: ./.github/workflows/daily-video-run.yml
-    with:
-      lang: en
-      prompt: ${{ inputs.prompt }}
-      # Empty on a scheduled run, which the pipeline reads as "publish".
-      upload: ${{ inputs.upload }}
-    secrets:
-      LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
-      ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-      OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
-      PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
-      LOGO_DEV_TOKEN: ${{ secrets.LOGO_DEV_TOKEN }}
-      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
-      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
-      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+# jobs:
+#   run:
+#     uses: ./.github/workflows/daily-video-run.yml
+#     with:
+#       lang: en
+#       prompt: ${{ inputs.prompt }}
+#       # Empty on a scheduled run, which the pipeline reads as "publish".
+#       upload: ${{ inputs.upload }}
+#     secrets:
+#       LLM_API_KEY: ${{ secrets.LLM_API_KEY }}
+#       ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+#       OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+#       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+#       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+#       PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }}
+#       PIXABAY_API_KEY: ${{ secrets.PIXABAY_API_KEY }}
+#       LOGO_DEV_TOKEN: ${{ secrets.LOGO_DEV_TOKEN }}
+#       YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+#       YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+#       YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
