@@ -16,7 +16,8 @@ export async function ensureBucket() {
   if (!data) {
     const { error } = await admin.storage.createBucket(config.storageBucket, {
       public: false,
-      fileSizeLimit: '512MB',
+      // Supabase's free plan caps files at 50MB; raise on a paid plan.
+      fileSizeLimit: process.env.SUPABASE_FILE_LIMIT || '50MB',
     });
     if (error && !/already exists/i.test(error.message)) {
       console.warn(`[storage] could not create bucket "${config.storageBucket}": ${error.message}`);
