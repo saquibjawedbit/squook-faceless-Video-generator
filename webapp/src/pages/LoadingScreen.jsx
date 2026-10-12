@@ -8,10 +8,20 @@ const STEPS = [
   { key: 'rendering', label: 'Rendering the video', note: 'Compositing every frame' },
   { key: 'mastering', label: 'Mastering the audio', note: 'Balancing to broadcast loudness' },
 ];
-const order = (k) => Math.max(0, STEPS.findIndex((s) => s.key === k));
 
-export default function LoadingScreen({ stage, progress = 0, prompt = '', title = '' }) {
-  const active = stage === 'done' ? STEPS.length : (stage === 'queued' || !stage ? 0 : order(stage));
+// Landing page → video (HyperFrames) runs a different sequence.
+const LANDING_STEPS = [
+  { key: 'capturing', label: 'Reading your landing page', note: 'Screens, brand colors, fonts, copy' },
+  { key: 'planning', label: 'Writing the story', note: 'Hook, beats, voice-over' },
+  { key: 'animating', label: 'Animating every scene', note: 'Motion graphics from your real screens' },
+  { key: 'rendering', label: 'Rendering in high quality', note: 'Final checks, then the MP4' },
+];
+
+export default function LoadingScreen({ stage, progress = 0, prompt = '', title = '', variant = 'prompt' }) {
+  const steps = variant === 'landing' ? LANDING_STEPS : STEPS;
+  const eta = variant === 'landing' ? 'Usually 10–30 minutes — you can leave this open' : 'This usually takes a couple of minutes';
+  const order = (k) => Math.max(0, steps.findIndex((s) => s.key === k));
+  const active = stage === 'done' ? steps.length : (stage === 'queued' || !stage ? 0 : order(stage));
 
   return (
     <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 24 }}>
@@ -30,7 +40,7 @@ export default function LoadingScreen({ stage, progress = 0, prompt = '', title 
 
         {/* stepper */}
         <div style={{ margin: '30px 0 26px', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          {STEPS.map((s, i) => {
+          {steps.map((s, i) => {
             const done = i < active;
             const now = i === active;
             const dotBg = done ? 'var(--accent)' : now ? 'transparent' : 'transparent';
@@ -45,7 +55,7 @@ export default function LoadingScreen({ stage, progress = 0, prompt = '', title 
                   }}>
                     {done && <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="#0B0B0E" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M5 13l4 4L19 7" /></svg>}
                   </span>
-                  {i < STEPS.length - 1 && <span style={{ width: 2, height: 26, marginTop: 4, background: done ? 'var(--accent)' : 'rgba(255,255,255,0.1)' }} />}
+                  {i < steps.length - 1 && <span style={{ width: 2, height: 26, marginTop: 4, background: done ? 'var(--accent)' : 'rgba(255,255,255,0.1)' }} />}
                 </div>
                 <div style={{ paddingTop: -1 }}>
                   <div style={{ fontSize: 14.5, fontWeight: now ? 600 : 500, color: now ? '#F4F3F0' : done ? 'rgba(244,243,240,0.7)' : 'rgba(244,243,240,0.4)' }}>{s.label}</div>
@@ -62,7 +72,7 @@ export default function LoadingScreen({ stage, progress = 0, prompt = '', title 
           <div style={{ position: 'absolute', top: 0, bottom: 0, width: '40%', background: 'linear-gradient(90deg,transparent,rgba(255,255,255,0.25),transparent)', animation: 'sqshimmer 1.6s linear infinite' }} />
         </div>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 10 }}>
-          <span style={{ fontFamily: mono, fontSize: 11.5, color: 'rgba(244,243,240,0.45)' }}>This usually takes a couple of minutes</span>
+          <span style={{ fontFamily: mono, fontSize: 11.5, color: 'rgba(244,243,240,0.45)' }}>{eta}</span>
           <span style={{ fontFamily: mono, fontSize: 11.5, color: 'var(--accent)' }}>{Math.round(progress)}%</span>
         </div>
       </div>

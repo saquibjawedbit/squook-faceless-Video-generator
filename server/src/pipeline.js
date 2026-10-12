@@ -72,9 +72,9 @@ function run(cmd, args, cwd, onLog) {
   });
 }
 
-const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+export const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-async function firstExisting(paths) {
+export async function firstExisting(paths) {
   for (const p of paths) {
     try { await access(p, constants.R_OK); return p; } catch { /* next */ }
   }
@@ -96,12 +96,15 @@ async function readIrMeta() {
   } catch { return { title: null, durationS: null, format: null }; }
 }
 
-// Extract a poster frame using Remotion's bundled ffmpeg (no system ffmpeg needed).
-async function makeThumb(videoPath, id) {
+// Extract a poster frame from the finished mp4.
+export async function makeThumb(videoPath, id) {
   const thumb = join(ARTIFACTS_DIR, `${id}.jpg`);
+  const args = ['-loglevel', 'error', '-i', videoPath, '-frames:v', '1', '-q:v', '3', thumb, '-y'];
+  // System ffmpeg when installed (the deployed image has it, the renderer
+  // doesn't ship there); otherwise Remotion's bundled one.
+  try { await run('ffmpeg', args, ARTIFACTS_DIR, () => {}); return thumb; } catch { /* fall back */ }
   try {
-    await run('npx', ['remotion', 'ffmpeg', '-loglevel', 'error', '-i', videoPath,
-      '-frames:v', '1', '-q:v', '3', thumb, '-y'], RENDERER_DIR, () => {});
+    await run('npx', ['remotion', 'ffmpeg', ...args], RENDERER_DIR, () => {});
     return thumb;
   } catch { return null; }
 }

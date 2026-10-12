@@ -1,8 +1,8 @@
 import { randomUUID } from 'node:crypto';
-import { readFile, readdir, stat, unlink } from 'node:fs/promises';
+import { readFile, readdir, stat, unlink, rm } from 'node:fs/promises';
 import { join } from 'node:path';
 import { admin } from './supabaseAdmin.js';
-import { config, persistenceEnabled, ARTIFACTS_DIR } from './config.js';
+import { config, persistenceEnabled, ARTIFACTS_DIR, HYPERFRAMES_DIR } from './config.js';
 import { deleteSnapshot } from './snapshot.js';
 
 // In-memory mirror of projects created this process. Serves live progress during
@@ -23,6 +23,9 @@ function publicView(p) {
     title: p.title,
     prompt: p.prompt,
     format: p.format,
+    // 'landing' = made from a landing page with HyperFrames (no editable IR;
+    // the webapp opens it in the watch view instead of the editor).
+    kind: p.genre === 'landing' ? 'landing' : 'prompt',
     status: p.status,
     stage: p.stage,
     progress: p.progress,
@@ -39,12 +42,12 @@ function publicView(p) {
   };
 }
 
-export async function createProject({ userId, prompt, format, preset, genre, presetBundle, uploads, music, voice, duration }) {
+export async function createProject({ userId, prompt, title, format, preset, genre, presetBundle, uploads, music, voice, duration }) {
   const p = {
     id: randomUUID(),
     userId,
     prompt,
-    title: deriveTitle(prompt),
+    title: title || deriveTitle(prompt),
     // No format given → the flow infers it from the prompt; the real aspect
     // is backfilled from the render IR when the video finishes.
     format: format || '',
@@ -151,6 +154,21 @@ export async function getProject(id) {
   return null;
 }
 
+// How many landing-page videos were started since `since` (ISO) — by one user,
+// or by everyone when userId is null. Failed runs count: they still cost.
+export async function countLandingSince(userId, since) {
+  if (persistenceEnabled) {
+    let q = admin.from('projects').select('id', { count: 'exact', head: true })
+      .eq('genre', 'landing').gte('created_at', since);
+    if (userId) q = q.eq('user_id', userId);
+    const { count, error } = await q;
+    if (error) throw new Error(`quota check failed: ${error.message}`);
+    return count || 0;
+  }
+  return [...mem.values()].filter((p) =>
+    p.genre === 'landing' && p.createdAt >= since && (!userId || p.userId === userId)).length;
+}
+
 export async function listProjects(userId) {
   if (persistenceEnabled) {
     const { data, error } = await admin.from('projects')
@@ -199,6 +217,8 @@ export async function deleteProject(id) {
   for (const u of p?.uploads || []) if (u?.path) locals.push(u.path);
   for (const f of locals) { try { await unlink(f); } catch { /* ignore */ } }
   try { await deleteSnapshot(id); } catch { /* ignore */ }
+  // Landing-page videos keep their HyperFrames project folder.
+  await rm(join(HYPERFRAMES_DIR, id), { recursive: true, force: true }).catch(() => {});
   mem.delete(id);
 }
 
@@ -217,15 +237,19 @@ export async function rehydrateFromArtifacts() {
     let ir = null;
     try { ir = JSON.parse(await readFile(join(ARTIFACTS_DIR, `${id}.ir.json`), 'utf8')); } catch { /* video-only */ }
     const st = await stat(join(ARTIFACTS_DIR, f)).catch(() => null);
+    // A landing-page video has a HyperFrames folder instead of an IR.
+    let landing = null;
+    try { landing = JSON.parse(await readFile(join(HYPERFRAMES_DIR, id, 'squook-result.json'), 'utf8')); } catch { /* not one */ }
     mem.set(id, {
       id, userId: 'anon',
       prompt: ir?.metadata?.prompt || '',
-      title: ir?.metadata?.title || 'Recovered video',
+      genre: landing ? 'landing' : 'auto',
+      title: ir?.metadata?.title || landing?.title || 'Recovered video',
       format: ir ? (ir.metadata.width >= ir.metadata.height ? '16:9' : '9:16') : '',
       preset: null, status: 'done', stage: 'done', progress: 100, error: null,
       uploads: [], music: '', voice: '', duration: '',
       storagePath: null, thumbPath: null,
-      durationS: ir?.metadata?.total_duration_seconds ?? null,
+      durationS: ir?.metadata?.total_duration_seconds ?? landing?.durationS ?? null,
       videoPath: join(ARTIFACTS_DIR, f),
       quality: 'draft', draft: 1,
       createdAt: (st?.mtime || new Date()).toISOString(),

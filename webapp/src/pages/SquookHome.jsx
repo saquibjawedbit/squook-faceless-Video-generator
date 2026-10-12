@@ -2,10 +2,15 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import Box from '../lib/Box.jsx';
 import { css } from '../lib/css.js';
 import { navigate } from '../lib/router.js';
-import { createProject, previewScript, listProjects, getProject, thumbSrc, listPresets, createPreset, deletePreset } from '../lib/api.js';
+import { getLandingQuota, createProject, createLandingVideo, previewScript, listProjects, getProject, thumbSrc, listPresets, createPreset, deletePreset } from '../lib/api.js';
 import ScriptReview from './ScriptReview.jsx';
 import LoadingScreen from './LoadingScreen.jsx';
 import { VOICES, playSample, stopSample, onSampleChange } from '../lib/voices.js';
+import { useSession, signOut } from '../lib/supabase.js';
+
+// Public MVP builds ship only the landing-page feature (the prompt pipeline
+// needs Ollama + a GPU): VITE_LANDING_ONLY=true.
+const LANDING_ONLY = import.meta.env.VITE_LANDING_ONLY === 'true';
 
 /**
  * Squook Home — a faithful React port of `Squook Home.dc.html`: the logged-in
@@ -23,12 +28,16 @@ const mono = "'JetBrains Mono',monospace";
 const grotesk = "'Schibsted Grotesk',sans-serif";
 
 const INITIAL = {
+  mode: LANDING_ONLY ? 'landing' : 'prompt', // 'prompt' (describe it) | 'landing' (paste a landing page URL)
+  landingUrl: '', landingStyle: 'launch', landingNotes: '',
+  landingJob: false,   // the running generation is a landing-page video
   prompt: '', assets: [], format: '16:9', lengthSec: 30,
   voice: '',           // narration voice id ('' = auto, 'none' = no voiceover)
   playingVoice: null,  // which voice sample is previewing right now
   generating: false, genStage: '', genProgress: 0, note: '',
   previewing: false, review: null, // review = { script, asset_plan } once the script is written
   projects: null, // null = loading; [] = loaded-empty
+  quota: null,    // { left, globalLeft, limit } for landing-page videos
   genre: 'auto',  // selected content preset id (built-in or custom-xxxx)
   presets: null,  // { builtins:[], custom:[] } | null while loading
   presetForm: null, // the "new preset" draft, or null when closed
@@ -65,6 +74,15 @@ function formToBundle(f) {
     music_default: f.music || '',
   };
 }
+
+// Landing page → video styles (HyperFrames workflows) and their length ranges.
+const LANDING_STYLES = [
+  { id: 'launch', label: 'Launch film', desc: '30–90s narrated promo built from your real screens' },
+  { id: 'motion', label: 'Motion teaser', desc: 'Short, punchy motion graphic — no voice-over' },
+];
+const LENGTH_RANGE = { prompt: [5, 600, 5], launch: [20, 90, 5], motion: [5, 15, 1] }; // [min, max, step]
+const rangeFor = (s) => LENGTH_RANGE[s.mode === 'landing' ? s.landingStyle : 'prompt'];
+const clampLen = (s) => { const [min, max] = rangeFor(s); return Math.min(max, Math.max(min, s.lengthSec)); };
 
 // Placeholder tile gradients (drafts/failed have no rendered thumbnail).
 const PALETTE = [
@@ -116,7 +134,9 @@ const TRENDING = [
 let _uid = 0;
 const uid = (p) => p + (++_uid);
 
-export default function SquookHome({ userName = 'Alex' }) {
+export default function SquookHome({ userName }) {
+  const session = useSession();
+  userName ??= session?.user?.email?.split('@')[0];
   const [state, setStateRaw] = useState(INITIAL);
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -126,6 +146,7 @@ export default function SquookHome({ userName = 'Alex' }) {
   const toastT = useRef(null);
   const pollRef = useRef(null);
   const fileRef = useRef(null);       // hidden <input type=file> for Footage/Image
+  const urlRef = useRef(null);        // landing page URL input
   const pickKindRef = useRef(null);   // which button opened the picker (VIDEO|IMAGE)
 
   const setState = useCallback((patch) => {
@@ -152,6 +173,13 @@ export default function SquookHome({ userName = 'Alex' }) {
   useEffect(() => {
     let ok = true;
     listProjects().then((ps) => { if (ok) setState({ projects: ps }); }).catch(() => { if (ok) setState({ projects: [] }); });
+    return () => { ok = false; };
+  }, [setState]);
+
+  // Landing-page videos left today (shown in the nav when a limit is set).
+  useEffect(() => {
+    let ok = true;
+    getLandingQuota().then((q) => { if (ok) setState({ quota: q }); }).catch(() => {});
     return () => { ok = false; };
   }, [setState]);
 
@@ -243,9 +271,18 @@ export default function SquookHome({ userName = 'Alex' }) {
     // no fake "link" chip, since the pipeline doesn't fetch links yet.
   };
 
-  const keydown = (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); generate(); } };
+  const keydown = (e) => {
+    if (!((e.metaKey || e.ctrlKey) && e.key === 'Enter')) return;
+    e.preventDefault();
+    if (stateRef.current.mode === 'landing') generateLanding(); else generate();
+  };
 
   const openEditor = (id) => navigate(id ? `editor?id=${id}` : 'editor');
+  // Landing-page videos have no editable timeline — they open in the watch view.
+  const openProject = (p) => navigate(p.kind === 'landing' ? `watch?id=${p.id}` : `editor?id=${p.id}`);
+
+  // Switch composer mode / landing style, keeping the length inside the new range.
+  const setMode = (patch) => setState((s) => { const n = { ...s, ...patch }; return { ...patch, lengthSec: clampLen(n) }; });
 
   // Poll a project until it finishes rendering; resolves the final publicView.
   const pollProject = (id) => new Promise((resolve, reject) => {
@@ -291,6 +328,22 @@ export default function SquookHome({ userName = 'Alex' }) {
       .catch((err) => { setState({ generating: false }); toast('Generation failed — ' + (err.message || err)); });
   };
 
+  // Landing page → video: no script review — HyperFrames plans, animates and
+  // renders the whole thing from the site, then it opens in the watch view.
+  const generateLanding = () => {
+    const S0 = stateRef.current;
+    if (!S0.landingUrl.trim()) { toast('Paste your landing page URL first'); urlRef.current?.focus(); return; }
+    if (S0.generating) return;
+    setState({ generating: true, landingJob: true, genStage: 'capturing', genProgress: 0 });
+    createLandingVideo({
+      url: S0.landingUrl.trim(), style: S0.landingStyle, format: S0.format,
+      duration: S0.lengthSec, notes: S0.landingNotes.trim(),
+    })
+      .then((p) => { getLandingQuota().then((qq) => setState({ quota: qq })).catch(() => {}); return pollProject(p.id); })
+      .then((p) => navigate(`watch?id=${p.id}`))
+      .catch((err) => { setState({ generating: false, landingJob: false }); toast('Couldn’t make the video — ' + (err.message || err)); });
+  };
+
   const goGallery = () => { navigate(''); setTimeout(() => document.getElementById('gallery')?.scrollIntoView({ behavior: 'smooth' }), 60); };
 
   /* ---- computed render values ---- */
@@ -302,8 +355,9 @@ export default function SquookHome({ userName = 'Alex' }) {
       <LoadingScreen
         stage={S.genStage}
         progress={S.genProgress}
-        prompt={S.prompt.trim()}
-        title={S.review?.script?.metadata?.title || ''}
+        prompt={S.landingJob ? S.landingUrl.trim() : S.prompt.trim()}
+        title={S.landingJob ? '' : (S.review?.script?.metadata?.title || '')}
+        variant={S.landingJob ? 'landing' : 'prompt'}
       />
     );
   }
@@ -321,7 +375,9 @@ export default function SquookHome({ userName = 'Alex' }) {
     );
   }
   const seg = (on) => 'cursor:pointer;border:none;background:' + (on ? 'rgba(255,255,255,0.1)' : 'transparent') + ';color:' + (on ? '#F4F3F0' : 'rgba(244,243,240,0.55)') + ';font-size:12.5px;font-weight:600;padding:7px 13px;border-radius:8px;transition:background .15s,color .15s';
-  const formatOpts = ['16:9', '9:16'].map((f) => ({ label: f, pick: () => setState({ format: f }), style: seg(S.format === f) }));
+  const isLanding = S.mode === 'landing';
+  const [lenMin, lenMax, lenStep] = rangeFor(S);
+  const formatOpts = (isLanding ? ['16:9', '9:16', '1:1'] : ['16:9', '9:16']).map((f) => ({ label: f, pick: () => setState({ format: f }), style: seg(S.format === f) }));
   // Built-ins first, then the caller's custom presets (marked deletable).
   const presetList = [
     ...((S.presets?.builtins) || []),
@@ -329,9 +385,13 @@ export default function SquookHome({ userName = 'Alex' }) {
   ];
   const ls = S.lengthSec;
   const lengthLabel = ls < 60 ? ls + 's' : Math.floor(ls / 60) + ':' + String(ls % 60).padStart(2, '0');
-  const canGen = S.prompt.trim().length > 0;
+  const canGen = isLanding ? S.landingUrl.trim().length > 0 : S.prompt.trim().length > 0;
   const genStyle = 'cursor:pointer;display:inline-flex;align-items:center;gap:9px;border:none;border-radius:12px;padding:13px 24px;font-size:15px;font-weight:600;background:var(--accent);color:#0B0B0E;transition:filter .15s,transform .15s,opacity .15s;' + (canGen ? '' : 'opacity:0.5');
   const name = (userName ?? 'Alex').trim() || 'Alex';
+  const q = S.quota;
+  const quotaLabel = q?.limit != null
+    ? `${q.left} of ${q.limit} videos left today`
+    : LANDING_ONLY ? 'Landing page → video' : 'Pro · 24 renders left';
   const initial = name.charAt(0).toUpperCase();
 
   // Real projects split into finished videos vs in-progress drafts.
@@ -369,7 +429,8 @@ export default function SquookHome({ userName = 'Alex' }) {
             </nav>
           </div>
           <div style={css('display:flex;align-items:center;gap:14px')}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: mono, fontSize: 11, color: 'rgba(244,243,240,0.55)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 99, padding: '5px 11px' }}><span style={css('width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block')} />Pro · 24 renders left</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 7, fontFamily: mono, fontSize: 11, color: 'rgba(244,243,240,0.55)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 99, padding: '5px 11px' }}><span style={css('width:6px;height:6px;border-radius:50%;background:var(--accent);display:inline-block')} />{quotaLabel}</span>
+            {session && <Box t="button" onClick={signOut} title={session.user.email} s="cursor:pointer;background:none;border:none;font-size:12.5px;color:rgba(244,243,240,0.55);padding:0" sh="color:#F4F3F0">Sign out</Box>}
             <span style={css('width:31px;height:31px;border-radius:50%;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:12.5px;font-weight:600;color:rgba(244,243,240,0.85)')}>{initial}</span>
           </div>
         </div>
@@ -381,15 +442,33 @@ export default function SquookHome({ userName = 'Alex' }) {
         <section style={css('padding:52px 0 8px')}>
           <div style={css('margin-bottom:24px')}>
             <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.16em', color: 'var(--accent)' }}>WELCOME BACK</div>
-            <h1 style={{ margin: '12px 0 0', fontFamily: grotesk, fontWeight: 800, fontSize: 'clamp(30px,4vw,46px)', lineHeight: 1.04, letterSpacing: '-0.03em' }}>Good to see you, {name}.<br /><span style={{ color: 'rgba(244,243,240,0.5)' }}>What are we making today?</span></h1>
+            <h1 style={{ margin: '12px 0 0', fontFamily: grotesk, fontWeight: 800, fontSize: 'clamp(30px,4vw,46px)', lineHeight: 1.04, letterSpacing: '-0.03em' }}>Good to see you, {name}.<br /><span style={{ color: 'rgba(244,243,240,0.5)' }}>{LANDING_ONLY ? 'Paste your landing page, get a launch video.' : 'What are we making today?'}</span></h1>
           </div>
+
+          {/* composer mode: describe it, or paste a landing page */}
+          {!LANDING_ONLY && <div style={css('display:inline-flex;gap:2px;border:1px solid rgba(255,255,255,0.1);border-radius:11px;padding:3px;background:rgba(255,255,255,0.02);margin-bottom:12px')}>
+            {[{ id: 'prompt', label: 'Describe it' }, { id: 'landing', label: 'From landing page' }].map((m) => (
+              <button key={m.id} onClick={() => setMode({ mode: m.id })} style={css(seg(S.mode === m.id))}>{m.label}</button>
+            ))}
+          </div>}
 
           {/* composer card */}
           <div ref={composerRef} className="sq-focus" style={css('border:1px solid rgba(255,255,255,0.12);border-radius:20px;background:rgba(255,255,255,0.025);padding:20px 20px 16px;box-shadow:0 24px 70px rgba(0,0,0,0.35)')}>
+            {isLanding ? (
+              <div style={css('display:flex;flex-direction:column;gap:10px')}>
+                <input ref={urlRef} value={S.landingUrl} onChange={(e) => setState({ landingUrl: e.target.value })} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); generateLanding(); } }}
+                  type="url" inputMode="url" autoComplete="url" spellCheck={false} placeholder="Paste your landing page — https://yourproduct.com"
+                  style={{ width: '100%', boxSizing: 'border-box', border: 'none', background: 'transparent', color: '#F4F3F0', fontSize: 19, lineHeight: 1.5, outline: 'none', padding: '4px 0' }} />
+                <textarea value={S.landingNotes} onChange={(e) => setState({ landingNotes: e.target.value })} onKeyDown={keydown} rows="2" maxLength={1000}
+                  placeholder="Optional: who it’s for, what to highlight, a line it must say…"
+                  style={{ width: '100%', boxSizing: 'border-box', resize: 'none', border: 'none', borderTop: '1px solid rgba(255,255,255,0.07)', paddingTop: 10, background: 'transparent', color: 'rgba(244,243,240,0.85)', fontSize: 14.5, lineHeight: 1.55, outline: 'none', minHeight: 52 }} />
+              </div>
+            ) : (
             <textarea ref={taRef} value={S.prompt} onChange={(e) => setState({ prompt: e.target.value })} onKeyDown={keydown} onPaste={handlePaste} rows="3" placeholder="Describe the video you want — the audience, the mood, the length. Like briefing a director…" style={{ width: '100%', boxSizing: 'border-box', resize: 'none', border: 'none', background: 'transparent', color: '#F4F3F0', fontSize: 17, lineHeight: 1.55, outline: 'none', minHeight: 78 }} />
+            )}
 
             {/* attached assets */}
-            {S.assets.length > 0 && (
+            {!isLanding && S.assets.length > 0 && (
               <div style={css('display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 12px')}>
                 {S.assets.map((a) => (
                   <span key={a.id} style={css('display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.13);border-radius:9px;padding:6px 8px 6px 10px;font-size:12.5px;color:rgba(244,243,240,0.88)')}>
@@ -406,7 +485,11 @@ export default function SquookHome({ userName = 'Alex' }) {
             <div style={css('display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;padding-top:14px;border-top:1px solid rgba(255,255,255,0.07)')}>
               <div style={css('display:flex;align-items:center;gap:8px;flex-wrap:wrap')}>
                 <input ref={fileRef} type="file" multiple onChange={onFilesPicked} style={{ display: 'none' }} />
-                {ATTACH_BTNS.map((b) => (
+                {isLanding && LANDING_STYLES.map((st) => (
+                  <button key={st.id} onClick={() => setMode({ landingStyle: st.id })} title={st.desc}
+                    style={css(`cursor:pointer;background:${S.landingStyle === st.id ? 'rgba(255,255,255,0.09)' : 'rgba(255,255,255,0.03)'};border:1px solid ${S.landingStyle === st.id ? 'var(--accent)' : 'rgba(255,255,255,0.1)'};border-radius:9px;padding:8px 13px;font-size:12.5px;color:${S.landingStyle === st.id ? '#F4F3F0' : 'rgba(244,243,240,0.72)'}`)}>{st.label}</button>
+                ))}
+                {!isLanding && ATTACH_BTNS.map((b) => (
                   <Box key={b.key} t="button" onClick={() => onAttach(b)} title={b.soon ? 'Coming soon' : `Attach ${b.label.toLowerCase()}`} s={`cursor:pointer;display:inline-flex;align-items:center;gap:7px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.1);border-radius:9px;padding:8px 12px;font-size:12.5px;color:rgba(244,243,240,${b.soon ? '0.4' : '0.75'});transition:border-color .15s,color .15s`} sh="border-color:rgba(255,255,255,0.28);color:#F4F3F0">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"><path d={b.d} /></svg>
                     {b.label}
@@ -421,7 +504,7 @@ export default function SquookHome({ userName = 'Alex' }) {
                 </div>
                 <div style={css('display:flex;align-items:center;gap:11px;border:1px solid rgba(255,255,255,0.1);border-radius:10px;padding:8px 13px;background:rgba(255,255,255,0.02)')}>
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="rgba(244,243,240,0.5)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
-                  <input type="range" min="5" max="600" step="5" value={S.lengthSec} onChange={(e) => setState({ lengthSec: +e.target.value })} style={{ width: 120, accentColor: 'var(--accent)' }} />
+                  <input type="range" min={lenMin} max={lenMax} step={lenStep} value={S.lengthSec} onChange={(e) => setState({ lengthSec: +e.target.value })} style={{ width: 120, accentColor: 'var(--accent)' }} />
                   <span style={{ fontFamily: mono, fontSize: 12, color: '#F4F3F0', minWidth: 36, textAlign: 'right' }}>{lengthLabel}</span>
                 </div>
               </div>
@@ -430,15 +513,18 @@ export default function SquookHome({ userName = 'Alex' }) {
             {/* bottom row: hint + generate */}
             <div style={css('display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-top:14px')}>
               <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontFamily: mono, fontSize: 11, color: 'rgba(244,243,240,0.4)' }}>
-                <span style={css('border:1px solid rgba(255,255,255,0.16);border-radius:5px;padding:2px 6px')}>⌘ ⏎</span> to generate · paste or attach an image
+                {isLanding
+                  ? <>Built with HyperFrames from your site’s real screens, colors and copy</>
+                  : <><span style={css('border:1px solid rgba(255,255,255,0.16);border-radius:5px;padding:2px 6px')}>⌘ ⏎</span> to generate · paste or attach an image</>}
               </span>
-              <Box t="button" onClick={generate} s={genStyle + (S.previewing ? ';opacity:0.7;pointer-events:none' : '')} sh="filter:brightness(1.1);transform:translateY(-1px)">
-                {S.previewing ? 'Writing your script…' : 'Write script'}
+              <Box t="button" onClick={isLanding ? generateLanding : generate} s={genStyle + (S.previewing ? ';opacity:0.7;pointer-events:none' : '')} sh="filter:brightness(1.1);transform:translateY(-1px)">
+                {isLanding ? 'Make video' : S.previewing ? 'Writing your script…' : 'Write script'}
                 {!S.previewing && <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14" /><path d="M13 6l6 6-6 6" /></svg>}
               </Box>
             </div>
           </div>
 
+          {!isLanding && <>
           {/* content-preset picker */}
           <div style={css('display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-top:16px')}>
             <span style={{ fontFamily: mono, fontSize: 10.5, letterSpacing: '0.12em', color: 'rgba(244,243,240,0.4)', marginRight: 2, marginTop: 8 }}>STYLE</span>
@@ -523,6 +609,7 @@ export default function SquookHome({ userName = 'Alex' }) {
               <Box key={t.label} t="button" onClick={() => applyTemplate(t.p)} s="cursor:pointer;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.1);border-radius:99px;padding:7px 14px;font-size:12.5px;color:rgba(244,243,240,0.72);transition:border-color .15s,color .15s" sh="border-color:var(--accent);color:#F4F3F0">{t.label}</Box>
             ))}
           </div>
+          </>}
         </section>
 
         {/* ===== CONTINUE / DRAFTS ===== */}
@@ -540,7 +627,7 @@ export default function SquookHome({ userName = 'Alex' }) {
               : (
                 <div style={css('display:grid;grid-template-columns:repeat(3,1fr);gap:16px')}>
                   {draftItems.map((d) => (
-                    <Box key={d.id} onClick={() => openEditor(d.id)} s="cursor:pointer;display:flex;gap:14px;border:1px solid rgba(255,255,255,0.09);border-radius:14px;background:rgba(255,255,255,0.02);padding:12px;transition:transform .18s,border-color .18s" sh="transform:translateY(-3px);border-color:rgba(255,255,255,0.24)">
+                    <Box key={d.id} onClick={() => openProject(d)} s="cursor:pointer;display:flex;gap:14px;border:1px solid rgba(255,255,255,0.09);border-radius:14px;background:rgba(255,255,255,0.02);padding:12px;transition:transform .18s,border-color .18s" sh="transform:translateY(-3px);border-color:rgba(255,255,255,0.24)">
                       <div style={css('position:relative;flex:none;width:104px;border-radius:10px;overflow:hidden;aspect-ratio:16/10')}>
                         <div style={css(bg(gradFor(d.id)))} />
                         <div style={css('position:absolute;inset:0;background:linear-gradient(to top,rgba(0,0,0,0.5),transparent 70%)')} />
@@ -576,7 +663,7 @@ export default function SquookHome({ userName = 'Alex' }) {
               : (
                 <div style={css('display:grid;grid-template-columns:repeat(4,1fr);gap:16px')}>
                   {videoItems.map((v) => (
-                    <Box key={v.id} onClick={() => openEditor(v.id)} s="position:relative;aspect-ratio:16/10;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.09);cursor:pointer;transition:transform .2s,border-color .2s" sh="transform:translateY(-4px);border-color:rgba(255,255,255,0.24)">
+                    <Box key={v.id} onClick={() => openProject(v)} s="position:relative;aspect-ratio:16/10;border-radius:14px;overflow:hidden;border:1px solid rgba(255,255,255,0.09);cursor:pointer;transition:transform .2s,border-color .2s" sh="transform:translateY(-4px);border-color:rgba(255,255,255,0.24)">
                       <div style={css(bg(gradFor(v.id)))} />
                       <img src={thumbSrc(v.id)} alt="" onError={(e) => { e.currentTarget.style.display = 'none'; }} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
                       <div style={css('position:absolute;inset:0;pointer-events:none;background:linear-gradient(to top, rgba(0,0,0,0.84) 0%, rgba(0,0,0,0.2) 40%, transparent 62%)')} />
@@ -593,7 +680,7 @@ export default function SquookHome({ userName = 'Alex' }) {
         </section>
 
         {/* ===== TRENDING ===== */}
-        <section style={css('padding:56px 0 0')}>
+        {!LANDING_ONLY && <section style={css('padding:56px 0 0')}>
           <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:16px;margin-bottom:20px')}>
             <div>
               <div style={sectionLabel('var(--accent)')}>MADE ON SQUOOK THIS WEEK</div>
@@ -624,7 +711,7 @@ export default function SquookHome({ userName = 'Alex' }) {
               );
             })}
           </div>
-        </section>
+        </section>}
       </main>
 
       {/* ===== GENERATING OVERLAY ===== */}

@@ -23,6 +23,65 @@ prompt ─▶ guide_creator_flow (CrewAI: Researcher → Writer → Director) �
 | [`webapp/`](webapp/) | React + Vite frontend: Supabase auth, prompt → video UI, project history, and a live IR editor built on `@remotion/player`. | Long-running dev server on **http://localhost:5173** |
 | [`ui/`](ui/) | Static design comps (landing, onboarding, pricing, wireframes). Not a service. | — |
 
+## Landing page → video (HyperFrames)
+
+Paste a landing page URL and get a finished, high-quality video built from the
+site's real screens, brand colors, fonts and copy — powered by
+[HyperFrames](https://github.com/heygen-com/hyperframes).
+
+Two styles:
+
+| Style | HyperFrames workflow | Result |
+|---|---|---|
+| **Launch film** | `product-launch-video` | 20–90s narrated promo: hook → value → proof → call to action |
+| **Motion teaser** | `motion-graphics` | 5–15s motion graphic, no voice-over |
+
+**In the web app:** Home → **From landing page** → paste the URL → pick a style,
+format (16:9 / 9:16 / 1:1) and length → **Make video**. There's no script review
+step; when it's done the video opens in a watch page with a download button.
+
+**From Claude Code:** the repo ships a skill, `landing-page-video`
+(`.agents/skills/landing-page-video/`, linked into `.claude/skills/`). Ask:
+
+```text
+Make a 45-second launch video for https://yourproduct.com
+```
+
+**How it works:** `POST /api/landing` queues a job (its own lane, so it never
+blocks prompt videos). The server runs a headless Claude Code session
+(`claude -p`) in the repo, which uses the skill to drive HyperFrames end to end
+inside `server/hyperframes/<id>/` — capture → storyboard → animated frames →
+`lint` / `check` / snapshots → high-quality render. Progress is read from the
+files HyperFrames writes; the result is copied to `server/artifacts/<id>.mp4`.
+
+**Needs (real mode only):** the [Claude Code CLI](https://claude.com/claude-code)
+installed and signed in, Node 22+, and `ffmpeg`. Check with
+`npx hyperframes doctor`. For narration without a HeyGen account, install the
+local Kokoro voice (`pip install kokoro-onnx soundfile`); otherwise launch films
+come out with music but no voice-over. Settings live in `server/.env`
+(`CLAUDE_BIN`, `LANDING_CLAUDE_MODEL`, `LANDING_TIMEOUT_MIN`). A run takes about
+10–30 minutes. `PIPELINE_MODE=mock` fakes the stages and returns the sample render.
+
+> The headless session can run shell commands, and it reads a website you don't
+> control. The skill treats page content as data only and the server refuses
+> local/private addresses, but run this on a machine you're comfortable with.
+
+### Deploying the landing-page MVP (Railway)
+
+The root `Dockerfile` builds one service: the API, the built webapp, Claude
+Code and HyperFrames (`LANDING_ONLY=true`: just the landing-page feature).
+Railway picks it up via `railway.json`. Set these service variables:
+
+| Variable | Value |
+|---|---|
+| `ANTHROPIC_API_KEY` | Pays for the video agent. Set a monthly spend limit in the Anthropic console. |
+| `SUPABASE_URL`, `SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY` | Sign-in, project history, video storage (run `server/db/schema.sql` once) |
+| `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` | Same URL + anon key, baked into the webapp at build time |
+| `LANDING_DAILY_LIMIT` | Videos per user per 24h, e.g. `3` |
+| `LANDING_GLOBAL_DAILY_LIMIT` | Videos across everyone per 24h, e.g. `20` |
+
+The video agent gets a trimmed environment (no Supabase or stock-API keys).
+
 ## Prerequisites
 
 - **Node.js** 18+ and npm

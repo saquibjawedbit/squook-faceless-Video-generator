@@ -1,0 +1,14 @@
+.git
+**/node_modules
+**/.env
+**/.env.*
+!**/.env.example
+.playwright-mcp
+automation
+guide_creator_flow
+renderer
+ui
+webapp/dist
+server/artifacts
+server/uploads
+server/hyperframes

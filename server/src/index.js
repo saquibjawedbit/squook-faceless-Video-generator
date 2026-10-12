@@ -4,11 +4,13 @@ import multer from 'multer';
 import { createReadStream } from 'node:fs';
 import { stat, unlink } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
-import { config, authEnabled, persistenceEnabled, UPLOADS_DIR } from './config.js';
+import { config, authEnabled, persistenceEnabled, UPLOADS_DIR, WEBAPP_DIST } from './config.js';
+import { existsSync } from 'node:fs';
 import { requireAuth } from './auth.js';
 import { ensureBucket } from './supabaseAdmin.js';
-import { enqueueProject, enqueueRerender, enqueueRevoice } from './jobs.js';
-import { getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
+import { enqueueProject, enqueueRerender, enqueueRevoice, enqueueLanding } from './jobs.js';
+import { LANDING_STAGES, validateLandingUrl, landingOptions } from './landing.js';
+import { countLandingSince, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
 import { runDirectorChat, runDirectorChatStream } from './directorAgent.js';
 import { appendChat, readChat, clearChat } from './chatStore.js';
 import { STAGES, previewScript } from './pipeline.js';
@@ -45,8 +47,13 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' })); // edited IRs with word-level captions get big
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, pipelineMode: config.pipelineMode, authEnabled, persistenceEnabled, stages: STAGES });
+  res.json({ ok: true, pipelineMode: config.pipelineMode, authEnabled, persistenceEnabled, landingOnly: config.landingOnly, stages: STAGES, landingStages: LANDING_STAGES });
 });
+
+// LANDING_ONLY deployments: the prompt pipeline (Ollama + GPU) isn't available.
+const promptPipeline = (_req, res, next) => (config.landingOnly
+  ? res.status(403).json({ error: 'Only landing-page videos are available here' })
+  : next());
 
 // Load a project and confirm the caller owns it.
 async function ownedProject(req, res) {
@@ -88,7 +95,7 @@ async function discardUploads(req) {
   for (const f of req.files || []) { try { await unlink(f.path); } catch { /* ignore */ } }
 }
 
-app.post('/api/projects', requireAuth, upload.array('files', 6), async (req, res) => {
+app.post('/api/projects', promptPipeline, requireAuth, upload.array('files', 6), async (req, res) => {
   // Saving requires a real signed-in user (isolation needs a real auth.uid()).
   if (persistenceEnabled && req.user.id === 'anon') {
     await discardUploads(req);
@@ -117,9 +124,43 @@ app.post('/api/projects', requireAuth, upload.array('files', 6), async (req, res
   res.status(201).json(publicView(p));
 });
 
+// Landing page → video: paste a URL, HyperFrames builds a launch film (or a
+// short motion teaser) from the site's real screens, brand and copy.
+app.post('/api/landing', requireAuth, async (req, res) => {
+  if (persistenceEnabled && req.user.id === 'anon') {
+    return res.status(401).json({ error: 'Sign in to save video projects' });
+  }
+  let url;
+  try { url = validateLandingUrl(req.body?.url); }
+  catch (e) { return res.status(400).json({ error: e.message }); }
+  const quota = await landingQuota(req.user.id).catch((e) => ({ error: e.message }));
+  if (quota.error) return res.status(503).json({ error: quota.error });
+  if (quota.globalLeft === 0) return res.status(429).json({ error: 'We’ve hit today’s video limit — please try again tomorrow.' });
+  if (quota.left === 0) return res.status(429).json({ error: `You’ve used your ${config.landingDailyLimit} videos for today — come back tomorrow.` });
+  const opts = landingOptions(req.body || {});
+  const p = await enqueueLanding({ userId: req.user.id, url, ...opts });
+  res.status(201).json(publicView(p));
+});
+
+// Remaining landing-page videos in the last 24h (null = unlimited).
+async function landingQuota(userId) {
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const left = (limit, used) => (limit > 0 ? Math.max(0, limit - used) : null);
+  return {
+    left: left(config.landingDailyLimit, config.landingDailyLimit ? await countLandingSince(userId, since) : 0),
+    globalLeft: left(config.landingGlobalDailyLimit, config.landingGlobalDailyLimit ? await countLandingSince(null, since) : 0),
+    limit: config.landingDailyLimit || null,
+  };
+}
+
+app.get('/api/landing/quota', requireAuth, async (req, res) => {
+  try { res.json(await landingQuota(req.user.id)); }
+  catch (e) { res.status(503).json({ error: String(e.message || e) }); }
+});
+
 // Generate JUST the script (directing) for the review-before-render step — no
 // project, no render. Returns { script, asset_plan } the client shows and edits.
-app.post('/api/script/preview', requireAuth, async (req, res) => {
+app.post('/api/script/preview', promptPipeline, requireAuth, async (req, res) => {
   const prompt = (req.body?.prompt || '').trim();
   if (!prompt) return res.status(400).json({ error: 'prompt is required' });
   if (prompt.length > 2000) return res.status(400).json({ error: 'prompt too long' });
@@ -138,7 +179,7 @@ app.post('/api/script/preview', requireAuth, async (req, res) => {
 });
 
 // AI-revise the review script from a plain-language instruction → { script }.
-app.post('/api/script/revise', requireAuth, async (req, res) => {
+app.post('/api/script/revise', promptPipeline, requireAuth, async (req, res) => {
   const instruction = String(req.body?.instruction || '').trim();
   const script = req.body?.script;
   if (!instruction) return res.status(400).json({ error: 'instruction is required' });
@@ -483,6 +524,10 @@ app.use((err, _req, res, _next) => {
   if (err) return res.status(400).json({ error: String(err.message || err) });
   res.status(500).json({ error: 'Internal error' });
 });
+
+// Serve the built webapp from the same origin when it's been built (the
+// deployed image does this). The app uses a hash router, so static files suffice.
+if (existsSync(WEBAPP_DIST)) app.use(express.static(WEBAPP_DIST, { index: 'index.html' }));
 
 ensureBucket().finally(async () => {
   // Fail over any jobs orphaned by a previous process (the queue was in-memory).

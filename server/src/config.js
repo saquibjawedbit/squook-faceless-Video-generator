@@ -17,6 +17,10 @@ export const FALLBACK_VIDEO = resolve(RENDERER_DIR, 'out', 'video.mp4');
 export const ARTIFACTS_DIR = resolve(SERVER_DIR, 'artifacts');
 mkdirSync(ARTIFACTS_DIR, { recursive: true });
 
+// Landing-page videos: one HyperFrames project per job (server/hyperframes/<id>/)
+export const HYPERFRAMES_DIR = resolve(SERVER_DIR, 'hyperframes');
+mkdirSync(HYPERFRAMES_DIR, { recursive: true });
+
 // User-uploaded footage
 export const UPLOADS_DIR = resolve(SERVER_DIR, 'uploads');
 mkdirSync(UPLOADS_DIR, { recursive: true });
@@ -48,7 +52,23 @@ export const config = {
   // the secret is optional and only enables brand-name → domain search.
   logoDevToken: process.env.LOGO_DEV_TOKEN || '',
   logoDevSecret: process.env.LOGO_DEV_SECRET || '',
+  // Landing page → video: a headless Claude Code run of the repo's
+  // landing-page-video skill, which drives HyperFrames end to end.
+  claudeBin: process.env.CLAUDE_BIN || 'claude',
+  landingModel: process.env.LANDING_CLAUDE_MODEL || '',
+  landingTimeoutMin: Number(process.env.LANDING_TIMEOUT_MIN || 60),
+  // Public MVP guards: videos per signed-in user per 24h, and across everyone
+  // per 24h (caps the Claude bill). 0 = unlimited.
+  landingDailyLimit: Number(process.env.LANDING_DAILY_LIMIT || 0),
+  landingGlobalDailyLimit: Number(process.env.LANDING_GLOBAL_DAILY_LIMIT || 0),
+  // LANDING_ONLY=true → only the landing-page feature is live; the prompt
+  // pipeline routes (need Ollama + GPU) answer 403.
+  landingOnly: String(process.env.LANDING_ONLY).toLowerCase() === 'true',
 };
+
+// Built webapp (webapp/dist) — served by the API when present, so a single
+// deployment hosts both.
+export const WEBAPP_DIST = resolve(REPO_ROOT, 'webapp', 'dist');
 
 export const authEnabled = Boolean(config.supabaseUrl && config.supabaseKey);
 // Persistence + Storage require the service_role key. Without it the API still

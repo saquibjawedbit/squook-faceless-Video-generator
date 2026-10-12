@@ -4,6 +4,8 @@ import Pricing from './pages/Pricing.jsx';
 import About from './pages/About.jsx';
 import SquookHome from './pages/SquookHome.jsx';
 import SquookEditor from './pages/SquookEditor.jsx';
+import WatchVideo from './pages/WatchVideo.jsx';
+import AuthGate from './components/AuthGate.jsx';
 import { useRoute } from './lib/router.js';
 
 export default function App() {
@@ -11,14 +13,16 @@ export default function App() {
 
   // The editor is a self-contained, full-viewport surface with its own
   // vignette + grain overlays, so it renders without the site Atmosphere.
-  if (route === 'editor') return <SquookEditor />;
+  if (route === 'editor') return <AuthGate><SquookEditor /></AuthGate>;
 
   let page;
   if (route === 'pricing') page = <Pricing />;
   else if (route === 'about') page = <About />;
   // `#/app` (the marketing "Start free" CTA) lands on the logged-in home /
   // composer; generating or opening anything from there routes to #/editor.
-  else if (route === 'app') page = <SquookHome />;
+  else if (route === 'app') page = <AuthGate><SquookHome /></AuthGate>;
+  // Landing-page videos (HyperFrames) open here — no editable timeline.
+  else if (route === 'watch') page = <AuthGate><WatchVideo /></AuthGate>;
   else page = <Landing />;
 
   return (

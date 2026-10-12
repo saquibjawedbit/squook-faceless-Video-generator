@@ -2,10 +2,25 @@
 // access (ALLOW_ANON=true) so no auth token is attached; projects belong to the
 // in-memory `anon` user. Override the host with VITE_API_BASE if the API isn't
 // on localhost:8787.
-const BASE = (import.meta.env.VITE_API_BASE || 'http://localhost:8787').replace(/\/$/, '');
+import { supabase, authToken } from './supabase.js';
+
+// Production builds talk to the same origin that served them (the API hosts
+// the built webapp); dev defaults to the local API.
+const BASE = (import.meta.env.VITE_API_BASE ?? (import.meta.env.PROD ? '' : 'http://localhost:8787')).replace(/\/$/, '');
+
+// The signed-in user's access token (fresh from Supabase if not cached yet).
+async function token() {
+  if (!supabase) return null;
+  return authToken() || (await supabase.auth.getSession()).data.session?.access_token || null;
+}
+
+async function withAuth(opts = {}) {
+  const t = await token();
+  return t ? { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${t}` } } : opts;
+}
 
 async function jfetch(path, opts) {
-  const res = await fetch(BASE + path, opts);
+  const res = await fetch(BASE + path, await withAuth(opts));
   if (!res.ok) {
     let msg = res.statusText || ('HTTP ' + res.status);
     let raw;
@@ -32,6 +47,15 @@ export function createProject({ prompt, format, duration, genre, voice, files, e
   if (editedScript?.scenes) { fd.append('editedScript', JSON.stringify(editedScript)); fd.append('assetPlan', JSON.stringify(assetPlan || [])); }
   return jfetch('/api/projects', { method: 'POST', body: fd });
 }
+
+// Landing page → video (HyperFrames). style: 'launch' (30–90s narrated film)
+// or 'motion' (≤15s motion teaser). Returns the project's publicView; poll it.
+// { left, globalLeft, limit } — null fields mean unlimited.
+export const getLandingQuota = () => jfetch('/api/landing/quota');
+
+export const createLandingVideo = ({ url, style, format, duration, notes }) =>
+  jfetch('/api/landing', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, style, format, duration, notes }) });
 
 // Generate the script for review before rendering → { script, asset_plan }.
 export const previewScript = ({ prompt, format, duration, genre, voice, uploadNames }) =>
@@ -61,7 +85,8 @@ export const getPlaybackUrl = (id) => jfetch(`/api/projects/${id}/url`).then((r)
 
 // Direct <img>/<video> src helpers — the routes accept the anon user by
 // unguessable project id, so no fetch/headers needed.
-export const thumbSrc = (id) => `${BASE}/api/projects/${id}/thumb`;
+// <img> can't send headers — pass the token as ?token= (the API accepts it).
+export const thumbSrc = (id) => `${BASE}/api/projects/${id}/thumb${authToken() ? `?token=${encodeURIComponent(authToken())}` : ''}`;
 export const apiBase = BASE;
 
 const json = (body, method = 'POST') => ({
@@ -88,7 +113,7 @@ export const clearChat = (id) => jfetch(`/api/projects/${id}/chat`, { method: 'D
 //   {type:'status', label} · {type:'delta', text} · {type:'done', reply,
 //   proposal, trace} · {type:'error', error}. Resolves when the stream ends.
 export async function directorChatStream(id, payload, onEvent, signal) {
-  const res = await fetch(`${BASE}/api/projects/${id}/chat/stream`, { ...json(payload), signal });
+  const res = await fetch(`${BASE}/api/projects/${id}/chat/stream`, await withAuth({ ...json(payload), signal }));
   if (!res.ok || !res.body) {
     let msg = res.statusText || ('HTTP ' + res.status);
     try { const j = await res.json(); if (j?.error) msg = j.error; } catch { /* non-JSON */ }
