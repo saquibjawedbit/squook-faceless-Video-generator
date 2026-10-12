@@ -64,6 +64,13 @@ export const config = {
   // LANDING_ONLY=true → only the landing-page feature is live; the prompt
   // pipeline routes (need Ollama + GPU) answer 403.
   landingOnly: String(process.env.LANDING_ONLY).toLowerCase() === 'true',
+  // Run the agent on Cloudflare Workers AI instead of Anthropic (see
+  // workersAiAdapter.js). Both token + account id must be set to enable it.
+  cfApiToken: process.env.CLOUDFLARE_API_TOKEN || '',
+  cfAccountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
+  cfModel: process.env.CLOUDFLARE_MODEL || '@cf/moonshotai/kimi-k2.6',
+  cfMaxTokens: Number(process.env.CLOUDFLARE_MAX_TOKENS || 16000),
+  cfThinking: String(process.env.CLOUDFLARE_THINKING ?? 'true').toLowerCase() !== 'false',
 };
 
 // Built webapp (webapp/dist) — served by the API when present, so a single

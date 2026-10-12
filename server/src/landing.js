@@ -3,6 +3,7 @@ import { copyFile, access, readFile, readdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { ARTIFACTS_DIR, HYPERFRAMES_DIR, REPO_ROOT, FINAL_VIDEO, FALLBACK_VIDEO, config } from './config.js';
 import { makeThumb, firstExisting, wait } from './pipeline.js';
+import { ensureAdapter } from './workersAiAdapter.js';
 
 // Landing page → video. One headless Claude Code session runs the repo's
 // `landing-page-video` skill, which drives HyperFrames (capture → storyboard →
@@ -98,11 +99,21 @@ function describeEvent(ev) {
 // server's own secrets (Supabase service key, stock-API keys, …) — only what
 // Claude Code, HyperFrames and the system need.
 const AGENT_ENV = /^(PATH|HOME|USER|LANG|LC_\w+|TERM|TMPDIR|TZ|SHELL|NODE_\w+|NPM_CONFIG_\w+|ANTHROPIC_\w+|CLAUDE_CODE_\w+|PUPPETEER_\w+|PRODUCER_\w+|HYPERFRAMES_\w+|HF_TTS_PROVIDER|GEMINI_API_KEY|XDG_\w+)$/;
-function agentEnv() {
-  return Object.fromEntries(Object.entries(process.env).filter(([k]) => AGENT_ENV.test(k)));
+function agentEnv(adapter) {
+  const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => AGENT_ENV.test(k)));
+  if (adapter) {
+    // Workers AI mode: talk to the loopback adapter with its throwaway key.
+    for (const k of Object.keys(env)) if (/^ANTHROPIC_/.test(k)) delete env[k];
+    Object.assign(env, {
+      ANTHROPIC_BASE_URL: adapter.baseUrl,
+      ANTHROPIC_API_KEY: adapter.key,
+      CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC: '1',
+    });
+  }
+  return env;
 }
 
-function runClaude(prompt, cwd, onLog, timeoutMs) {
+function runClaude(prompt, cwd, onLog, timeoutMs, adapter) {
   const args = [
     '-p', prompt,
     '--output-format', 'stream-json', '--verbose',
@@ -111,10 +122,10 @@ function runClaude(prompt, cwd, onLog, timeoutMs) {
     '--permission-mode', 'acceptEdits',
     '--allowedTools', 'Bash', 'Read', 'Write', 'Edit', 'Glob', 'Grep', 'Skill', 'Agent', 'TodoWrite', 'WebFetch', 'WebSearch',
   ];
-  if (config.landingModel) args.push('--model', config.landingModel);
+  if (config.landingModel && !adapter) args.push('--model', config.landingModel);
 
   return new Promise((resolvePromise, reject) => {
-    const child = spawn(config.claudeBin, args, { cwd, env: agentEnv(), stdio: ['ignore', 'pipe', 'pipe'] });
+    const child = spawn(config.claudeBin, args, { cwd, env: agentEnv(adapter), stdio: ['ignore', 'pipe', 'pipe'] });
     let buf = '';
     let result = null;
     const errTail = [];
@@ -207,7 +218,9 @@ export async function runLandingVideo(project, update) {
   }, 3000);
 
   try {
-    await runClaude(buildPrompt(opts, dir), REPO_ROOT, log, config.landingTimeoutMin * 60_000);
+    const adapter = await ensureAdapter();
+    if (adapter) log(`[agent] running on Cloudflare Workers AI (${config.cfModel})`);
+    await runClaude(buildPrompt(opts, dir), REPO_ROOT, log, config.landingTimeoutMin * 60_000, adapter);
   } finally {
     clearInterval(poll);
   }
