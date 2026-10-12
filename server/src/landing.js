@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
-import { copyFile, access, readFile, readdir } from 'node:fs/promises';
-import { join } from 'node:path';
+import { copyFile, access, readFile, readdir, stat } from 'node:fs/promises';
+import { join, resolve, sep } from 'node:path';
 import { ARTIFACTS_DIR, HYPERFRAMES_DIR, REPO_ROOT, FINAL_VIDEO, FALLBACK_VIDEO, config } from './config.js';
 import { makeThumb, firstExisting, wait } from './pipeline.js';
 import { ensureAdapter } from './workersAiAdapter.js';
@@ -227,8 +227,17 @@ export async function runLandingVideo(project, update) {
 
   const result = await readJson(join(dir, 'squook-result.json'));
   if (result && result.ok === false) throw new Error(result.error || 'the video agent reported a failure');
-  const video = join(dir, 'renders', 'video.mp4');
-  if (!(await exists(video))) throw new Error('the video agent finished without rendering renders/video.mp4');
+  // The agent may nest the project (e.g. my-video/renders/…); accept the path it
+  // reported as long as it stays inside the job folder.
+  const reported = result?.video ? resolve(dir, result.video) : null;
+  const candidates = [join(dir, 'renders', 'video.mp4'), ...(reported && reported.startsWith(dir + sep) ? [reported] : [])];
+  const video = await firstExisting(candidates);
+  if (!video) throw new Error('the video agent finished without rendering a video');
+  // Weaker models sometimes "succeed" by rendering the blank starter template.
+  // A real motion piece is hundreds of KB per second; a static title card is ~3KB/s.
+  const { size } = await stat(video);
+  const seconds = Number(result?.durationS) || opts.lengthS || 10;
+  if (size / seconds < 40 * 1024) throw new Error('the rendered video looks empty (blank template) — please try again');
 
   await copyFile(video, dest);
   const thumbPath = await makeThumb(dest, project.id);

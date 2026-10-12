@@ -87,7 +87,7 @@ function toChatMessages(body) {
       const calls = blocks.filter((b) => b.type === 'tool_use').map((b) => ({
         id: b.id, type: 'function', function: { name: b.name, arguments: JSON.stringify(b.input ?? {}) },
       }));
-      out.push({ role: 'assistant', content: text || null, ...(calls.length ? { tool_calls: calls } : {}) });
+      out.push({ role: 'assistant', content: text || '', ...(calls.length ? { tool_calls: calls } : {}) });
       continue;
     }
     // user turn: tool results become `tool` messages; the rest stays a user message.
