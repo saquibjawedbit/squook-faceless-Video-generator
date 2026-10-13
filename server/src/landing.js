@@ -163,7 +163,9 @@ function runClaude(prompt, cwd, onLog, timeoutMs, adapter) {
     child.on('close', (code, signal) => {
       clearTimeout(timer);
       if (code === 0) return resolvePromise(result);
-      reject(new Error(signal
+      reject(new Error(signal === 'SIGKILL'
+        ? 'video agent was killed (SIGKILL) — the server most likely ran out of memory'
+        : signal
         ? `video agent stopped (${signal})`
         : `video agent exited with code ${code}\n${errTail.join('\n')}`));
     });
