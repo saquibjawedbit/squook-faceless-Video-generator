@@ -1,0 +1,491 @@
+[button] Resources
+[a] Customers
+[a] Open app
+[span] The product development
+[span] system for teams and agents
+[span] The product development system for teams and agents
+[span] Purpose-built for planning and building products. Designed for the AI era.
+[span] New
+[span] Loops
+[span] New
+[span] Loops
+[span] My issues
+[button] Workspace
+[span] Initiatives
+[span] Projects
+[button] Favorites
+[span] Faster app launch
+[span] Agent tasks
+[span] Agent Insights
+[span] UI Refresh
+[span] DRV-8852
+[span] Faster app launch
+[span] / 84
+[h3] Faster app launch
+[p] Render UI before
+[code] vehicle_state
+[p] sync when minimum required state is present, instead of blocking on full refresh during iOS startup.
+[h4] Activity
+[span] Linear
+[span] created the issue via
+[span] Slack
+[span] on behalf of
+[span] Karri
+[span] 2min ago
+[span] Triage Intelligence
+[span] added the labels
+[span] Performance
+[span] and
+[span] iOS
+[span] 2min ago
+[span] karri
+[span] 4 min ago
+[span] Right now we show a spinner forever, which makes it look like the car disappeared...
+[span] jori
+[span] just now
+[span] @Linear can you take a stab at this?
+[span] Linear
+[span] connected by
+[span] Jori
+[span] 2 min ago
+[span] Changed 2 files
+[span] Draft PR awaiting your review
+[span] 2 min ago
+[span] Linear
+[span] moved from
+[span] Todo
+[span] In Progress
+[span] just now
+[span] Linear
+[span] Opus 5
+[p] Fix the dimmed ride rows that never reset and open a PR
+[span] DRV-364
+[span] added to context
+[span] Worked for 10 sec
+[p] Pushed and opened a draft PR. Removed dimmedIds — isItemDimmed now checks waitingStatusById directly.
+[span] Changed
+[span] files
+[span] Draft
+[span] Reset dimmed ride rows
+[span] master
+[span] ride/drv-364-reset-dimmed-rows
+[span] Preview
+[p] Reply…
+[span] Skills
+[span] Reviews
+[span] Revert
+[span] Properties
+[span] In Progress
+[span] Medium
+[span] Karri
+[span] Linear
+[span] Cycle 144
+[span] Labels
+[button] Performance
+[button] iOS
+[span] Releases
+[span] Linear App
+[span] 1.6881...
+[span] Jun 25
+[p] Powering the companies building the future
+[strong] A new species of product tool.
+[h2] Purpose-built for modern teams with AI workflows at its core, Linear sets a new standard for planning and building products.
+[span] Purpose-built
+[p] Linear is shaped by the practices and principles of world-class product teams.
+[span] Powered by agents
+[p] Designed for workflows shared by humans and agents. From drafting PRDs to pushing PRs.
+[span] Designed for speed
+[p] Reduces noise and restores momentum to help teams ship with high velocity and focus.
+[span] Fig 0.1
+[span] Purpose-built
+[p] Linear is shaped by the practices and principles of world-class product teams.
+[span] Fig 0.2
+[span] Powered by agents
+[p] Designed for workflows shared by humans and agents. From drafting PRDs to pushing PRs.
+[span] Fig 0.3
+[span] Designed for speed
+[p] Reduces noise and restores momentum to help teams ship with high velocity and focus.
+[h2] Intake
+[h2] and integrations
+[p] Automatically turn conversations and customer feedback into actionable issues that are instantly routed, labeled, and prioritized for the right team.
+[span] Learn more
+[span] Backlog
+[span] ENG-2085
+[span] Reduce UI flicker during autonomy...
+[span] ENG-2094
+[span] Add buffering for autonomy event streams
+[span] ENG-2092
+[span] Reduce startup delay caused by vehicle sync
+[span] ENG-2200
+[span] Fix delayed route updates during rerouting
+[span] Todo
+[span] ENG-926
+[span] Remove UI inconsistencies
+[span] Bug
+[span] Design
+[span] ENG-2088
+[span] TypeError: Cannot read properties
+[span] Bug
+[span] ENG-924
+[span] Upgrade to Claude Opus 5
+[span] ENG-1882
+[span] Optimize load times
+[span] Performance
+[span] In Progress
+[span] ENG-1487
+[span] Remove contentData from GraphQL API
+[span] 61039
+[span] MKT-1028
+[span] Launch page assets
+[span] Design
+[span] ENG-2187
+[span] Prevent duplicate ride requests on poor...
+[span] Bug
+[span] 62048
+[span] Done
+[span] ENG-2074
+[span] Clean up deprecated APIs...
+[span] API
+[span] 61002
+[span] ENG-1912
+[span] Reduce latency in autonomy st...
+[span] 61005
+[span] ENG-1951
+[span] Reduce ETA fluctuations durin...
+[span] 61202
+[span] ENG-1960
+[span] Improve fallback messaging
+[span] 61149
+[span] ENG-1991
+[span] Improve rider visibility into veh...
+[span] Thread
+[span] #product
+[span] didier
+[span] 11:32 AM
+[span] Has anyone been looking into the iOS startup performance issues?
+[span] lena
+[span] 11:32 AM
+[span] Anyone else noticing the iOS app feels slow to open if you haven’t used it in a bit?
+[span] didier
+[span] 11:32 AM
+[span] Yea, we’re still blocking initial render on a full vehicle_state sync every time…
+[span] andreas
+[span] 11:32 AM
+[span] Feels like we could render sooner and load the rest in the background. Probably also worth tracking startup timing so we know how often this happens!
+[span] @Linear
+[span] create issues and assign to me
+[span] Features
+[span] Linear Agent
+[span] Customer Requests
+[span] Triage
+[span] Linear Asks
+[h2] Planning
+[h2] and monitoring
+[p] Plan and navigate from idea to launch. Align your team with product initiatives, strategic roadmaps, and clear, up-to-date PRDs.
+[span] Learn more
+[span] MAR
+[span] APR
+[span] MAY
+[span] JUN
+[span] JUL
+[span] AUG
+[span] SEP
+[span] UI Refresh
+[span] Core screens
+[span] Polish
+[span] Split fares
+[span] Internal
+[span] Public Beta
+[span] Autonomy status clarity
+[span] Alpha
+[span] Autonomy telemetry reliability
+[span] Beta
+[span] Cycle time by agent
+[span] Oct 2025
+[span] Nov 2025
+[span] Dec 2025
+[span] Jan 2026
+[span] Feb 2026
+[span] Features
+[span] Projects
+[span] Documents
+[span] Pulse
+[span] Initiatives
+[span] Visual planning
+[span] Insights
+[h2] AI and
+[h2] automations
+[p] Build and deploy AI agents that work alongside you as teammates. Work on complex tasks together or delegate entire issues end-to-end.
+[span] Learn more
+[span] Linear
+[span] Opus 5
+[p] what are the three most important customer requests around permissions? add them to the Access Controls project
+[span] Worked for 8 sec
+[p] Three issues ranked by customer impact:
+[span] ENG-2298
+[span] Add granular project permissions
+[span] ENG-2647
+[span] Let guests access multiple teams
+[span] ENG-2352
+[span] Create custom roles with scoped access
+[p] I’ve added them to
+[span] Access Controls
+[span] Cursor
+[p] add retry handling for failed image uploads described in this issue
+[span] ENG-2844
+[span] added to context
+[span] Thinking…
+[span] Thinking…
+[span] Linear
+[span] Opus 5
+[p] Review today’s mobile triage and group the issues by what should happen next
+[span] Mobile Triage
+[span] added to context
+[span] Thinking…
+[span] Thinking…
+[span] ChatPRD
+[p] review this issue, draft complete offline mode requirements, and break the work into sub-issues
+[span] ENG-2521
+[span] added to context
+[span] Worked for 1 min
+[p] Updated the issue with requirements, open product decisions, and acceptance criteria.
+[span] ENG-2920
+[span] Define offline mode requirements
+[span] Features
+[span] Linear Agent
+[span] Coding sessions
+[span] Triage
+[span] Linear MCP
+[h2] Build, review,
+[h2] and ship
+[p] Streamline code reviews with clear diffs, better context, and fewer back-and-forth comments. Keep PRs moving without sacrificing quality.
+[span] Learn more
+[span] In Review
+[span] ENG-2498
+[span] Replace isFullySynced with a sync status
+[span] #54910
+[span] iOS
+[span] Oct 9
+[span] ENG-2380
+[span] Show a stale data banner while syncing
+[span] #55167
+[span] Reliability
+[span] Oct 9
+[span] ENG-2039
+[span] Pass sync status to the dashboard
+[span] #55209
+[span] Bug
+[span] Reliability
+[span] Oct 8
+[span] In Progress
+[span] ENG-2076
+[span] Reduce ETA jitter
+[span] #55423
+[span] Performance
+[span] Working…
+[span] Working…
+[span] Oct 6
+[span] ENG-2108
+[span] Handle GPS dropouts gracefully
+[span] #55409
+[span] Maps
+[span] Working…
+[span] Working…
+[span] Oct 2
+[span] ENG-2143
+[span] Optimize map tile loading on initial app open
+[span] Maps
+[span] Oct 7
+[span] ENG-2187
+[span] Prevent duplicate ride requests on poor networks
+[span] Bug
+[span] Working…
+[span] Working…
+[span] Oct 5
+[span] Todo
+[span] ENG-2254
+[span] Reduce unnecessary map re-rendering on home screen
+[span] Maps
+[span] Oct 10
+[span] ENG-2291
+[span] Clean up deprecated APIs used by the rider app
+[span] API
+[span] Oct 9
+[span] ENG-2327
+[span] Speed up CI pipelines for mobile builds
+[span] Performance
+[span] Oct 9
+[span] ENG-2358
+[span] Reduce flakiness in mobile UI tests
+[span] Reliability
+[span] Oct 4
+[span] kinetic-ios/src/screens/Home/HomeScreen.tsx
+[span] import
+[span] React
+[span] from
+[span] react
+[span] import
+[span] View
+[span] ActivityIndicator
+[span] from
+[span] react-native
+[span] import
+[span] useVehicleState
+[span] from
+[span] @hooks/useVehicleState
+[span] import
+[span] Dashboard
+[span] from
+[span] @components/Dashboard
+[span] export
+[span] const
+[span] HomeScreen
+[span] const
+[span] vehicleState
+[span] isFullySynced
+[span] useVehicleState
+[span] isFullySynced
+[span] ) {
+[span] return
+[span] ActivityIndicator
+[span] size
+[span] large
+[span] return
+[span] View
+[span] Dashboard
+[span] state
+[span] vehicleState
+[span] } />
+[span] View
+[span] import
+[span] React
+[span] from
+[span] react
+[span] import
+[span] View
+[span] ActivityIndicator
+[span] from
+[span] react-native
+[span] import
+[span] useVehicleState
+[span] SyncStatus
+[span] from
+[span] @hooks/useVehicleState
+[span] import
+[span] Dashboard
+[span] from
+[span] @components/Dashboard
+[span] export
+[span] const
+[span] HomeScreen
+[span] const
+[span] vehicleState
+[span] syncStatus
+[span] useVehicleState
+[span] syncStatus
+[span] ===
+[span] SyncStatus
+[span] PENDING
+[span] ) {
+[span] return
+[span] ActivityIndicator
+[span] size
+[span] large
+[span] return
+[span] View
+[span] Dashboard
+[span] state
+[span] vehicleState
+[span] syncStatus
+[span] syncStatus
+[span] View
+[textarea] import React from 'react'
+import { View, ActivityIndicator } from 'react-native'
+import { useVehicleState, SyncStatus } from '@hooks/useVehicleState'
+import { Dashboard } from '@components/Dashboard'
+
+export const HomeScreen = () => {
+  const { vehicleState, syncStatus } = useVehicleState()
+
+  if (syncStatus === SyncStatus.PENDING) {
+    return <ActivityIndicator size="large" />
+  }
+
+  return (
+    <View>
+      <Dashboard state={vehicleState} syncStatus={syncStatus} />
+    </View>
+  )
+}
+[span] export
+[span] const
+[span] CodeReview
+[span] Diff.Provider
+[span] Slow
+[span] Fragmented
+[span] HumanOnly
+[span] Frictionless
+[span] Integrated
+[span] AgentReady
+[span] Diff.Provider
+[span] Linear
+[span] Features
+[span] Issues
+[span] Git automations
+[span] Guided reviews
+[span] Cycles
+[span] Diffs
+[span] Releases
+[h2] Changelog
+[span] Stacked pull requests
+[span] Stacked pull requests are now displayed in Linear Diffs. Move through a stack and see review, CI, and merge status at a glance. Related PRs are grouped into a single collapsible row in Reviews, alongside their issue and project context.
+[span] Oct 8, 2026
+[span] New controls for Linear coding agent
+[span] Coding sessions are the shortest path from issue to diff. Assign a task to Linear Agent, and it works in a secure cloud environment to write and test the code before opening a pull request for review.
+[span] Sep 24, 2026
+[span] Loops for product management
+[span] Loops are recurring agent workflows for teams. They now respond to more workspace activity, including changes to initiatives, projects, and cycles. They can also edit Linear documents and post updates to Slack.
+[span] Sep 10, 2026
+[span] Priority inbox
+[span] An active workspace can create a significant amount of notifications each day, and until now your inbox treated them all the same. The new Priority tab separates what needs your attention from what can wait, so something like a review blocking a release never gets buried.
+[span] Sep 3, 2026
+[span] View all
+[blockquote] You’ll probably build a better product, just because of the craft that using Linear infuses on your brain.
+[span] Gabriel Peal
+[span] OpenAI
+[blockquote] Our speed is intense and Linear helps us be action biased.
+[span] Nik Koblov
+[span] Ramp
+[blockquote] Linear is excellent, just excellent. It has the right opinions for fast moving teams.
+[span] Kaz Nejatian
+[span] Opendoor
+[p] You’ll probably build a better product, just because of the craft that using Linear infuses on your brain.
+[span] Gabriel Peal
+[span] Staff Software Engineer, OpenAI
+[p] Our speed is intense and Linear helps us be action biased.
+[span] Nik Koblov
+[span] Head of Engineering, Ramp
+[p] Linear powers over
+[strong] 40,000
+[p] product teams. From ambitious startups to major enterprises.
+[span] Customer stories
+[h2] Built for the future. Available today.
+[a] Get started
+[a] Contact sales
+[a] Security
+[h3] Features
+[a] Coding Sessions
+[a] Customer Requests
+[a] Insights
+[a] Integrations
+[a] Changelog
+[a] Customers
+[h3] Resources
+[a] Download
+[span] Documentation
+[a] Developers
+[a] Enterprise
+[a] Startups
+[a] Contact us
+[a] Community
+[a] X (Twitter)

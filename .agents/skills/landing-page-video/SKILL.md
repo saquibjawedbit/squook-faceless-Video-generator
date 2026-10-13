@@ -46,8 +46,8 @@ person already has its answer here; state the decision in one line and keep goin
 - **Script copy:** none supplied → narration may be written freely (`VO_MODE`
   restructured). If `notes` contains quoted lines, use those lines verbatim.
 - **Sign-in:** run `npx hyperframes auth status` (exit 1 just means signed
-  out — not an error). Signed out → continue on local engines (Kokoro voice if
-  installed, otherwise no narration but keep music/SFX). Never stop for sign-in.
+  out — not an error). Signed out → continue on local engines (Kokoro voice,
+  `--provider kokoro`). Never stop for sign-in.
 - **Render approval:** submitting the request *is* the approval. Do **not** open
   Studio (`hyperframes preview`) and do not ask "render now, or what changes?" —
   run the quality gates, then render.
@@ -91,18 +91,27 @@ person already has its answer here; state the decision in one line and keep goin
    ```
 
    Update `message` and `angle` once capture has run.
-4. **Launch-specific:** capture with
+4. **Launch films are narrated — no exceptions.** Write `SCRIPT.md` (one
+   voice-over line per frame, paced to the frame) and run the workflow's audio
+   step with a local voice when signed out:
+   `node <SKILL_DIR>/scripts/audio.mjs … --provider kokoro` (add `--voice` if
+   `voice` was given). Before rendering, open `audio_meta.json` and confirm
+   `voices` is non-empty. If it's empty, fix the script/audio step and rerun
+   it; only if no voice engine works at all, write a failed result saying
+   "no voice engine available". Never ship a launch film without voice-over.
+   Do not set `music: none` for a launch film.
+5. **Launch-specific:** capture with
    `npx hyperframes capture "<url>" -o ./capture --json`. A non-zero exit,
    `ok: false`, or `capture/BLOCKED.md` is a hard stop → failed result (§ 5).
    Do not invent a site from nothing. Dispatch the per-frame workers in
    parallel as the workflow says.
-5. **Motion-specific:** the request is the webpage category — the URL *is* the
+6. **Motion-specific:** the request is the webpage category — the URL *is* the
    search result. Feature the real captured page (hero, product shot, headline)
    with UI motion: scroll, reveal, cursor, callouts, logo/headline lockup at the end.
-6. **Quality gates still apply** — `npx hyperframes lint`, `npx hyperframes check`,
+7. **Quality gates still apply** — `npx hyperframes lint`, `npx hyperframes check`,
    and the snapshot contact sheet. Fix failures in place (cheapest safe edit),
    rerun the failed gate. Look at the contact sheet yourself before rendering.
-7. **Render at high quality** to `renders/video.mp4`:
+8. **Render at high quality** to `renders/video.mp4`:
    - launch: `npx hyperframes render --skill=product-launch-video --quality high --output renders/video.mp4`
    - motion: `npx hyperframes render . --skill=motion-graphics -q high -o ./renders/video.mp4`
 

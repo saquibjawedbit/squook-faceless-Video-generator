@@ -1,0 +1,80 @@
+{
+  "files": [
+    {
+      "file": "Berkeley-Mono-Variable.woff2",
+      "family": "Berkeley Mono Variable",
+      "rawFamily": "Berkeley Mono Variable",
+      "subfamily": "Regular",
+      "postscript": "BerkeleyMonoVariable-Regular",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "wght",
+        "wdth",
+        "slnt"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "InterVariable-Italic.woff2",
+      "family": "Inter Variable",
+      "rawFamily": "Inter Variable",
+      "subfamily": "Italic",
+      "postscript": "InterVariableItalic",
+      "weight": 400,
+      "style": "italic",
+      "variationAxes": [
+        "opsz",
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    },
+    {
+      "file": "InterVariable.woff2",
+      "family": "Inter Variable",
+      "rawFamily": "Inter Variable",
+      "subfamily": "Regular",
+      "postscript": "InterVariable",
+      "weight": 400,
+      "style": "normal",
+      "variationAxes": [
+        "opsz",
+        "wght"
+      ],
+      "identified": true,
+      "isIcon": false
+    }
+  ],
+  "families": [
+    {
+      "family": "Berkeley Mono Variable",
+      "weights": [
+        400
+      ],
+      "variable": true,
+      "fileCount": 1,
+      "files": [
+        "Berkeley-Mono-Variable.woff2"
+      ]
+    },
+    {
+      "family": "Inter Variable",
+      "weights": [
+        400
+      ],
+      "variable": true,
+      "fileCount": 2,
+      "files": [
+        "InterVariable-Italic.woff2",
+        "InterVariable.woff2"
+      ]
+    }
+  ],
+  "unidentified": [],
+  "meta": {
+    "generatedAt": "2026-10-13T06:03:48.089Z",
+    "tool": "fontkit"
+  }
+}

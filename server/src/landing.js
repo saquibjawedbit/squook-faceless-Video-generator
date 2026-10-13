@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process';
 import { copyFile, access, readFile, readdir, stat } from 'node:fs/promises';
-import { join, resolve, sep } from 'node:path';
+import { join, resolve, sep, dirname } from 'node:path';
 import { ARTIFACTS_DIR, HYPERFRAMES_DIR, REPO_ROOT, FINAL_VIDEO, FALLBACK_VIDEO, config } from './config.js';
 import { makeThumb, firstExisting, wait } from './pipeline.js';
 import { ensureAdapter } from './workersAiAdapter.js';
@@ -240,6 +240,11 @@ export async function runLandingVideo(project, update) {
   const { size } = await stat(video);
   const seconds = Number(result?.durationS) || opts.lengthS || 10;
   if (size / seconds < 40 * 1024) throw new Error('the rendered video looks empty (blank template) — please try again');
+  // Launch films are narrated; a run that skipped the voice-over isn't done.
+  if (opts.style === 'launch') {
+    const meta = await readJson(join(dirname(dirname(video)), 'audio_meta.json'));
+    if (!meta?.voices?.length) throw new Error('the launch film came out without a voice-over — please try again');
+  }
 
   await copyFile(video, dest);
   const thumbPath = await makeThumb(dest, project.id);
