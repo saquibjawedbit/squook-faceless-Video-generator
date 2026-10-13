@@ -2,7 +2,7 @@ name: Deploy to Cloudflare
 
 # Builds the app image (root Dockerfile) and deploys the Worker + Container in
 # cloudflare/. Runs on GitHub's network, which handles the ~900 MB image push.
-# Needs repo secret CLOUDFLARE_API_TOKEN (Workers Scripts: Edit + Containers: Edit).
+# Needs repo secret CLOUDFLARE_DEPLOY_TOKEN (Workers Scripts: Edit + Containers: Edit).
 on:
   workflow_dispatch:
   push:
@@ -33,6 +33,6 @@ jobs:
       - name: Deploy
         working-directory: cloudflare
         env:
-          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_DEPLOY_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: 67857d99d183f958afc5d4b768a18044
         run: npx wrangler deploy
