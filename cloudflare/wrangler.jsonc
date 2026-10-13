@@ -1,0 +1,37 @@
+{
+  // Squook landing-page → video MVP on Cloudflare Containers.
+  // Deploy: `npx wrangler deploy` (needs Docker running to build ../Dockerfile).
+  // Secrets: SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY, CLOUDFLARE_API_TOKEN
+  //   → `npx wrangler secret put <NAME>`
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "squook",
+  "main": "src/index.js",
+  "compatibility_date": "2026-10-01",
+  "observability": { "enabled": true },
+  "containers": [
+    {
+      "class_name": "SquookApp",
+      "image": "../Dockerfile",
+      "image_build_context": "..",
+      // 2 vCPU / 8 GiB: Claude Code + headless Chrome rendering need the room.
+      "instance_type": "standard-3",
+      "max_instances": 1
+    }
+  ],
+  "durable_objects": {
+    "bindings": [{ "name": "SQUOOK", "class_name": "SquookApp" }]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["SquookApp"] }],
+  "vars": {
+    "SUPABASE_URL": "https://omupuwpmywcuzsykabbk.supabase.co",
+    "SUPABASE_BUCKET": "videos",
+    "CLOUDFLARE_ACCOUNT_ID": "67857d99d183f958afc5d4b768a18044",
+    "CLOUDFLARE_MODEL": "@cf/moonshotai/kimi-k2.6",
+    "LANDING_ONLY": "true",
+    "LANDING_DAILY_LIMIT": "3",
+    "LANDING_GLOBAL_DAILY_LIMIT": "20",
+    "LANDING_TIMEOUT_MIN": "60",
+    "PIPELINE_MODE": "real",
+    "ALLOW_ANON": "false"
+  }
+}

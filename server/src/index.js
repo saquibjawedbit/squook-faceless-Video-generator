@@ -5,10 +5,10 @@ import { createReadStream } from 'node:fs';
 import { stat, unlink } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 import { config, authEnabled, persistenceEnabled, UPLOADS_DIR, WEBAPP_DIST } from './config.js';
-import { existsSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { requireAuth } from './auth.js';
 import { ensureBucket } from './supabaseAdmin.js';
-import { enqueueProject, enqueueRerender, enqueueRevoice, enqueueLanding } from './jobs.js';
+import { enqueueProject, enqueueRerender, enqueueRevoice, enqueueLanding, isBusy } from './jobs.js';
 import { LANDING_STAGES, validateLandingUrl, landingOptions } from './landing.js';
 import { countLandingSince, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
 import { runDirectorChat, runDirectorChatStream } from './directorAgent.js';
@@ -47,7 +47,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' })); // edited IRs with word-level captions get big
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, pipelineMode: config.pipelineMode, authEnabled, persistenceEnabled, landingOnly: config.landingOnly, stages: STAGES, landingStages: LANDING_STAGES });
+  res.json({ ok: true, busy: isBusy(), pipelineMode: config.pipelineMode, authEnabled, persistenceEnabled, landingOnly: config.landingOnly, stages: STAGES, landingStages: LANDING_STAGES });
 });
 
 // LANDING_ONLY deployments: the prompt pipeline (Ollama + GPU) isn't available.
@@ -527,7 +527,17 @@ app.use((err, _req, res, _next) => {
 
 // Serve the built webapp from the same origin when it's been built (the
 // deployed image does this). The app uses a hash router, so static files suffice.
-if (existsSync(WEBAPP_DIST)) app.use(express.static(WEBAPP_DIST, { index: 'index.html' }));
+// The page gets its public settings at serve time (window.__SQUOOK__), so one
+// image works on any host without rebuilding the bundle.
+if (existsSync(WEBAPP_DIST)) {
+  const html = readFileSync(resolve(WEBAPP_DIST, 'index.html'), 'utf8');
+  const runtime = JSON.stringify({
+    supabaseUrl: config.supabaseUrl, supabaseAnonKey: config.supabaseKey, landingOnly: config.landingOnly,
+  }).replace(/</g, '\\u003c');
+  const page = html.replace('</head>', `<script>window.__SQUOOK__=${runtime}</script></head>`);
+  app.get(['/', '/index.html'], (_req, res) => res.type('html').send(page));
+  app.use(express.static(WEBAPP_DIST, { index: false }));
+}
 
 ensureBucket().finally(async () => {
   // Fail over any jobs orphaned by a previous process (the queue was in-memory).

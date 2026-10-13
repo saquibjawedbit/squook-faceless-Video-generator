@@ -3,8 +3,10 @@ import { createClient } from '@supabase/supabase-js';
 
 // Supabase auth for the webapp. Without VITE_SUPABASE_URL / _ANON_KEY the app
 // runs signed-out against an ALLOW_ANON dev API (supabase === null).
-const url = import.meta.env.VITE_SUPABASE_URL;
-const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// Served-at-runtime settings (window.__SQUOOK__) win over build-time env.
+const runtime = (typeof window !== 'undefined' && window.__SQUOOK__) || {};
+const url = runtime.supabaseUrl || import.meta.env.VITE_SUPABASE_URL;
+const key = runtime.supabaseAnonKey || import.meta.env.VITE_SUPABASE_ANON_KEY;
 export const supabase = url && key ? createClient(url, key) : null;
 
 // The current access token, kept in sync so api.js can attach it synchronously

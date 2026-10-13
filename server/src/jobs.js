@@ -40,6 +40,10 @@ export async function enqueueLanding({ userId, url, style, format, lengthS, note
   return p;
 }
 
+// True while any job is queued or running — the Cloudflare container wrapper
+// polls this (via /api/health) so it never sleeps mid-render.
+export const isBusy = () => working || landingWorking || queue.length > 0 || landingQueue.length > 0;
+
 async function drainLanding() {
   if (landingWorking) return;
   landingWorking = true;

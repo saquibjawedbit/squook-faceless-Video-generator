@@ -22,6 +22,11 @@ function bearer(req) {
 export async function requireAuth(req, res, next) {
   const token = bearer(req);
 
+  // A production server without Supabase config must fail closed — otherwise a
+  // missing secret would silently open the API to anonymous use.
+  if (!authEnabled && process.env.NODE_ENV === 'production' && !config.allowAnon) {
+    return res.status(503).json({ error: 'Sign-in is not configured on this server yet' });
+  }
   if (!authEnabled || (config.allowAnon && !token)) {
     req.user = { id: 'anon', email: 'anon@local' };
     return next();

@@ -10,7 +10,7 @@ import { useSession, signOut } from '../lib/supabase.js';
 
 // Public MVP builds ship only the landing-page feature (the prompt pipeline
 // needs Ollama + a GPU): VITE_LANDING_ONLY=true.
-const LANDING_ONLY = import.meta.env.VITE_LANDING_ONLY === 'true';
+const LANDING_ONLY = window.__SQUOOK__?.landingOnly ?? import.meta.env.VITE_LANDING_ONLY === 'true';
 
 /**
  * Squook Home — a faithful React port of `Squook Home.dc.html`: the logged-in
