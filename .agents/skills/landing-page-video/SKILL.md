@@ -110,9 +110,22 @@ person already has its answer here; state the decision in one line and keep goin
 6. **Motion-specific:** the request is the webpage category — the URL *is* the
    search result. Feature the real captured page (hero, product shot, headline)
    with UI motion: scroll, reveal, cursor, callouts, logo/headline lockup at the end.
-7. **Quality gates still apply** — `npx hyperframes lint`, `npx hyperframes check`,
-   and the snapshot contact sheet. Fix failures in place (cheapest safe edit),
-   rerun the failed gate. Look at the contact sheet yourself before rendering.
+7. **Quality gates still apply, but fix in parallel and stop early** —
+   `npx hyperframes lint`, `npx hyperframes check`, and the snapshot contact
+   sheet. Speed rules (this run is time-boxed; a person is waiting):
+   - Run `lint` and `check` **once** on the assembled project and group every
+     finding by frame. Then **re-dispatch one frame worker per failing frame,
+     all at once in parallel**, each with its frame's findings (the worker
+     role's *Retry* path). Do not fix frames one by one yourself — only a
+     one-line edit (a typo'd id, a missing attribute) is cheaper to do inline.
+   - Only **errors** block the render. Contrast and other **warnings** are fixed
+     only if the same parallel re-dispatch already touches that frame;
+     otherwise note them and move on.
+   - At most **2** fix rounds. If errors remain after round 2, fall back to the
+     simplest working version of that frame (static layout + fade-in) and
+     render.
+   - Take the contact sheet **once**, after the last fix round, and look at it
+     yourself before rendering.
 8. **Render at high quality** to `renders/video.mp4`:
    - launch: `npx hyperframes render --skill=product-launch-video --quality high --output renders/video.mp4`
    - motion: `npx hyperframes render . --skill=motion-graphics -q high -o ./renders/video.mp4`

@@ -188,7 +188,15 @@ async function capturedTitle(dir) {
  */
 export async function runLandingVideo(project, update) {
   const dest = join(ARTIFACTS_DIR, `${project.id}.mp4`);
-  const log = (line) => update({ log: line });
+  // Elapsed-time prefix + container stdout, so a run's full timeline can be
+  // read from the logs (the project keeps only the last few lines).
+  const t0 = Date.now();
+  const log = (line) => {
+    const s = Math.round((Date.now() - t0) / 1000);
+    const stamped = `[${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}] ${line}`;
+    console.log(`[landing ${project.id.slice(0, 8)}] ${stamped}`);
+    update({ log: stamped });
+  };
   const opts = project.landing;
 
   if (config.pipelineMode === 'mock') {
