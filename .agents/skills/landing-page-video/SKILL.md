@@ -61,6 +61,8 @@ person already has its answer here; state the decision in one line and keep goin
 1. **Install / refresh the workflow** (from the repo root):
    `npx hyperframes skills update product-launch-video` (or `motion-graphics`).
    If it fails, write a failed result with its stderr (§ 5) and stop.
+   **Skip this step when `HF_SKILLS_PREINSTALLED=1`** (the deployed image
+   bakes the skills in; refreshing re-downloads the whole repo for nothing).
 2. **Open the workflow skill** (`/product-launch-video` or `/motion-graphics`)
    and follow it step by step, honoring every gate, with the answers from § 2.
    Use `project_dir` wherever the workflow says `videos/<project>` /

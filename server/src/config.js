@@ -70,7 +70,9 @@ export const config = {
   cfAccountId: process.env.CLOUDFLARE_ACCOUNT_ID || '',
   cfModel: process.env.CLOUDFLARE_MODEL || '@cf/moonshotai/kimi-k2.6',
   cfMaxTokens: Number(process.env.CLOUDFLARE_MAX_TOKENS || 16000),
-  cfThinking: String(process.env.CLOUDFLARE_THINKING ?? 'true').toLowerCase() !== 'false',
+  // Off by default: on Kimi K2.6 thinking makes code-writing calls 2–5x slower
+  // (benchmarked 2026-10-15) with no gain in tool-use accuracy.
+  cfThinking: String(process.env.CLOUDFLARE_THINKING ?? 'false').toLowerCase() === 'true',
 };
 
 // Built webapp (webapp/dist) — served by the API when present, so a single

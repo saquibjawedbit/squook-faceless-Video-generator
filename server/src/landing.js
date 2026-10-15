@@ -98,7 +98,7 @@ function describeEvent(ev) {
 // The agent reads pages we don't control and has a shell, so it never sees the
 // server's own secrets (Supabase service key, stock-API keys, …) — only what
 // Claude Code, HyperFrames and the system need.
-const AGENT_ENV = /^(PATH|HOME|USER|LANG|LC_\w+|TERM|TMPDIR|TZ|SHELL|NODE_\w+|NPM_CONFIG_\w+|ANTHROPIC_\w+|CLAUDE_CODE_\w+|PUPPETEER_\w+|PRODUCER_\w+|HYPERFRAMES_\w+|HF_TTS_PROVIDER|GEMINI_API_KEY|XDG_\w+)$/;
+const AGENT_ENV = /^(PATH|HOME|USER|LANG|LC_\w+|TERM|TMPDIR|TZ|SHELL|NODE_\w+|NPM_CONFIG_\w+|ANTHROPIC_\w+|CLAUDE_CODE_\w+|PUPPETEER_\w+|PRODUCER_\w+|HYPERFRAMES_\w+|HF_TTS_PROVIDER|HF_SKILLS_PREINSTALLED|GEMINI_API_KEY|XDG_\w+)$/;
 function agentEnv(adapter) {
   const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => AGENT_ENV.test(k)));
   if (adapter) {

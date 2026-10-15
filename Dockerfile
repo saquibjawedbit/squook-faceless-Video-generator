@@ -45,6 +45,8 @@ COPY --chown=node .agents/ .agents/
 COPY --chown=node .claude/skills/ .claude/skills/
 COPY --from=web --chown=node /web/dist webapp/dist
 
-ENV NODE_ENV=production PIPELINE_MODE=real LANDING_ONLY=true PORT=8787
+# Skills are baked in above (skip the per-run refresh); local Kokoro voice.
+ENV NODE_ENV=production PIPELINE_MODE=real LANDING_ONLY=true PORT=8787 \
+    HF_SKILLS_PREINSTALLED=1 HF_TTS_PROVIDER=kokoro
 EXPOSE 8787
 CMD ["node", "server/src/index.js"]

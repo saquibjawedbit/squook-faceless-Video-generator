@@ -13,8 +13,8 @@
       "class_name": "SquookApp",
       "image": "../Dockerfile",
       "image_build_context": "..",
-      // 2 vCPU / 8 GiB: Claude Code + headless Chrome rendering need the room.
-      "instance_type": "standard-3",
+      // 4 vCPU / 12 GiB: Claude Code + headless Chrome; more cores = faster renders.
+      "instance_type": "standard-4",
       "max_instances": 1
     }
   ],
@@ -30,7 +30,7 @@
     "LANDING_ONLY": "true",
     "LANDING_DAILY_LIMIT": "3",
     "LANDING_GLOBAL_DAILY_LIMIT": "20",
-    "LANDING_TIMEOUT_MIN": "60",
+    "LANDING_TIMEOUT_MIN": "90",
     "PIPELINE_MODE": "real",
     "ALLOW_ANON": "false"
   }
