@@ -61,6 +61,9 @@ export const config = {
   // per 24h (caps the Claude bill). 0 = unlimited.
   landingDailyLimit: Number(process.env.LANDING_DAILY_LIMIT || 0),
   landingGlobalDailyLimit: Number(process.env.LANDING_GLOBAL_DAILY_LIMIT || 0),
+  // Comma-separated emails with no per-user daily limit (the founder's test account).
+  landingUnlimitedEmails: (process.env.LANDING_UNLIMITED_EMAILS || '')
+    .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
   // LANDING_ONLY=true → only the landing-page feature is live; the prompt
   // pipeline routes (need Ollama + GPU) answer 403.
   landingOnly: String(process.env.LANDING_ONLY).toLowerCase() === 'true',

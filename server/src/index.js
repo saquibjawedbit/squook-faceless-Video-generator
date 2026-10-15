@@ -133,7 +133,7 @@ app.post('/api/landing', requireAuth, async (req, res) => {
   let url;
   try { url = validateLandingUrl(req.body?.url); }
   catch (e) { return res.status(400).json({ error: e.message }); }
-  const quota = await landingQuota(req.user.id).catch((e) => ({ error: e.message }));
+  const quota = await landingQuota(req.user).catch((e) => ({ error: e.message }));
   if (quota.error) return res.status(503).json({ error: quota.error });
   if (quota.globalLeft === 0) return res.status(429).json({ error: 'We’ve hit today’s video limit — please try again tomorrow.' });
   if (quota.left === 0) return res.status(429).json({ error: `You’ve used your ${config.landingDailyLimit} videos for today — come back tomorrow.` });
@@ -143,18 +143,20 @@ app.post('/api/landing', requireAuth, async (req, res) => {
 });
 
 // Remaining landing-page videos in the last 24h (null = unlimited).
-async function landingQuota(userId) {
+async function landingQuota(user) {
   const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
   const left = (limit, used) => (limit > 0 ? Math.max(0, limit - used) : null);
+  const unlimited = config.landingUnlimitedEmails.includes(String(user.email || '').toLowerCase());
+  const userLimit = unlimited ? 0 : config.landingDailyLimit;
   return {
-    left: left(config.landingDailyLimit, config.landingDailyLimit ? await countLandingSince(userId, since) : 0),
+    left: left(userLimit, userLimit ? await countLandingSince(user.id, since) : 0),
     globalLeft: left(config.landingGlobalDailyLimit, config.landingGlobalDailyLimit ? await countLandingSince(null, since) : 0),
-    limit: config.landingDailyLimit || null,
+    limit: userLimit || null,
   };
 }
 
 app.get('/api/landing/quota', requireAuth, async (req, res) => {
-  try { res.json(await landingQuota(req.user.id)); }
+  try { res.json(await landingQuota(req.user)); }
   catch (e) { res.status(503).json({ error: String(e.message || e) }); }
 });
 

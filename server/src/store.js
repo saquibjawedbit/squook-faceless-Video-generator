@@ -155,18 +155,21 @@ export async function getProject(id) {
 }
 
 // How many landing-page videos were started since `since` (ISO) — by one user,
-// or by everyone when userId is null. Failed runs count: they still cost.
+// or by everyone when userId is null. Failed runs count: they still cost —
+// except ones a server restart killed, which are our fault, not the user's.
+const RESTART_ERROR = 'interrupted by a server restart';
 export async function countLandingSince(userId, since) {
   if (persistenceEnabled) {
     let q = admin.from('projects').select('id', { count: 'exact', head: true })
-      .eq('genre', 'landing').gte('created_at', since);
+      .eq('genre', 'landing').gte('created_at', since)
+      .or(`error.is.null,error.neq."${RESTART_ERROR}"`);
     if (userId) q = q.eq('user_id', userId);
     const { count, error } = await q;
     if (error) throw new Error(`quota check failed: ${error.message}`);
     return count || 0;
   }
   return [...mem.values()].filter((p) =>
-    p.genre === 'landing' && p.createdAt >= since && (!userId || p.userId === userId)).length;
+    p.genre === 'landing' && p.createdAt >= since && p.error !== RESTART_ERROR && (!userId || p.userId === userId)).length;
 }
 
 export async function listProjects(userId) {
