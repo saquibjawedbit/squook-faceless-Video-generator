@@ -443,6 +443,9 @@ export default function SquookHome({ userName }) {
           <div style={css('margin-bottom:24px')}>
             <div style={{ fontFamily: mono, fontSize: 12, letterSpacing: '0.16em', color: 'var(--accent)' }}>WELCOME BACK</div>
             <h1 style={{ margin: '12px 0 0', fontFamily: grotesk, fontWeight: 800, fontSize: 'clamp(30px,4vw,46px)', lineHeight: 1.04, letterSpacing: '-0.03em' }}>Good to see you, {name}.<br /><span style={{ color: 'rgba(244,243,240,0.5)' }}>{LANDING_ONLY ? 'Paste your landing page, get a launch video.' : 'What are we making today?'}</span></h1>
+            <a href="#/fast" style={css('display:inline-flex;align-items:center;gap:8px;margin-top:16px;border-radius:999px;padding:8px 16px;font-size:13.5px;font-weight:600;text-decoration:none;color:#F4F3F0;border:1px solid var(--accent);background:rgba(255,107,53,0.10)')}>
+              New: Fast mode — a video in under a minute, from a link or a topic →
+            </a>
           </div>
 
           {/* composer mode: describe it, or paste a landing page */}

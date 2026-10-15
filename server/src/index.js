@@ -10,7 +10,9 @@ import { requireAuth } from './auth.js';
 import { ensureBucket } from './supabaseAdmin.js';
 import { enqueueProject, enqueueRerender, enqueueRevoice, enqueueLanding, isBusy } from './jobs.js';
 import { LANDING_STAGES, validateLandingUrl, landingOptions } from './landing.js';
-import { countLandingSince, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
+import { countLandingSince, createProject, updateProject, finishProject, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
+import { generateFastVideo, renderFastMp4, fastBusy } from './fastVideo.js';
+import { makeThumb } from './pipeline.js';
 import { runDirectorChat, runDirectorChatStream } from './directorAgent.js';
 import { appendChat, readChat, clearChat } from './chatStore.js';
 import { STAGES, previewScript } from './pipeline.js';
@@ -47,7 +49,7 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' })); // edited IRs with word-level captions get big
 
 app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, busy: isBusy(), pipelineMode: config.pipelineMode, authEnabled, persistenceEnabled, landingOnly: config.landingOnly, stages: STAGES, landingStages: LANDING_STAGES });
+  res.json({ ok: true, busy: isBusy() || fastBusy(), pipelineMode: config.pipelineMode, authEnabled, persistenceEnabled, landingOnly: config.landingOnly, stages: STAGES, landingStages: LANDING_STAGES });
 });
 
 // LANDING_ONLY deployments: the prompt pipeline (Ollama + GPU) isn't available.
@@ -86,7 +88,7 @@ async function streamFile(req, res, filePath, mime) {
 const ASSET_MIME = {
   '.mp4': 'video/mp4', '.webm': 'video/webm', '.mp3': 'audio/mpeg', '.wav': 'audio/wav',
   '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.png': 'image/png', '.webp': 'image/webp',
-  '.gif': 'image/gif', '.json': 'application/json',
+  '.gif': 'image/gif', '.json': 'application/json', '.svg': 'image/svg+xml',
 };
 
 // Create a project + kick off generation (optionally with uploaded footage).
@@ -154,6 +156,54 @@ async function landingQuota(user) {
     limit: userLimit || null,
   };
 }
+
+// Fast mode: one model call → template-based video that plays in the browser
+// within seconds; the MP4 renders in the background. Input: a URL or a topic.
+app.post('/api/fast', requireAuth, async (req, res) => {
+  if (persistenceEnabled && req.user.id === 'anon') {
+    return res.status(401).json({ error: 'Sign in to save video projects' });
+  }
+  const b = req.body || {};
+  let url = null;
+  const topic = String(b.topic || '').trim().slice(0, 1000);
+  if (b.url) {
+    try { url = validateLandingUrl(b.url); }
+    catch (e) { return res.status(400).json({ error: e.message }); }
+  } else if (!topic) return res.status(400).json({ error: 'Paste a link or describe a topic' });
+  const quota = await landingQuota(req.user).catch((e) => ({ error: e.message }));
+  if (quota.error) return res.status(503).json({ error: quota.error });
+  if (quota.globalLeft === 0) return res.status(429).json({ error: 'We’ve hit today’s video limit — please try again tomorrow.' });
+  if (quota.left === 0) return res.status(429).json({ error: `You’ve used your ${config.landingDailyLimit} videos for today — come back tomorrow.` });
+
+  const style = b.style === 'explainer' ? 'explainer' : 'promo';
+  const format = ['16:9', '9:16', '1:1'].includes(b.format) ? b.format : '16:9';
+  const lengthS = Math.max(15, Math.min(180, Math.round(Number(b.duration) || 30)));
+  const p = await createProject({
+    userId: req.user.id, prompt: url || topic,
+    title: url ? new URL(url).hostname.replace(/^www\./, '') : topic.slice(0, 60),
+    format, genre: 'fast', duration: String(lengthS),
+  });
+  p.log = [];
+  const log = (line) => { (p.log ||= []).push(line); console.log(`[fast ${p.id.slice(0, 8)}] ${line}`); };
+  await updateProject(p.id, { status: 'running', stage: 'writing', progress: 10 });
+  let ir;
+  try {
+    ir = await generateFastVideo(p, { url, topic, style, look: String(b.look || ''), format, lengthS, notes: String(b.notes || '').slice(0, 1000) }, log);
+  } catch (e) {
+    await updateProject(p.id, { status: 'failed', error: String(e.message || e) });
+    return res.status(502).json({ error: String(e.message || e) });
+  }
+  await updateProject(p.id, { status: 'running', stage: 'rendering', progress: 60, title: ir.metadata.title });
+  res.status(201).json({ project: publicView(p), ir });
+
+  // MP4 in the background; the browser already plays the preview.
+  renderFastMp4(p.id, () => {})
+    .then(async (videoPath) => finishProject(p.id, {
+      videoPath, thumbPath: await makeThumb(videoPath, p.id).catch(() => null),
+      title: ir.metadata.title, durationS: ir.metadata.total_duration_seconds,
+    }))
+    .catch((e) => { log(`render failed: ${e.message}`); updateProject(p.id, { status: 'failed', error: `MP4 render failed: ${e.message}` }); });
+});
 
 app.get('/api/landing/quota', requireAuth, async (req, res) => {
   try { res.json(await landingQuota(req.user)); }

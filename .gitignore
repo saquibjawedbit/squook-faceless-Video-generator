@@ -14,6 +14,8 @@
 *.ogg
 *.flac
 *.opus
+# Fast mode's built-in music beds + sound effects ship with the app.
+!server/media/*.mp3
 
 # Generated pipeline output (videos, audio, IR assets)
 renderer/out/

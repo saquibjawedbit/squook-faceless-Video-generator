@@ -3,14 +3,31 @@ import {SceneRenderer} from './SceneRenderer';
 import type {RenderIR, Transition} from './ir';
 import {asset, transitionFrames} from './ir';
 import {ThemeProvider, themeOf} from './theme';
+import type {Theme} from './theme';
+import {StyleProvider, styleOf} from './styles';
+import type {StylePack} from './styles';
+import {BrandFont} from './templates/BrandFont';
+
+// With a style pack, the legacy theme (used by shaders, captions and the older
+// graphics) is derived from the pack so every layer agrees on colours/fonts.
+const themeFromPack = (base: Theme, s: StylePack): Theme => ({
+  ...base,
+  palette: {bg: s.palette.bg, bg_light: s.palette.surface, accent: s.palette.accent, accent2: s.palette.accent2, text: s.palette.text},
+  font: {...base.font, family: s.font.body, caption_size: s.caption.size},
+});
 
 // Each scene's sequence extends by its own transition_out frames into the
 // next scene; the next scene (later in DOM = on top) animates in over that
 // overlap, driven by the previous scene's transition.
 export const MainVideo: React.FC<{ir: RenderIR}> = ({ir}) => {
   const {fps, total_frames: totalFrames, music} = ir.metadata;
+  const pack = styleOf(ir);
+  const theme = pack ? themeFromPack(themeOf(ir), pack) : themeOf(ir);
+  const {brand_font: brandFont, brand_font_css: brandFontCss} = ir.metadata as {brand_font?: string; brand_font_css?: string};
   return (
-    <ThemeProvider value={themeOf(ir)}>
+    <StyleProvider value={pack}>
+    <ThemeProvider value={theme}>
+    {brandFont ? <BrandFont family={brandFont} href={brandFontCss} /> : null}
     <AbsoluteFill style={{backgroundColor: '#000'}}>
       {music ? (
         <Audio
@@ -50,5 +67,6 @@ export const MainVideo: React.FC<{ir: RenderIR}> = ({ir}) => {
       })}
     </AbsoluteFill>
     </ThemeProvider>
+    </StyleProvider>
   );
 };

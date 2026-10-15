@@ -25,7 +25,7 @@ function publicView(p) {
     format: p.format,
     // 'landing' = made from a landing page with HyperFrames (no editable IR;
     // the webapp opens it in the watch view instead of the editor).
-    kind: p.genre === 'landing' ? 'landing' : 'prompt',
+    kind: p.genre === 'landing' || p.genre === 'fast' ? p.genre : 'prompt',
     status: p.status,
     stage: p.stage,
     progress: p.progress,
@@ -161,7 +161,7 @@ const RESTART_ERROR = 'interrupted by a server restart';
 export async function countLandingSince(userId, since) {
   if (persistenceEnabled) {
     let q = admin.from('projects').select('id', { count: 'exact', head: true })
-      .eq('genre', 'landing').gte('created_at', since)
+      .in('genre', ['landing', 'fast']).gte('created_at', since)
       .or(`error.is.null,error.neq."${RESTART_ERROR}"`);
     if (userId) q = q.eq('user_id', userId);
     const { count, error } = await q;
@@ -169,7 +169,7 @@ export async function countLandingSince(userId, since) {
     return count || 0;
   }
   return [...mem.values()].filter((p) =>
-    p.genre === 'landing' && p.createdAt >= since && p.error !== RESTART_ERROR && (!userId || p.userId === userId)).length;
+    ['landing', 'fast'].includes(p.genre) && p.createdAt >= since && p.error !== RESTART_ERROR && (!userId || p.userId === userId)).length;
 }
 
 export async function listProjects(userId) {

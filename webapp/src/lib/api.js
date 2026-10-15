@@ -57,6 +57,12 @@ export const createLandingVideo = ({ url, style, format, duration, notes }) =>
   jfetch('/api/landing', { method: 'POST', headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url, style, format, duration, notes }) });
 
+// Fast mode: a link or a topic → { project, ir } in seconds. The IR plays in the
+// browser right away; the MP4 renders in the background (poll the project).
+export const createFastVideo = ({ url, topic, style, look, format, duration, notes }) =>
+  jfetch('/api/fast', { method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url, topic, style, look, format, duration, notes }) });
+
 // Generate the script for review before rendering → { script, asset_plan }.
 export const previewScript = ({ prompt, format, duration, genre, voice, uploadNames }) =>
   jfetch('/api/script/preview', { method: 'POST', headers: { 'Content-Type': 'application/json' },

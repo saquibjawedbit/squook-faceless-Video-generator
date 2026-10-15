@@ -92,7 +92,7 @@ const motionColor = (v) => {
 
 // Clamp every number, cap counts, whitelist kinds/colors — a malformed spec
 // yields fewer shapes or null, never anything that can crash the renderer.
-function sanitizeMotion(rawShapes, rawBg) {
+export function sanitizeMotion(rawShapes, rawBg) {
   const shapes = [];
   for (const s of (Array.isArray(rawShapes) ? rawShapes : []).slice(0, 48)) {
     if (!s || typeof s !== 'object' || !MOTION_KINDS.has(s.kind)) continue;

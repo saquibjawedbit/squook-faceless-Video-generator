@@ -3,9 +3,9 @@
 // logic — duration_s is the source of truth, frames are derived.
 
 const LAYER_TYPES = new Set([
-  'video', 'image', 'solid', 'audio', 'text', 'graphic', 'captions', 'lottie', 'shader', 'motion',
+  'video', 'image', 'solid', 'audio', 'text', 'graphic', 'captions', 'lottie', 'shader', 'motion', 'template',
 ]);
-const TRANSITIONS = new Set(['cut', 'crossfade', 'slide']);
+const TRANSITIONS = new Set(['cut', 'crossfade', 'slide', 'zoom', 'wipe', 'whip', 'blur']);
 
 // Recompute every derived timing field from scene duration_s values.
 // Must be a NO-OP on a pristine IR produced by the Python builder.
@@ -83,6 +83,15 @@ export function referencedPaths(ir) {
     // Graphic icon_row fetches per-icon SVGs into params.icon_srcs — snapshot
     // them too, or a re-render loses the icons.
     for (const iconSrc of l.params?.icon_srcs || []) add(iconSrc);
+    // Template scenes reference images/icons/logos inside their props.
+    if (l.type === 'template' && l.props) {
+      const walk = (v) => {
+        if (typeof v === 'string') { if (/^assets\//.test(v)) add(v); }
+        else if (Array.isArray(v)) v.forEach(walk);
+        else if (v && typeof v === 'object') Object.values(v).forEach(walk);
+      };
+      walk(l.props);
+    }
   }
   return [...out];
 }

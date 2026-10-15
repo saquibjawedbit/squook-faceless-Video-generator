@@ -6,7 +6,8 @@
 .playwright-mcp
 automation
 guide_creator_flow
-renderer
+renderer/public
+renderer/out
 ui
 webapp/dist
 server/artifacts

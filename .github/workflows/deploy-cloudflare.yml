@@ -11,6 +11,7 @@ on:
       - 'Dockerfile'
       - 'server/**'
       - 'webapp/**'
+      - 'renderer/**'
       - '.agents/skills/landing-page-video/**'
       - 'cloudflare/**'
 

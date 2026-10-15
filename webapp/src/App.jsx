@@ -5,6 +5,7 @@ import About from './pages/About.jsx';
 import SquookHome from './pages/SquookHome.jsx';
 import SquookEditor from './pages/SquookEditor.jsx';
 import WatchVideo from './pages/WatchVideo.jsx';
+import FastVideo from './pages/FastVideo.jsx';
 import AuthGate from './components/AuthGate.jsx';
 import { useRoute } from './lib/router.js';
 
@@ -23,6 +24,7 @@ export default function App() {
   else if (route === 'app') page = <AuthGate><SquookHome /></AuthGate>;
   // Landing-page videos (HyperFrames) open here — no editable timeline.
   else if (route === 'watch') page = <AuthGate><WatchVideo /></AuthGate>;
+  else if (route === 'fast') page = <AuthGate><FastVideo /></AuthGate>;
   else page = <Landing />;
 
   return (

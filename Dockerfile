@@ -4,6 +4,11 @@
 
 # ---- webapp build ---------------------------------------------------------
 FROM node:22-bookworm-slim AS web
+# The fast-mode page plays videos live by importing the Remotion templates from
+# ../renderer/src (vite alias), so the renderer and its deps sit beside it.
+COPY renderer/package*.json /renderer/
+RUN cd /renderer && npm ci
+COPY renderer/src /renderer/src
 WORKDIR /web
 COPY webapp/package*.json ./
 RUN npm ci
@@ -44,6 +49,11 @@ COPY --chown=node server/ server/
 COPY --chown=node .agents/ .agents/
 COPY --chown=node .claude/skills/ .claude/skills/
 COPY --from=web --chown=node /web/dist webapp/dist
+# Fast mode renders its MP4s with Remotion (and screenshots sites with its Chrome).
+COPY --chown=node renderer/package*.json renderer/
+RUN cd renderer && npm ci && npx remotion browser ensure
+COPY --chown=node renderer/ renderer/
+RUN mkdir -p renderer/public renderer/out
 
 # Skills are baked in above (skip the per-run refresh); local Kokoro voice.
 ENV NODE_ENV=production PIPELINE_MODE=real LANDING_ONLY=true PORT=8787 \

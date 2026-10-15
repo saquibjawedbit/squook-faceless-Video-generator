@@ -3,6 +3,7 @@ import {AbsoluteFill, useCurrentFrame} from 'remotion';
 import type {CaptionWord, TextStyle} from '../ir';
 import {useTheme} from '../theme';
 import {resolveFont} from '../fonts';
+import {luminance, useStyleOrNull} from '../styles';
 
 const VERTICAL = {
   top: {justify: 'flex-start' as const, pad: {paddingTop: '9%'}},
@@ -24,6 +25,7 @@ export const CaptionLayer: React.FC<{
   const frame = useCurrentFrame();
   const t = frame / fps;
   const theme = useTheme();
+  const pack = useStyleOrNull();
 
   const phrases = useMemo(() => {
     const out: CaptionWord[][] = [];
@@ -50,9 +52,13 @@ export const CaptionLayer: React.FC<{
 
   // All caption styling is overridable per-layer via the IR `style` (which the
   // Director/edit agent writes), falling back to the theme.
+  const cap = pack?.caption;
   const place = VERTICAL[style?.position ?? 'bottom'];
-  const highlight = style?.highlight ?? theme.palette.accent;
-  const fontFamily = resolveFont(style?.font_family) ?? theme.font.family;
+  const lightBg = pack ? luminance(pack.palette.bg) > 0.4 : false;
+  const highlight = style?.highlight ?? cap?.highlight ?? theme.palette.accent;
+  const fontFamily = resolveFont(style?.font_family) ?? (pack ? pack.font.body : theme.font.family);
+  const boxed = cap ? cap.box : true;
+  const boxBg = style?.bg ?? (pack ? (lightBg ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.62)') : 'rgba(0, 0, 0, 0.6)');
 
   return (
     <AbsoluteFill
@@ -65,7 +71,7 @@ export const CaptionLayer: React.FC<{
           justifyContent: 'center',
           gap: '0 14px',
           maxWidth: '72%',
-          background: style?.bg ?? 'rgba(0, 0, 0, 0.6)',
+          background: boxed ? boxBg : 'transparent',
           padding: '14px 30px',
           borderRadius: 14,
         }}
@@ -77,11 +83,12 @@ export const CaptionLayer: React.FC<{
               key={i}
               style={{
                 fontFamily,
-                fontSize: style?.font_size ?? theme.font.caption_size,
-                fontWeight: style?.font_weight ?? 700,
+                fontSize: style?.font_size ?? cap?.size ?? theme.font.caption_size,
+                fontWeight: style?.font_weight ?? cap?.weight ?? 700,
                 fontStyle: style?.italic ? 'italic' : 'normal',
                 letterSpacing: style?.letter_spacing != null ? `${style.letter_spacing}px` : undefined,
-                textTransform: style?.uppercase ? 'uppercase' : 'none',
+                textTransform: style?.uppercase ?? cap?.uppercase ? 'uppercase' : 'none',
+                textShadow: boxed ? undefined : (lightBg ? '0 1px 12px rgba(255,255,255,0.9)' : '0 2px 14px rgba(0,0,0,0.8)'),
                 lineHeight: 1.35,
                 color: active ? highlight : (style?.color ?? theme.palette.text),
                 transform: active ? 'scale(1.06)' : 'none',

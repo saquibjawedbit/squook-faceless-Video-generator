@@ -46,6 +46,7 @@ export type ImageLayer = {
   src: string;
   fit: 'cover' | 'contain';
   ken_burns: 'zoom_in' | 'zoom_out' | 'pan_left' | 'pan_right';
+  frame?: boolean; // draw as a browser window (website screenshots)
   transform?: Transform;
 };
 
@@ -168,7 +169,25 @@ export type TextLayer = {
   style?: TextStyle;
 };
 
+// A designed scene from ./templates, styled by the video's style pack.
+// `props` shapes per kind are documented in templates/index.tsx.
+export type TemplateKind =
+  | 'hero' | 'cta' | 'stat' | 'stats' | 'icons' | 'chart' | 'steps' | 'chat'
+  | 'split' | 'before_after' | 'compare' | 'quote' | 'kinetic' | 'phone' | 'logos' | 'screen' | 'backdrop';
+
+export type TemplateLayer = {
+  type: 'template';
+  kind: TemplateKind;
+  layout?: 'left' | 'right' | 'center' | 'full';
+  props: Record<string, any>;
+  // Seconds (into the scene) at which successive items appear — matched to the
+  // spoken word that introduces each item. Absent → evenly staggered.
+  beats?: number[];
+  transform?: Transform;
+};
+
 export type Layer =
+  | TemplateLayer
   | VideoLayer
   | ImageLayer
   | SolidLayer
@@ -182,7 +201,7 @@ export type Layer =
 
 
 export type Transition = {
-  type: 'cut' | 'crossfade' | 'slide';
+  type: 'cut' | 'crossfade' | 'slide' | 'zoom' | 'wipe' | 'whip' | 'blur';
   duration_s: number;
 };
 
