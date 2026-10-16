@@ -102,8 +102,8 @@ export const Chat: React.FC<TemplateProps> = ({p, beats, fps, durationFrames}) =
   // ── geometry ──────────────────────────────────────────────────────────────
   const vertical = H > W * 1.1;
   const square = !vertical && W < H * 1.35;
-  const zoneTop = H * (vertical ? 0.05 : 0.065);
-  const zoneBot = H * 0.84;
+  const zoneTop = H * (vertical ? 0.07 : 0.065);
+  const zoneBot = H * (vertical ? 0.82 : 0.84);
   const zoneH = zoneBot - zoneTop;
   const zoneMid = (zoneTop + zoneBot) / 2;
   // Window height follows its content (last few messages), within limits.
@@ -114,8 +114,9 @@ export const Chat: React.FC<TemplateProps> = ({p, beats, fps, durationFrames}) =
     return lines * BODY_FS * 1.32 + 30 + 12;
   };
   const contentH = msgs.slice(-5).reduce((a, m) => a + estH(m), 0) + 104 + 92 + 22 + 110;
-  const CH = Math.round(Math.max(vertical ? 760 : 600, Math.min(vertical ? 1060 : square ? 760 : 780, contentH)));
-  const kA = Math.min((vertical ? W * 0.84 : square ? W * 0.68 : W * 0.4) / CW, (zoneH * 0.96) / CH);
+  // Vertical: a tall phone-like window (more of the conversation visible).
+  const CH = Math.round(vertical ? Math.max(920, Math.min(1180, contentH)) : Math.max(600, Math.min(square ? 760 : 780, contentH)));
+  const kA = Math.min((vertical ? W * 0.86 : square ? W * 0.68 : W * 0.4) / CW, (zoneH * (vertical ? 0.94 : 0.96)) / CH);
 
   // Table height estimate (design px).
   const flagged = rows.filter((r) => r.flag).length;
@@ -127,17 +128,25 @@ export const Chat: React.FC<TemplateProps> = ({p, beats, fps, durationFrames}) =
   let table: Box = {x: 0, y: 0, k: 1};
   let arrow: null | {x1: number; y1: number; x2: number; y2: number} = null;
   let dimChat = 0;
+  let CHb = CH; // window height once the result is shown (vertical crops the top)
   if (hasResult && !n) {
     const kt = Math.min((vertical ? W * 0.86 : W * 0.5) / TW, (zoneH * 0.96) / TH);
     table = {x: W / 2 - (TW * kt) / 2, y: zoneMid - (TH * kt) / 2, k: kt};
   } else if (hasResult && vertical) {
-    const kt = Math.min((W * 0.86) / TW, (zoneH * 0.55) / TH);
-    const k2 = Math.min(kA * 0.66, (zoneH - 110 - TH * kt) / CH);
-    const total = CH * k2 + 110 + TH * kt;
+    // The window stays wide and readable; it gets shorter from the top
+    // (latest messages stay in view) to make room for the table below.
+    const gapA = 100 * (W / 1080);
+    const kt = Math.min((W * 0.88) / TW, (zoneH * 0.5) / TH);
+    const avail = zoneH - TH * kt - gapA;
+    let k2 = Math.min(kA, (W * 0.84) / CW);
+    const minCH = 520;
+    if (avail / k2 < minCH) k2 = Math.max(0.3, avail / minCH);
+    CHb = Math.max(minCH, Math.min(CH, avail / k2));
+    const total = CHb * k2 + gapA + TH * kt;
     const top = zoneTop + Math.max(0, (zoneH - total) / 2);
     chatB = {x: W / 2 - (CW * k2) / 2, y: top, k: k2};
-    table = {x: W / 2 - (TW * kt) / 2, y: top + CH * k2 + 110, k: kt};
-    arrow = {x1: W / 2, y1: top + CH * k2 + 18, x2: W / 2, y2: top + CH * k2 + 92};
+    table = {x: W / 2 - (TW * kt) / 2, y: top + CHb * k2 + gapA, k: kt};
+    arrow = {x1: W / 2, y1: top + CHb * k2 + gapA * 0.16, x2: W / 2, y2: top + CHb * k2 + gapA * 0.84};
   } else if (hasResult && square) {
     const k2 = kA * 0.74;
     const kt = Math.min((W * 0.6) / TW, (zoneH * 0.78) / TH);
@@ -169,7 +178,7 @@ export const Chat: React.FC<TemplateProps> = ({p, beats, fps, durationFrames}) =
   const chatWindow = n ? (
     <div
       style={{
-        position: 'absolute', left: 0, top: 0, width: CW, height: CH,
+        position: 'absolute', left: 0, top: 0, width: CW, height: CH + (CHb - CH) * move,
         transformOrigin: '0 0',
         transform: `translate(${cb.x}px, ${cb.y + (1 - enterW) * 50}px) scale(${cb.k * (0.95 + 0.05 * enterW)})`,
         opacity: clamp01(enterW * 1.4),

@@ -46,14 +46,26 @@ export const Quote: React.FC<TemplateProps> = ({p, layout, beats, fps, durationF
   // ── type size by length ───────────────────────────────────────────────────
   const len = text.length;
   const baseFs = len < 50 ? 96 : len < 90 ? 82 : len < 150 ? 70 : len < 240 ? 56 : 46;
-  const fs = baseFs * Math.min(1.12, s.scale) * u * (vertical ? 0.92 : 1);
   const lh = s.headingCase === 'upper' ? 1.08 : 1.22;
-  const maxW = vertical ? W * 0.84 : Math.min(W * 0.72, 1460 * u);
+  const maxW = vertical ? W * 0.86 : Math.min(W * 0.72, 1460 * u);
   const zoneH = H * 0.74;
-  const maxLines = Math.max(2, Math.floor((zoneH * 0.62) / (fs * lh)));
-  const markSize = (vertical ? 300 : 320) * u;
+  // Vertical: type sized so the quote fills ~55% of the frame height (by an
+  // estimate of the wrapped line count), within sensible limits.
+  const cw = s.headingCase === 'upper' ? 0.46 : 0.5;
+  const fitV = (() => {
+    for (let f = 190 * u; f > 52 * u; f -= 2 * u) {
+      const perLine = Math.max(6, Math.floor(maxW / (cw * f)));
+      const lines = Math.ceil((len * 1.08) / perLine);
+      if (lines * f * lh <= H * 0.5) return f;
+    }
+    return 52 * u;
+  })();
+  const fs = vertical ? fitV : baseFs * Math.min(1.12, s.scale) * u;
+  const maxLines = Math.max(2, Math.floor((zoneH * (vertical ? 0.7 : 0.62)) / (fs * lh)));
+  const markSize = (vertical ? 380 : 320) * u;
   const float = Math.sin((frame / fps) * 1.1) * 6 * u;
 
+  const av = vertical ? 1.4 : 1; // author block scale
   const ghost = 0.14;
   const align = center ? 'center' : 'left';
 
@@ -98,11 +110,11 @@ export const Quote: React.FC<TemplateProps> = ({p, layout, beats, fps, durationF
         })}
       </div>
       {author || role ? (
-        <div style={{display: 'flex', alignItems: 'center', gap: 26 * u, marginTop: 52 * u, flexDirection: center ? 'column' : 'row'}}>
-          <div style={{width: 72 * u * rule2, height: 4 * u, borderRadius: 2, background: s.palette.accent, flex: 'none'}} />
+        <div style={{display: 'flex', alignItems: 'center', gap: 26 * u * av, marginTop: 52 * u * av, flexDirection: center ? 'column' : 'row'}}>
+          <div style={{width: 72 * u * av * rule2, height: 4 * u * av, borderRadius: 2, background: s.palette.accent, flex: 'none'}} />
           <div style={{...authorEnter, textAlign: align}}>
-            {author ? <div style={{fontFamily: s.font.body, fontWeight: 700, fontSize: 36 * u, color: s.palette.text, letterSpacing: '-0.01em'}}>{author}</div> : null}
-            {role ? <div style={{fontFamily: s.font.body, fontSize: 28 * u, color: s.palette.muted, marginTop: 6 * u}}>{role}</div> : null}
+            {author ? <div style={{fontFamily: s.font.body, fontWeight: 700, fontSize: 36 * u * av, color: s.palette.text, letterSpacing: '-0.01em'}}>{author}</div> : null}
+            {role ? <div style={{fontFamily: s.font.body, fontSize: 28 * u * av, color: s.palette.muted, marginTop: 6 * u * av}}>{role}</div> : null}
           </div>
         </div>
       ) : null}

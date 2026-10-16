@@ -127,9 +127,9 @@ export const Split: React.FC<TemplateProps> = ({p, layout, beats, durationFrames
 
   const upper = s.headingCase === 'upper';
   const n = title.length;
-  const tSize = (box.vertical ? (n <= 24 ? 110 : n <= 44 ? 92 : 74) : n <= 24 ? 84 : n <= 44 ? 70 : 58) * s.scale * box.tf * (upper ? 0.88 : 1);
-  const bodySize = (box.vertical ? 38 : 32) * box.tf;
-  const bulletSize = (box.vertical ? 36 : 31) * box.tf;
+  const tSize = (box.vertical ? (n <= 24 ? 128 : n <= 44 ? 108 : 86) : n <= 24 ? 84 : n <= 44 ? 70 : 58) * s.scale * box.tf * (upper ? 0.88 : 1);
+  const bodySize = (box.vertical ? 44 : 32) * box.tf;
+  const bulletSize = (box.vertical ? 42 : 31) * box.tf;
 
   const tEye = 6;
   const tTitle = eyebrow ? 10 : 6;
@@ -147,7 +147,7 @@ export const Split: React.FC<TemplateProps> = ({p, layout, beats, durationFrames
       {eyebrow ? (
         <div style={{display: 'flex', alignItems: 'center', gap: 16 * box.tf, marginBottom: 24 * box.tf, ...eyeEnter}}>
           <div style={{height: 2, width: 48 * box.tf * rule, background: s.palette.accent}} />
-          <div style={{fontFamily: s.font.mono, fontSize: (box.vertical ? 28 : 24) * box.tf, letterSpacing: '0.18em', textTransform: 'uppercase', color: s.palette.accent, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{eyebrow}</div>
+          <div style={{fontFamily: s.font.mono, fontSize: (box.vertical ? 32 : 24) * box.tf, letterSpacing: '0.18em', textTransform: 'uppercase', color: s.palette.accent, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis'}}>{eyebrow}</div>
         </div>
       ) : null}
       {title ? (
@@ -204,11 +204,14 @@ export const Split: React.FC<TemplateProps> = ({p, layout, beats, durationFrames
   const safe: CSSProperties = {position: 'absolute', left: box.pad.side, right: box.pad.side, top: box.pad.top, bottom: box.pad.bottom};
 
   if (box.vertical) {
-    const imgW = box.width - box.pad.side * 2;
+    // Phone layout: a large screenshot on top (nearly full width), text below.
+    const imgW = box.width * 0.9;
     return (
       <AbsoluteFill style={{pointerEvents: 'none'}}>
-        <div style={{...safe, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 80 * box.tf}}>
-          <BrowserFrame src={image} width={imgW - 28 * box.tf} tf={box.tf} delay={tImg} from={0} durationFrames={durationFrames} />
+        <div style={{...safe, display: 'flex', flexDirection: 'column', justifyContent: 'center', gap: 84 * box.tf}}>
+          <div style={{marginLeft: (box.width * 0.84 - imgW) / 2 - 14 * box.tf}}>
+            <BrowserFrame src={image} width={imgW - 28 * box.tf} tf={box.tf} delay={tImg} from={0} durationFrames={durationFrames} />
+          </div>
           {textCol}
         </div>
       </AbsoluteFill>

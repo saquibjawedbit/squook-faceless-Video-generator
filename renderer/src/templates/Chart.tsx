@@ -1,6 +1,6 @@
 import type {TemplateProps} from '.';
 import {alpha, useStyle} from '../styles';
-import {Heading, useBeat, useCountUp, useEnter, useProgress} from './kit';
+import {Heading, VFrame, useBeat, useCountUp, useEnter, useProgress, useVertical} from './kit';
 import {SafeArea, clampLines, ellipsis, parseNum, str, useFrameInfo} from './Stat';
 
 type Bar = {label: string; value: number; hi: boolean; delay: number; pct: number};
@@ -122,6 +122,38 @@ export const Chart: React.FC<TemplateProps> = ({p, beats, durationFrames}) => {
   const headerH = title ? 150 * k : unit.length > 3 ? 60 * k : 0;
   const availH = H * 0.74 - headerH;
   const innerW = W * (tall ? 0.84 : 0.85);
+  const vg = useVertical();
+
+  if (vg.v) {
+    // Phone layout: big title, then thick horizontal bars, one per row, with
+    // the label above each bar and a large value at its end.
+    const u = vg.u;
+    const nb = Math.max(1, bars.length);
+    const z = nb <= 4 ? 1.25 : nb <= 6 ? 1.1 : 0.95;
+    return (
+      <VFrame
+        durationFrames={durationFrames}
+        justify="space-evenly"
+        titleGap={40 * u}
+        title={
+          title || unit.length > 3 ? (
+            <div>
+              {title ? <Heading size={104 * u} style={{...clampLines(3)}}>{title}</Heading> : null}
+              {unit.length > 3 ? (
+                <div style={{fontFamily: s.font.mono, fontSize: 30 * u, letterSpacing: '0.16em', textTransform: 'uppercase', color: s.palette.muted, marginTop: 22 * u, ...unitEnter}}>
+                  {unit}
+                </div>
+              ) : null}
+            </div>
+          ) : null
+        }
+      >
+        {bars.map((b, i) => (
+          <VRow key={i} b={b} z={z} u={u} unit={unit} />
+        ))}
+      </VFrame>
+    );
+  }
 
   return (
     <SafeArea durationFrames={durationFrames}>
@@ -174,6 +206,44 @@ export const Chart: React.FC<TemplateProps> = ({p, beats, durationFrames}) => {
         </div>
       )}
     </SafeArea>
+  );
+};
+
+/** Vertical (9:16) bar row: label on top, thick bar + big value below. */
+const VRow: React.FC<{b: Bar; z: number; u: number; unit: string}> = ({b, z, u, unit}) => {
+  const s = useStyle();
+  const g = Math.max(0, useProgress(b.delay));
+  const lab = useEnter(b.delay);
+  const thick = 64 * u * z;
+  const r = Math.min(s.radius, 16) * u * z;
+  return (
+    <div style={{display: 'flex', flexDirection: 'column'}}>
+      <div
+        style={{
+          ...ellipsis,
+          fontFamily: s.font.body,
+          fontSize: 44 * u * z,
+          fontWeight: b.hi ? 700 : 500,
+          color: b.hi ? s.palette.text : s.palette.muted,
+          marginBottom: 14 * u * z,
+          ...lab,
+        }}
+      >
+        {b.label}
+      </div>
+      <div style={{display: 'flex', alignItems: 'center', gap: 24 * u}}>
+        <div
+          style={{
+            flex: `0 0 calc(${Math.max(0.012, b.pct * g) * 72}%)`,
+            height: thick,
+            borderRadius: r,
+            background: b.hi ? s.palette.accent : alpha(s.palette.text, 0.16),
+            boxShadow: b.hi && s.id === 'tech' ? `0 0 ${40 * u}px ${alpha(s.palette.accent, 0.4)}` : undefined,
+          }}
+        />
+        <ValueText v={b.value} delay={b.delay} unit={unit} hi={b.hi} size={(b.hi ? 64 : 56) * u * z * s.scale} />
+      </div>
+    </div>
   );
 };
 

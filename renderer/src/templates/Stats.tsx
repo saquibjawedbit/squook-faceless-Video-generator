@@ -1,13 +1,16 @@
 import type {TemplateProps} from '.';
 import {alpha, useStyle} from '../styles';
-import {Body, Heading, useBeat, useEnter, useProgress} from './kit';
+import {Body, Heading, VFrame, useBeat, useEnter, useProgress, useVertical} from './kit';
 import {BigNumber, SafeArea, clampLines, finalNumberText, fitNumber, str, useFrameInfo, useNumberText} from './Stat';
 
 type Item = {number?: unknown; prefix?: unknown; suffix?: unknown; label?: unknown};
 
-const StatCard: React.FC<{item: Item; delay: number; size: number; index: number; single?: boolean}> = ({item, delay, size, index, single}) => {
+const StatCard: React.FC<{item: Item; delay: number; size: number; index: number; single?: boolean; vu?: number}> = ({item, delay, size, index, single, vu}) => {
   const s = useStyle();
-  const {k, tall} = useFrameInfo();
+  const fi = useFrameInfo();
+  // Vertical (vu set): sizes in width units, card fills its share of the block.
+  const k = vu ?? fi.k;
+  const tall = fi.tall;
   const enter = useEnter(delay);
   const bar = useProgress(delay + 8);
   const prefix = str(item.prefix);
@@ -28,11 +31,12 @@ const StatCard: React.FC<{item: Item; delay: number; size: number; index: number
         border: `1px solid ${s.card.border}`,
         boxShadow: s.card.shadow,
         borderRadius: s.radius * k * 1.2,
-        padding: `${(tall ? 40 : 52) * k}px ${44 * k}px ${(tall ? 40 : 48) * k}px`,
+        padding: vu ? `${30 * k}px ${48 * k}px ${34 * k}px` : `${(tall ? 40 : 52) * k}px ${44 * k}px ${(tall ? 40 : 48) * k}px`,
         display: 'flex',
         flexDirection: 'column',
-        justifyContent: 'space-between',
-        minHeight: (tall ? 250 : 330) * k,
+        justifyContent: vu ? 'center' : 'space-between',
+        minHeight: vu ? 0 : (tall ? 250 : 330) * k,
+        ...(vu ? {flex: 'none'} : {}),
         ...enter,
       }}
     >
@@ -49,7 +53,7 @@ const StatCard: React.FC<{item: Item; delay: number; size: number; index: number
       />
       <BigNumber text={text || '0'} final={finalNumberText(item.number)} prefix={prefix} suffix={suffix} size={size} />
       {label ? (
-        <Body size={(tall ? 36 : 34) * k} delay={delay + 8} muted style={{marginTop: 28 * k, ...clampLines(2)}}>
+        <Body size={(vu ? 40 : tall ? 36 : 34) * k} delay={delay + 8} muted style={{marginTop: vu ? Math.max(18 * k, size * (s.id === 'editorial' ? 0.2 : 0.1)) : 28 * k, ...clampLines(2)}}>
           {label}
         </Body>
       ) : null}
@@ -71,6 +75,39 @@ export const Stats: React.FC<TemplateProps> = ({p, beats, durationFrames}) => {
     (tall ? 170 : 210) * k * s.scale,
   );
   const delays = [0, 1, 2, 3].map((i) => useBeat(beats, i, base)); // eslint-disable-line react-hooks/rules-of-hooks
+  const vg = useVertical();
+
+  if (vg.v) {
+    // Phone layout: big title, then the numbers stacked as large cards that
+    // share the block height.
+    const u = vg.u;
+    const vInner = W - vg.side * 2 - 104 * u;
+    // Number size from the height each card gets (block minus title, gaps,
+    // padding and its label), capped by the width.
+    const titleH = title ? (str(title).length * 0.5 * 104 * u * s.scale > vInner + 104 * u ? 2 : 1) * 104 * u * s.scale * 1.06 + 64 * u : 0;
+    const labelH = (it: Item) => {
+      const l = str(it.label);
+      if (!l) return 0;
+      return (l.length * 0.5 * 40 * u > vInner ? 2 : 1) * 40 * u * 1.35 + 20 * u;
+    };
+    const vh = Math.min(vg.zoneH, vg.H * 0.72) - titleH - (n - 1) * 28 * u - n * 64 * u - items.reduce((a, it) => a + labelH(it), 0);
+    const vBase = Math.min((n <= 2 ? 320 : 280) * u * s.scale, Math.max(120 * u, vh / n / 0.95));
+    const vSize = Math.min(...items.map((it) => fitNumber(vBase, vInner, finalNumberText(it.number), str(it.prefix), str(it.suffix), s)), vBase);
+    return (
+      <VFrame
+        durationFrames={durationFrames}
+        justify="center"
+        titleGap={64 * u}
+        title={title ? <Heading size={104 * u} style={{...clampLines(3)}}>{title}</Heading> : null}
+        blockH={vg.H * 0.72}
+        bodyStyle={{gap: 28 * u}}
+      >
+        {items.map((it, i) => (
+          <StatCard key={i} item={it} delay={delays[i]} size={vSize} index={i} single={items.length === 1} vu={u} />
+        ))}
+      </VFrame>
+    );
+  }
 
   return (
     <SafeArea durationFrames={durationFrames}>

@@ -1,6 +1,6 @@
 import type {TemplateProps} from '.';
 import {alpha, useStyle} from '../styles';
-import {Body, Heading, useBeat, useEnter, useProgress} from './kit';
+import {Body, Heading, VFrame, useBeat, useEnter, useProgress, useVertical} from './kit';
 import {SafeArea, clampLines, str, useFrameInfo, useRamp} from './Stat';
 
 type Item = {title: string; text: string};
@@ -83,6 +83,48 @@ export const Steps: React.FC<TemplateProps> = ({p, beats, durationFrames}) => {
 
   const node = (tall ? (n >= 5 ? 104 : 124) : n >= 5 ? 84 : 104) * k;
   const thick = 5 * k;
+  const vg = useVertical();
+
+  if (vg.v) {
+    // Phone layout: big title on top, one step per row filling the block,
+    // nodes joined by a connector that runs the full height between rows.
+    const u = vg.u;
+    const vn = (n >= 5 ? 124 : n === 4 ? 150 : 170) * u;
+    const ts = n >= 5 ? 0.86 : n === 4 ? 1 : 1.12;
+    return (
+      <VFrame
+        durationFrames={durationFrames}
+        justify="flex-start"
+        titleGap={(n >= 5 ? 60 : 84) * u}
+        title={title ? <Heading size={104 * u} style={{...clampLines(3)}}>{title}</Heading> : null}
+      >
+        {items.map((it, i) => (
+          <div key={i} style={{display: 'flex', gap: 44 * u, alignItems: 'stretch', flex: i < n - 1 ? '1 1 0' : 'none', minHeight: 0}}>
+            <div style={{display: 'flex', flexDirection: 'column', alignItems: 'center', width: vn, flex: 'none'}}>
+              <Node n={i + 1} delay={at(i)} size={vn} />
+              {i < n - 1 ? (
+                <div style={{flex: 1, display: 'flex', padding: `${18 * u}px 0`, minHeight: 30 * u}}>
+                  <Connector from={at(i)} to={at(i + 1)} vertical thick={7 * u} />
+                </div>
+              ) : null}
+            </div>
+            <div style={{flex: 1, minWidth: 0, paddingTop: vn * 0.08, paddingBottom: i < n - 1 ? 36 * u : 0}}>
+              {it.title ? (
+                <Heading size={72 * u * ts} delay={at(i) + 2} style={{...clampLines(2)}}>
+                  {it.title}
+                </Heading>
+              ) : null}
+              {it.text ? (
+                <Body size={44 * u * ts} delay={at(i) + 7} style={{marginTop: 14 * u, ...clampLines(3)}}>
+                  {it.text}
+                </Body>
+              ) : null}
+            </div>
+          </div>
+        ))}
+      </VFrame>
+    );
+  }
 
   return (
     <SafeArea durationFrames={durationFrames}>

@@ -1,7 +1,7 @@
 import type {CSSProperties} from 'react';
 import type {TemplateProps} from '.';
 import {alpha, useStyle} from '../styles';
-import {Heading, useBeat, useEnter, useProgress} from './kit';
+import {Heading, VFrame, useBeat, useEnter, useProgress, useVertical} from './kit';
 import {Mark, SafeArea, clampLines, ellipsis, str, useFrameInfo, useRamp, warnOf} from './Stat';
 
 type Cell = boolean | string | null;
@@ -16,12 +16,13 @@ const toCell = (v: unknown): Cell => {
   return typeof v === 'string' ? v : null;
 };
 
-const CellView: React.FC<{v: Cell; us: boolean; delay: number; rowH: number}> = ({v, us, delay, rowH}) => {
+const CellView: React.FC<{v: Cell; us: boolean; delay: number; rowH: number; z?: number}> = ({v, us, delay, rowH, z = 1}) => {
   const s = useStyle();
-  const {k} = useFrameInfo();
+  const {k: k0} = useFrameInfo();
+  const k = k0 * z;
   const draw = useRamp(delay + 3, delay + 17);
   const enter = useEnter(delay + 2);
-  const size = Math.min(56 * k, rowH * 0.52);
+  const size = Math.min(56 * k, rowH * (z > 1 ? 0.6 : 0.52));
   if (v === true || v === false) {
     const color = v ? (us ? s.palette.onAccent : s.palette.muted) : us ? s.palette.muted : warnOf(s);
     const fill = v && us ? s.palette.accent : undefined;
@@ -48,9 +49,10 @@ const CellView: React.FC<{v: Cell; us: boolean; delay: number; rowH: number}> = 
   );
 };
 
-const RowView: React.FC<{row: Row; delay: number; rowH: number; last: boolean; cols: string}> = ({row, delay, rowH, last, cols}) => {
+const RowView: React.FC<{row: Row; delay: number; rowH: number; last: boolean; cols: string; z?: number}> = ({row, delay, rowH, last, cols, z = 1}) => {
   const s = useStyle();
-  const {k} = useFrameInfo();
+  const {k: k0} = useFrameInfo();
+  const k = k0 * z;
   const enter = useEnter(delay);
   const rule = useProgress(delay);
   const fillIn = Math.max(0, Math.min(1, useProgress(delay - 2)));
@@ -74,7 +76,7 @@ const RowView: React.FC<{row: Row; delay: number; rowH: number; last: boolean; c
             left: 0,
             right: 0,
             bottom: 0,
-            height: 1,
+            height: Math.max(1, z > 1 ? 2 : 1),
             background: alpha(s.palette.text, 0.12),
             transformOrigin: '0% 50%',
             transform: `scaleX(${Math.max(0, Math.min(1, rule))})`,
@@ -85,10 +87,10 @@ const RowView: React.FC<{row: Row; delay: number; rowH: number; last: boolean; c
         {row.label}
       </div>
       <div style={usCell}>
-        <CellView v={row.a} us delay={delay} rowH={rowH} />
+        <CellView v={row.a} us delay={delay} rowH={rowH} z={z} />
       </div>
       <div style={{height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center'}}>
-        <CellView v={row.b} us={false} delay={delay + 3} rowH={rowH} />
+        <CellView v={row.b} us={false} delay={delay + 3} rowH={rowH} z={z} />
       </div>
     </div>
   );
@@ -118,6 +120,59 @@ export const Compare: React.FC<TemplateProps> = ({p, beats, durationFrames}) => 
   const rowH = Math.max(64 * k, Math.min((tall ? 128 : 104) * k, avail / Math.max(1, rows.length)));
   const cols = tall ? 'minmax(0,1.25fr) minmax(0,1fr) minmax(0,1fr)' : 'minmax(0,1.6fr) minmax(0,1fr) minmax(0,1fr)';
   const r = s.radius * k;
+  const vg = useVertical();
+
+  const header = (hH: number, z: number, gc = cols) => (
+    <div style={{display: 'grid', gridTemplateColumns: gc, height: hH, alignItems: 'stretch', flex: 'none'}}>
+      <div />
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          background: s.palette.accent,
+          borderRadius: `${r * z}px ${r * z}px 0 0`,
+          padding: `0 ${16 * k}px`,
+          transformOrigin: '50% 100%',
+          transform: `scaleY(${0.4 + 0.6 * Math.max(0, Math.min(1, panel))})`,
+          opacity: Math.min(1, Math.max(0, panel)),
+        }}
+      >
+        <span style={{...(z > 1 ? {...clampLines(2), textAlign: 'center', lineHeight: 1.05} : ellipsis), fontFamily: s.font.heading, fontWeight: s.headingWeight, fontSize: 38 * k * z * s.scale, color: s.palette.onAccent, textTransform: s.headingCase === 'upper' ? 'uppercase' : 'none'}}>{colA}</span>
+      </div>
+      <div style={{display: 'flex', alignItems: 'center', justifyContent: 'center', padding: `0 ${16 * k}px`, ...head}}>
+        <span style={{...(z > 1 ? {...clampLines(2), textAlign: 'center', lineHeight: 1.1} : ellipsis), fontFamily: s.font.body, fontWeight: 600, fontSize: 32 * k * z, color: s.palette.muted}}>{colB}</span>
+      </div>
+    </div>
+  );
+
+  if (vg.v) {
+    // Phone layout: big title, then a table that fills the block with tall
+    // rows and large marks.
+    const u = vg.u;
+    const z = 1.3 / (k / u);
+    const vCols = 'minmax(0,1.55fr) minmax(0,0.9fr) minmax(0,0.9fr)'; // type ~1.4x the old tall size, in width units
+    const hH = 150 * u;
+    const titleEst = title ? 2 * 104 * u * s.scale * 1.06 + 64 * u : 0;
+    const vRow = Math.max(110 * u, Math.min(230 * u, (vg.blockH - titleEst - hH) / Math.max(1, rows.length)));
+    return (
+      <VFrame
+        durationFrames={durationFrames}
+        justify="center"
+        titleGap={64 * u}
+        title={title ? <Heading size={104 * u} style={{...clampLines(3)}}>{title}</Heading> : null}
+      >
+        {rows.length === 0 ? null : (
+          <div style={{width: '100%'}}>
+            {header(hH, z, vCols)}
+            {rows.map((row, i) => (
+              <RowView key={i} row={row} delay={at(i)} rowH={vRow} last={i === rows.length - 1} cols={vCols} z={z} />
+            ))}
+          </div>
+        )}
+      </VFrame>
+    );
+  }
 
   return (
     <SafeArea durationFrames={durationFrames}>

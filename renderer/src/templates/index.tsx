@@ -16,6 +16,7 @@ import {Phone} from './Phone';
 import {Logos} from './Logos';
 import {Screen} from './Screen';
 import {Backdrop} from './Backdrop';
+import {Visual} from './Visual';
 
 /**
  * Scene templates. Every template receives the same props:
@@ -39,6 +40,7 @@ import {Backdrop} from './Backdrop';
  *   kinetic      { lines: string[] }  big type; one beat per line
  *   phone        { image, title?, text? }                                layout: left | right (phone side)
  *   logos        { title?, logos: string[] }
+ *   visual       { image, title?, caption?, move?: 'push'|'pull'|'pan_left'|'pan_right' }  full-bleed AI picture  layout: left | center | right
  *   backdrop     { kind?: 'gradient'|'dots'|'grid'|'solid' }  the pack's background (first layer)
  *   screen       { image, img_w, img_h, title?, focus: [{ box: [x,y,w,h] (0–1), at (s), action: 'zoom'|'highlight'|'click', label? }] }
  */
@@ -54,7 +56,8 @@ const KINDS: Record<string, React.FC<TemplateProps>> = {
   hero: Hero, cta: Cta, stat: Stat, stats: Stats, icons: Icons, chart: Chart,
   steps: Steps, chat: Chat, split: Split, before_after: BeforeAfter, compare: Compare,
   quote: Quote, kinetic: Kinetic, phone: Phone, logos: Logos, screen: Screen,
-  backdrop: ({p}) => <Backdrop kind={p.kind} />,
+  visual: Visual,
+  backdrop: ({p}) => <Backdrop kind={p.kind} image={p.image} />,
 };
 
 export const TemplateLayer: React.FC<{layer: TemplateLayerType; fps: number; durationFrames: number}> = ({layer, fps, durationFrames}) => {

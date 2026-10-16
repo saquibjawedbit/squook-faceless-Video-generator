@@ -174,7 +174,7 @@ export type TextLayer = {
 // `props` shapes per kind are documented in templates/index.tsx.
 export type TemplateKind =
   | 'hero' | 'cta' | 'stat' | 'stats' | 'icons' | 'chart' | 'steps' | 'chat'
-  | 'split' | 'before_after' | 'compare' | 'quote' | 'kinetic' | 'phone' | 'logos' | 'screen' | 'backdrop';
+  | 'split' | 'before_after' | 'compare' | 'quote' | 'kinetic' | 'phone' | 'logos' | 'screen' | 'backdrop' | 'visual';
 
 export type TemplateLayer = {
   type: 'template';
@@ -245,10 +245,15 @@ export type RenderIR = {
 
 // IR paths look like "output/assets/scene_1.mp4"; media is synced to public/.
 // The web editor sets __SQUOOK_ASSET_RESOLVE__ to serve a project's snapshot instead.
+// Server-side renders set metadata.asset_base (MainVideo calls setAssetBase)
+// so media streams from the API instead of being copied into public/.
+let assetBase: string | null = null;
+export const setAssetBase = (base?: string | null) => { assetBase = base || null; };
 export const asset = (src: string): string => {
   const p = src.replace(/^output\//, '');
   const g = globalThis as {__SQUOOK_ASSET_RESOLVE__?: (p: string) => string};
-  return g.__SQUOOK_ASSET_RESOLVE__ ? g.__SQUOOK_ASSET_RESOLVE__(p) : staticFile(p);
+  if (g.__SQUOOK_ASSET_RESOLVE__) return g.__SQUOOK_ASSET_RESOLVE__(p);
+  return assetBase ? assetBase + p : staticFile(p);
 };
 
 export const transitionFrames = (t: Transition, fps: number): number =>

@@ -1,7 +1,7 @@
 import {AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {CSSProperties} from 'react';
 import type {TemplateProps} from '.';
-import {Heading, Icon, isCenter, useEnter} from './kit';
+import {Heading, Icon, VFrame, isCenter, useEnter} from './kit';
 import {alpha, useStyle} from '../styles';
 
 // Icons: a 2–4 item feature grid. Card packs (clean, tech, playful, corporate)
@@ -48,6 +48,25 @@ export const Icons: React.FC<TemplateProps> = ({p, layout, beats, fps}) => {
   const off = title && (beats?.length ?? 0) > n ? 1 : 0;
   const at = items.map((_, i) => beatAt(i + off, (title ? 12 : 6) + i * s.stagger * 2));
 
+  if (vertical) {
+    // Phone layout: big title, then one large feature per row; rows share the
+    // block height so the list fills the frame above the captions.
+    const vu = W / 1080;
+    const z = n <= 2 ? 1.6 : n === 3 ? 1.5 : 1.4;
+    return (
+      <VFrame
+        justify="flex-start"
+        titleGap={64 * vu}
+        title={title ? <Heading size={100 * vu} delay={titleAt} align={center ? 'center' : 'left'} style={{display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden'} as CSSProperties}>{title}</Heading> : null}
+        bodyStyle={{gap: (open ? 28 : 30) * vu}}
+      >
+        {items.map((it, i) => (
+          <Feature key={i} item={it} i={i} delay={at[i]} mode="list" open={open} n={n} z={z} />
+        ))}
+      </VFrame>
+    );
+  }
+
   return (
     <AbsoluteFill
       style={{
@@ -70,11 +89,13 @@ export const Icons: React.FC<TemplateProps> = ({p, layout, beats, fps}) => {
   );
 };
 
-const Feature: React.FC<{item: Item; i: number; delay: number; mode: Mode; open: boolean; n: number}> = ({item, i, delay, mode, open, n}) => {
+const Feature: React.FC<{item: Item; i: number; delay: number; mode: Mode; open: boolean; n: number; z?: number}> = ({item, i, delay, mode, open, n, z}) => {
   const s = useStyle();
   const frame = useCurrentFrame();
   const {fps, width: W, height: H} = useVideoConfig();
-  const u = Math.min(W, H) / 1080;
+  const u = (Math.min(W, H) / 1080) * (z ?? 1);
+  // Vertical rows (z set) share the block height and centre their content.
+  const fill: CSSProperties = z ? {flex: '1 1 0', minHeight: 0, maxHeight: (400 * u) / z} : {};
   const enter = useEnter(delay);
   const horizontal = mode === 'list';
   const big = mode === 'row' && n <= 3;
@@ -120,7 +141,7 @@ const Feature: React.FC<{item: Item; i: number; delay: number; mode: Mode; open:
   if (open) {
     const draw = interpolate(frame - delay, [0, 18], [0, 1], {extrapolateLeft: 'clamp', extrapolateRight: 'clamp'});
     return (
-      <div style={{position: 'relative', paddingTop: (horizontal ? 26 : 34) * u, ...enter}}>
+      <div style={{position: 'relative', paddingTop: (horizontal ? 26 : 34) * u, ...(z ? {...fill, display: 'flex', flexDirection: 'column', justifyContent: 'center'} : {}), ...enter}}>
         <div style={{position: 'absolute', left: 0, top: 0, height: 1, width: `${draw * 100}%`, background: alpha(s.palette.text, 0.22)}} />
         <div style={{position: 'absolute', left: 0, top: -1, height: 3, width: `${draw * 22}%`, background: s.palette.accent}} />
         {horizontal ? (
@@ -146,7 +167,7 @@ const Feature: React.FC<{item: Item; i: number; delay: number; mode: Mode; open:
       style={{
         background: s.card.bg, border: `1px solid ${s.card.border}`, boxShadow: s.card.shadow, borderRadius: R,
         padding: horizontal ? `${28 * u}px ${34 * u}px` : mode === 'grid' ? `${32 * u}px ${34 * u}px` : `${44 * u}px ${40 * u}px ${48 * u}px`,
-        ...layoutStyle, ...enter,
+        ...layoutStyle, ...fill, ...enter,
       }}
     >
       {badgeEl}

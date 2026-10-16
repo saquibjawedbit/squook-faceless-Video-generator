@@ -12,7 +12,7 @@
 //   4. The data maps onto renderer/src/templates (styled by the pack), timed to
 //      the spoken words, with a music bed and sound effects — the browser plays
 //      it immediately via @remotion/player; the MP4 renders in the background.
-import { spawn, execFile } from 'node:child_process';
+import { execFile } from 'node:child_process';
 import { mkdir, writeFile, copyFile, readdir, readFile } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
@@ -20,9 +20,10 @@ import { promisify } from 'node:util';
 import puppeteer from 'puppeteer-core';
 import { config, ARTIFACTS_DIR, RENDERER_DIR, SERVER_DIR } from './config.js';
 import { retime } from './ir.js';
-import { assetSnapshotDir, irSnapshotPath, restoreProject } from './snapshot.js';
+import { assetSnapshotDir, irSnapshotPath } from './snapshot.js';
 import { iconSvgUrl } from './icons.js';
 import { sanitizeMotion } from './directorAgent.js';
+import { renderStills, renderMp4 } from './renderService.js';
 import { MUSIC_MOODS, pickTrack, trackFile, musicStart, videoBeats, nextBeat, nearestBeat } from './music.js';
 import { randomInt } from 'node:crypto';
 
@@ -73,7 +74,7 @@ export const STYLES = {
   corporate: { transition: 'crossfade', mood: 'corporate', shader: null, sfx: 0.15, desc: 'navy, calm, trustworthy; B2B, finance, enterprise, health' },
   editorial: { transition: 'wipe', mood: 'warm', shader: null, sfx: 0.15, desc: 'cream paper, serif type, magazine feel; content, culture, explainers' },
 };
-const TEMPLATE_KINDS = ['hero', 'cta', 'stat', 'stats', 'icons', 'chart', 'steps', 'chat', 'split', 'before_after', 'compare', 'quote', 'kinetic', 'phone', 'logos', 'screen', 'motion'];
+const TEMPLATE_KINDS = ['visual', 'hero', 'cta', 'stat', 'stats', 'icons', 'chart', 'steps', 'chat', 'split', 'before_after', 'compare', 'quote', 'kinetic', 'phone', 'logos', 'screen', 'motion'];
 
 // ── 1. read the site ─────────────────────────────────────────────────────────
 
@@ -387,7 +388,10 @@ const TEMPLATE_GUIDE = `Scene templates ("template" field) and their fields — 
 - "kinetic": big bold words. lines: 2–4 lines (≤4 words each), with cues.
 - "logos": customer logos wall. title. Only if customer logos exist.
 - "motion": one custom animated diagram you design: shapes (≤20) of {kind:"circle"|"ring"|"dot"|"rect"|"line"|"text", x,y (0–100 % of frame), r, w, h, x2, y2, text (≤4 words), fill/stroke ("accent"|"accent2"|"text"), keyframes:[{t (s), x,y,scale,opacity,rotate}]}. Use at most once, only when a process/flow is best drawn.
-- "cta": closing. title, subtitle, button (≤3 words), url. Always the last scene.`;
+- "visual": a full-screen picture that SHOWS the sentence (a person, place, object or moment), with title (≤6 words) and caption (≤12 words). Needs "image". layout "left"|"center"|"right".
+- "cta": closing. title, subtitle, button (≤3 words), url. Always the last scene.
+
+Pictures: any scene may add "image": a vivid description of a real-world picture for it (subject, setting, action, mood, camera angle; Indian context when the audience is Indian). It becomes the background of hero/kinetic/quote/stat/stats/cta scenes and the whole frame of "visual". Never ask for text, words, logos, screens or UI in a picture.`;
 
 function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook }) {
   const scenes = Math.max(3, Math.min(30, Math.round(lengthS / 6)));
@@ -416,6 +420,7 @@ Open with ${hook}. The first 3 seconds must grab attention — never open on the
 Rules:
 - Scene 1 is the hook (hero or kinetic). Last scene is cta.
 - Never use the same template 3 times in a row.
+- ${site?.shots?.length ? 'Give 2–3 scenes an "image" (real screenshots carry the rest).' : 'Give at least half the scenes an "image", and use "visual" 2–3 times — a topic video needs real pictures, not only text.'}
 - Vary templates; never the same template twice in a row. ${shots.length ? `Use the real screenshots well: about a third of scenes are "screen" or "split", each screenshot at most once, and point the camera (focus) at the exact element the sentence talks about.` : ''}
 - On-screen text must support the voice-over, not repeat it word for word.
 - Numbers: never invent statistics, results or customer claims. Use only numbers printed on the website${site ? '' : ' (there is none: use only well-known public facts, or label a number clearly as an example, e.g. "say, 3 wrong items a day")'}. No fake quotes or testimonials.
@@ -457,6 +462,35 @@ export async function writeScript(input, images = []) {
     try { return parseJson(j.choices?.[0]?.message?.content); } catch (e) { lastErr = e; }
   }
   throw lastErr;
+}
+
+// ── pictures ────────────────────────────────────────────────────────────────
+
+const LOOK = {
+  clean: 'bright, airy, soft natural daylight, minimal clean composition, premium editorial photography',
+  bold: 'high contrast, dramatic lighting, deep shadows, bold cinematic photography',
+  tech: 'dark moody scene with subtle cool neon accents, futuristic, cinematic photography',
+  playful: 'vibrant colours, cheerful, playful 3D illustration style, soft shadows',
+  corporate: 'professional, natural window light, calm, high-end corporate photography',
+  editorial: 'film photography, warm tones, grain, magazine documentary style',
+};
+
+async function makePicture(prompt, styleId, format, dest) {
+  const [w, h] = format === '9:16' ? [768, 1344] : format === '1:1' ? [1024, 1024] : [1344, 768];
+  const full = `${prompt}. ${LOOK[styleId] || LOOK.tech}. No text, no words, no letters, no logos, no watermark.`;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const r = await fetch(`${CF_BASE()}/run/@cf/leonardo/lucid-origin`, {
+      method: 'POST', headers: cfHeaders(), signal: AbortSignal.timeout(60_000),
+      body: JSON.stringify({ prompt: full.slice(0, 1500), width: w, height: h }),
+    });
+    if (r.ok) {
+      const ct = r.headers.get('content-type') || '';
+      const buf = ct.includes('json') ? Buffer.from((await r.json()).result?.image || '', 'base64') : Buffer.from(await r.arrayBuffer());
+      if (buf.length > 1000) { await writeFile(dest, buf); return true; }
+    }
+    if (r.status < 500 && r.status !== 429) return false;
+  }
+  return false;
 }
 
 // ── 3. voice-over + word timings ─────────────────────────────────────────────
@@ -546,6 +580,7 @@ async function fetchTo(url, dest) {
  */
 function buildTemplate(s, ctx) {
   const { site, timed, offset, icons, usedShots } = ctx;
+  if (s.template === 'visual' && !ctx.picture) return null;
   const kind = TEMPLATE_KINDS.includes(s.template) ? s.template : null;
   const cues = (items) => cueTimes(items.map((it) => it?.cue ?? ''), timed, offset);
   const shotAt = (n) => {
@@ -561,6 +596,10 @@ function buildTemplate(s, ctx) {
   const T = (k, props, beats) => ({ type: 'template', kind: k, ...(layout ? { layout } : {}), props, ...(beats ? { beats } : {}) });
 
   switch (kind) {
+    case 'visual': {
+      if (!ctx.picture) return null;
+      return T('visual', { image: ctx.picture, title: str(s.title, 60), caption: str(s.caption || s.subtitle || s.text, 120), move: pick(ctx.rng, ['push', 'pull', 'pan_left', 'pan_right']) });
+    }
     case 'hero': return T('hero', { title: str(s.title, 70), subtitle: str(s.subtitle, 110), eyebrow: str(s.eyebrow, 30), logo: site?.logo || null });
     case 'cta': return T('cta', { title: str(s.title, 70), subtitle: str(s.subtitle, 110), button: str(s.button || 'Get started', 24), url: str(s.url || (site ? new URL(site.url).hostname.replace(/^www\./, '') : ''), 60), logo: site?.logo || null });
     case 'stat': {
@@ -646,6 +685,88 @@ function buildTemplate(s, ctx) {
 
 const words4 = (t) => t.split(/\s+/).slice(0, 4).join(' ');
 
+// ── quality check ───────────────────────────────────────────────────────────
+// Render one settled frame per scene, let the vision model look at them all,
+// and apply its fixes from a small fixed menu (shorter copy, another layout,
+// big-type fallback, drop a background picture). Never blocks the video.
+
+const mainLayer = (scene) => scene.layers.find((l) => (l.type === 'template' && l.kind !== 'backdrop') || l.type === 'motion');
+
+function setPath(obj, path, value) {
+  const keys = String(path).split('.');
+  let o = obj;
+  for (let i = 0; i < keys.length - 1; i++) {
+    const k = /^\d+$/.test(keys[i]) ? Number(keys[i]) : keys[i];
+    if (o == null || typeof o[k] !== 'object') return false;
+    o = o[k];
+  }
+  const last = /^\d+$/.test(keys.at(-1)) ? Number(keys.at(-1)) : keys.at(-1);
+  if (o == null || typeof o[last] !== 'string') return false; // only rewrite existing copy
+  o[last] = str(value, 160);
+  return true;
+}
+
+function textFields(props, prefix = '', out = []) {
+  for (const [k, v] of Object.entries(props || {})) {
+    const path = prefix ? `${prefix}.${k}` : k;
+    if (typeof v === 'string' && v && !/^assets\//.test(v) && !/^https?:/.test(v)) out.push(`${path}: "${v.slice(0, 90)}"`);
+    else if (v && typeof v === 'object') textFields(v, path, out);
+  }
+  return out;
+}
+
+async function qualityCheck(project, ir, dir, styleId, onStep) {
+  const fps = ir.metadata.fps;
+  const frames = ir.scenes.map((s) => s.start_frame + Math.round(Math.min(s.duration_s * 0.72, s.duration_s - 0.35) * fps));
+  const stills = await renderStills(project.id, ir, frames, join(dir, 'check'));
+  const images = await Promise.all(stills.map(async (f) => `data:image/jpeg;base64,${(await readFile(f)).toString('base64')}`));
+  const list = ir.scenes.map((s, i) => {
+    const l = mainLayer(s);
+    return `Scene ${i + 1} (image ${i + 1}): template ${l?.kind || l?.type}${l?.layout ? `, layout ${l.layout}` : ''}${s.layers.some((x) => x.props?.image && x.kind === 'backdrop') ? ', has background picture' : ''}\n  text: ${textFields(l?.props).join('; ') || '(none)'}`;
+  }).join('\n');
+  const prompt = `You are the final quality reviewer of a ${ir.metadata.width}x${ir.metadata.height} video. The attached images are one frame from each scene, in order. Captions at the bottom are added separately — ignore them.
+Look for real, visible problems only: text cut off at an edge or overflowing its box, text overlapping other text or images, text unreadable against its background, a blank/empty-looking scene, a broken image, an awkward layout that wastes most of the frame.
+${list}
+
+Fixes you may use (max 8 in total, only where a problem is visible):
+- {"scene":N,"op":"set","path":"<a text field path from the list>","value":"shorter or clearer copy"}
+- {"scene":N,"op":"layout","value":"left"|"right"|"center"}
+- {"scene":N,"op":"to_kinetic","lines":["2–3 short lines"]}  (replace a broken scene with big type)
+- {"scene":N,"op":"no_picture"}  (remove a background picture that hurts legibility)
+Reply ONLY JSON: {"fixes":[…],"notes":"one short sentence"}. If everything looks good: {"fixes":[],"notes":"ok"}.`;
+  const r = await fetch(`${CF_BASE()}/v1/chat/completions`, {
+    method: 'POST', headers: cfHeaders(), signal: AbortSignal.timeout(90_000),
+    body: JSON.stringify({
+      model: config.cfModel,
+      messages: [{ role: 'user', content: [{ type: 'text', text: prompt }, ...images.map((url) => ({ type: 'image_url', image_url: { url } }))] }],
+      max_tokens: 2000, temperature: 0.2, chat_template_kwargs: { thinking: false },
+    }),
+  });
+  if (!r.ok) throw new Error(`review failed ${r.status}`);
+  const out = parseJson((await r.json()).choices?.[0]?.message?.content);
+  let applied = 0;
+  for (const f of arr(out.fixes, 8)) {
+    const scene = ir.scenes[Number(f?.scene) - 1];
+    if (!scene) continue;
+    const l = mainLayer(scene);
+    if (f.op === 'set' && l?.props && setPath(l.props, f.path, f.value)) applied++;
+    else if (f.op === 'layout' && l?.type === 'template' && ['left', 'right', 'center'].includes(f.value)) { l.layout = f.value; applied++; }
+    else if (f.op === 'to_kinetic' && Array.isArray(f.lines) && f.lines.length) {
+      const idx = scene.layers.indexOf(l);
+      if (idx >= 0) { scene.layers[idx] = { type: 'template', kind: 'kinetic', props: { lines: arr(f.lines, 3).map((x) => str(x, 40)) } }; applied++; }
+    } else if (f.op === 'no_picture') {
+      const bg = scene.layers.findIndex((x) => x.kind === 'backdrop' && x.props?.image);
+      if (bg >= 0) {
+        scene.layers[bg] = STYLES[styleId].shader ? { type: 'shader', kind: STYLES[styleId].shader, intensity: 0.7 } : { type: 'template', kind: 'backdrop', props: {} };
+        applied++;
+      }
+    }
+  }
+  onStep(`quality check: ${applied} fix${applied === 1 ? '' : 'es'} — ${str(out.notes, 140)}`);
+  return applied;
+}
+
+
 const lum = (h) => {
   const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
@@ -707,6 +828,13 @@ export async function generateFastVideo(project, { url, topic, style, look, form
   // Icons are tinted server-side, so match the renderer's legibility rule
   // (styles.ts legibleAccent): a dark brand colour on a dark pack is lightened.
   const iconTint = legible(accentGuess, ['clean', 'playful', 'editorial'].includes(styleId));
+  // Pictures generate while the voice-over is made (all in parallel).
+  const pictures = {};
+  const picturesDone = Promise.all(scenes.map(async (s, i) => {
+    if (!s.image || typeof s.image !== 'string') return;
+    const p = `${rel}/pic_${i + 1}.jpg`;
+    try { if (await makePicture(str(s.image, 600), styleId, format, join(dir, p))) pictures[i] = p; } catch { /* scene falls back */ }
+  }));
   const audio = await Promise.all(scenes.map(async (s, i) => {
     const buf = await speak(str(s.narration, 400), voice);
     await writeFile(join(dir, rel, `vo_${i + 1}.mp3`), buf);
@@ -726,7 +854,8 @@ export async function generateFastVideo(project, { url, topic, style, look, form
       } catch { return null; }
     }));
   }));
-  mark(`voice-over + word timings ready${audio.every((a) => a.timed) ? '' : ' (some timings estimated)'}`);
+  await picturesDone;
+  mark(`voice-over + word timings ready${audio.every((a) => a.timed) ? '' : ' (some timings estimated)'}; ${Object.keys(pictures).length} pictures`);
 
   // 4. assemble
   const VO_OFFSET = 0.25; // voice starts just after the scene's transition lands
@@ -789,7 +918,7 @@ export async function generateFastVideo(project, { url, topic, style, look, form
     const last = i === scenes.length - 1;
     // Vary layouts the writer left open.
     const sv = { ...s, layout: s.layout || pick(rng, LAYOUTS) };
-    let layer = buildTemplate(last && s.template !== 'cta' ? { ...sv, template: 'cta' } : sv, { site, timed, offset: VO_OFFSET, icons: icons[i], usedShots });
+    let layer = buildTemplate(last && s.template !== 'cta' ? { ...sv, template: 'cta' } : sv, { site, timed, offset: VO_OFFSET, icons: icons[i], usedShots, picture: pictures[i], rng });
     // Never a blank scene: fall back to big type from the sentence itself.
     if (!layer) layer = i === 0
       ? { type: 'template', kind: 'hero', props: { title: str(s.title || words4(narration), 70), subtitle: str(s.subtitle, 110), logo: site?.logo || null } }
@@ -798,9 +927,13 @@ export async function generateFastVideo(project, { url, topic, style, look, form
     if (music.grid && layer.props?.focus) {
       for (const f of layer.props.focus) f.at = +(nearestBeat(music.grid, starts[i] + f.at, 0.25) - starts[i]).toFixed(3);
     }
-    const background = pack.shader
-      ? { type: 'shader', kind: pack.shader, intensity: 0.7 }
-      : { type: 'template', kind: 'backdrop', props: {} };
+    // A picture sits behind text-led scenes; otherwise the pack's background.
+    const behind = pictures[i] && ['hero', 'kinetic', 'quote', 'stat', 'stats', 'cta'].includes(layer.kind);
+    const background = behind
+      ? { type: 'template', kind: 'backdrop', props: { image: pictures[i] } }
+      : pack.shader
+        ? { type: 'shader', kind: pack.shader, intensity: 0.7 }
+        : { type: 'template', kind: 'backdrop', props: {} };
     const layers = [background];
     if (layer._motion) delete layer._motion;
     layers.push(layer);
@@ -857,6 +990,14 @@ export async function generateFastVideo(project, { url, topic, style, look, form
   };
   retime(ir);
   await writeFile(irSnapshotPath(project.id), JSON.stringify(ir, null, 2));
+  // Look at a frame of every scene and fix what's visibly wrong.
+  try {
+    if (await qualityCheck(project, ir, dir, styleId, onStep)) {
+      retime(ir);
+      await writeFile(irSnapshotPath(project.id), JSON.stringify(ir, null, 2));
+    }
+    mark('quality checked');
+  } catch (e) { onStep(`quality check skipped (${e.message})`); }
   mark('video ready to play');
   return ir;
 }
@@ -872,20 +1013,10 @@ export const fastBusy = () => pending > 0;
 export function renderFastMp4(projectId, onLog = () => {}) {
   pending++;
   const job = renderChain.then(async () => {
-    await mkdir(join(RENDERER_DIR, 'public'), { recursive: true });
-    await restoreProject(projectId);
-    const out = join(RENDERER_DIR, 'out', `fast-${projectId}.mp4`);
-    await new Promise((resolvePromise, reject) => {
-      const child = spawn('npx', ['remotion', 'render', 'Explainer', out, '--concurrency', '100%'], { cwd: RENDERER_DIR, stdio: ['ignore', 'pipe', 'pipe'] });
-      let tail = '';
-      const take = (c) => { tail = (tail + c.toString()).slice(-2000); onLog(c.toString().trim().split('\n').pop()); };
-      child.stdout.on('data', take);
-      child.stderr.on('data', take);
-      child.on('error', reject);
-      child.on('close', (code) => (code === 0 ? resolvePromise() : reject(new Error(`render exited ${code}: ${tail.slice(-300)}`))));
-    });
+    const ir = JSON.parse(await readFile(irSnapshotPath(projectId), 'utf8'));
     const dest = join(ARTIFACTS_DIR, `${projectId}.mp4`);
-    await copyFile(out, dest);
+    let last = -1;
+    await renderMp4(projectId, ir, dest, (p) => { const pct = Math.floor(p * 10) * 10; if (pct !== last) { last = pct; onLog(`render ${pct}%`); } });
     return dest;
   }).finally(() => { pending--; });
   renderChain = job.catch(() => {});

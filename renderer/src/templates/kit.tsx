@@ -173,3 +173,46 @@ export function useCountUp(to: number, delay = 0, duration = 40): string {
 /** Pick by layout with a default. */
 export const isRight = (layout?: string) => layout === 'right';
 export const isCenter = (layout?: string) => layout === 'center' || layout === 'full';
+
+// ── vertical (9:16) helpers ─────────────────────────────────────────────────
+// Phone frames are width-bound: a layout scaled from 16:9 ends up as a thin
+// strip in the middle. These helpers give vertical branches a type unit tied
+// to the width (u = 1 at 1080 wide) and a tall content block that sits between
+// the top safe margin (~8%) and the caption band (bottom ~18%).
+
+/** Vertical frame info. `v` is true only for clearly tall frames (H > 1.15 W). */
+export function useVertical() {
+  const {width: W, height: H} = useVideoConfig();
+  const v = H > W * 1.15;
+  const top = H * 0.08;
+  const bottom = H * 0.18;
+  return {v, W, H, u: W / 1080, top, bottom, side: W * 0.075, zoneH: H - top - bottom, blockH: H * 0.66};
+}
+
+/**
+ * Vertical scene layout: an optional title at the top of a block ~66% of the
+ * frame tall (centred above the caption band); the body fills the rest of the
+ * block. Body children are laid out in a column (`justify` decides spacing).
+ */
+export const VFrame: React.FC<{
+  children: ReactNode;
+  /** Scene length; when given, the block fades out over the last frames. */
+  durationFrames?: number;
+  title?: ReactNode;
+  titleGap?: number;
+  blockH?: number;
+  justify?: CSSProperties['justifyContent'];
+  bodyStyle?: CSSProperties;
+}> = ({children, durationFrames, title, titleGap, blockH, justify = 'space-evenly', bodyStyle}) => {
+  const g = useVertical();
+  const exit = useExit(durationFrames ?? 1e9);
+  const h = Math.min(g.zoneH, blockH ?? g.blockH);
+  return (
+    <AbsoluteFill style={{padding: `${g.top}px ${g.side}px ${g.bottom}px`, display: 'flex', flexDirection: 'column', justifyContent: 'center', opacity: exit}}>
+      <div style={{height: h, display: 'flex', flexDirection: 'column', minHeight: 0}}>
+        {title ? <div style={{flex: 'none', marginBottom: titleGap ?? 56 * g.u}}>{title}</div> : null}
+        <div style={{flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', justifyContent: justify, ...bodyStyle}}>{children}</div>
+      </div>
+    </AbsoluteFill>
+  );
+};

@@ -169,26 +169,26 @@ export const Stat: React.FC<TemplateProps> = ({p, layout, beats, durationFrames}
   const context = str(p.context);
 
   const text = useNumberText(p.number, t0 + 2, 48);
-  const size = fitNumber((tall ? 320 : 400) * k * s.scale, W * (tall ? 0.84 : 0.8), finalNumberText(p.number), prefix, suffix, s);
+  const size = fitNumber((tall ? 560 : 400) * k * s.scale, W * (tall ? 0.85 : 0.8), finalNumberText(p.number), prefix, suffix, s);
 
   const enter = useEnter(t0);
   const settle = useProgress(t0);
   const line = useProgress(t0 + 14);
-  const lineW = Math.max(0, Math.min(1.05, line)) * (tall ? 220 : 280) * k;
+  const lineW = Math.max(0, Math.min(1.05, line)) * (tall ? 300 : 280) * k;
 
   return (
     <SafeArea durationFrames={durationFrames} style={{alignItems: center ? 'center' : 'flex-start'}}>
       <div style={{...enter, transform: `${enter.transform ?? ''} scale(${0.94 + 0.06 * Math.min(1, settle)})`, transformOrigin: center ? '50% 100%' : '0% 100%'}}>
         <BigNumber text={text || '0'} final={finalNumberText(p.number)} prefix={prefix} suffix={suffix} size={size} align={align} />
       </div>
-      <div style={{height: 10 * k, width: lineW, background: s.palette.accent, borderRadius: 99, margin: `${34 * k}px 0 ${40 * k}px`, boxShadow: s.id === 'tech' ? `0 0 ${24 * k}px ${alpha(s.palette.accent, 0.6)}` : undefined}} />
+      <div style={{height: (tall ? 14 : 10) * k, width: lineW, background: s.palette.accent, borderRadius: 99, margin: tall ? `${48 * k}px 0 ${56 * k}px` : `${34 * k}px 0 ${40 * k}px`, boxShadow: s.id === 'tech' ? `0 0 ${24 * k}px ${alpha(s.palette.accent, 0.6)}` : undefined}} />
       {label ? (
-        <Heading size={(tall ? 66 : 64) * k} delay={tLabel} align={align} style={{maxWidth: center ? '86%' : tall ? '100%' : '70%', ...clampLines(3)}}>
+        <Heading size={(tall ? 96 : 64) * k} delay={tLabel} align={align} style={{maxWidth: center ? '86%' : tall ? '100%' : '70%', ...clampLines(3)}}>
           {label}
         </Heading>
       ) : null}
       {context ? (
-        <Body size={(tall ? 38 : 34) * k} delay={tLabel + 8} align={align} style={{marginTop: 22 * k, maxWidth: center ? '72%' : tall ? '100%' : '56%', ...clampLines(3)}}>
+        <Body size={(tall ? 50 : 34) * k} delay={tLabel + 8} align={align} style={{marginTop: (tall ? 30 : 22) * k, maxWidth: center ? '72%' : tall ? '100%' : '56%', ...clampLines(3)}}>
           {context}
         </Body>
       ) : null}

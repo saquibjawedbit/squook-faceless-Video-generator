@@ -37,7 +37,7 @@ export const Kinetic: React.FC<TemplateProps> = ({p, layout, beats, fps, duratio
   const longestWord = Math.max(...lines.flatMap((l) => l.split(' ').map((w) => w.length)));
   const visible = Math.min(n, 4);
   const lh = upper ? 1.0 : 1.08;
-  const base = (vertical ? 176 : 176) * s.scale * u;
+  const base = (vertical ? 250 : 176) * s.scale * u;
   const minFs = (vertical ? 64 : 72) * u;
   // Lines are broken into rows here (greedy, by estimated glyph width) so the
   // stack layout is exact rather than relying on the browser's wrapping.

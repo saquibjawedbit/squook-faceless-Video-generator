@@ -1,11 +1,24 @@
-import {AbsoluteFill, useCurrentFrame} from 'remotion';
+import {AbsoluteFill, Img, interpolate, useCurrentFrame, useVideoConfig} from 'remotion';
+import {asset} from '../ir';
 import {alpha, mix, useStyle} from '../styles';
 
 // The pack's non-shader backgrounds (shader packs use the ShaderLayer).
 // Slow drift keeps static scenes alive without distracting.
-export const Backdrop: React.FC<{kind?: string}> = ({kind}) => {
+export const Backdrop: React.FC<{kind?: string; image?: string}> = ({kind, image}) => {
   const s = useStyle();
   const frame = useCurrentFrame();
+  const {durationInFrames} = useVideoConfig();
+  // A picture behind a text scene: slow push-in, washed toward the pack's
+  // canvas colour so the scene's own type stays the hero and stays legible.
+  if (image) {
+    const t = interpolate(frame, [0, Math.max(1, durationInFrames)], [0, 1], {extrapolateRight: 'clamp'});
+    return (
+      <AbsoluteFill style={{background: s.palette.bg, overflow: 'hidden'}}>
+        <Img src={asset(image)} style={{width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${1.06 + 0.12 * Math.min(1, frame / 240)})`, filter: 'saturate(0.9)'}} />
+        <AbsoluteFill style={{background: `radial-gradient(ellipse 75% 70% at 50% 45%, ${alpha(s.palette.bg, 0.72)} 0%, ${alpha(s.palette.bg, 0.88)} 70%, ${s.palette.bg} 100%)`, opacity: 0.98 - 0 * t}} />
+      </AbsoluteFill>
+    );
+  }
   const k = kind || s.background.kind;
   const {bg, accent, accent2} = s.palette;
   const drift = Math.sin(frame / 90) * 6;

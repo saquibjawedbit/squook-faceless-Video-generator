@@ -13,6 +13,7 @@ import { LANDING_STAGES, validateLandingUrl, landingOptions } from './landing.js
 import { countLandingSince, createProject, updateProject, finishProject, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
 import { generateFastVideo, renderFastMp4, fastBusy, saveFastSource, ensureFastSource } from './fastVideo.js';
 import { makeThumb } from './pipeline.js';
+import { warmRenderer } from './renderService.js';
 import { runDirectorChat, runDirectorChatStream } from './directorAgent.js';
 import { appendChat, readChat, clearChat } from './chatStore.js';
 import { STAGES, previewScript } from './pipeline.js';
@@ -602,5 +603,7 @@ ensureBucket().finally(async () => {
   await rehydrateFromArtifacts().catch((e) => console.warn('[store] recover failed:', e.message));
   app.listen(config.port, () => {
     console.log(`Squook API on http://localhost:${config.port}  (pipeline: ${config.pipelineMode}, auth: ${authEnabled ? 'on' : 'off'}, persistence: ${persistenceEnabled ? 'on' : 'off'})`);
+    // Fast mode: bundle the renderer + open its browser now, not on the first video.
+    if (config.pipelineMode === 'real') warmRenderer();
   });
 });

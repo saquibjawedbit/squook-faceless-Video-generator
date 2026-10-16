@@ -1,7 +1,7 @@
 import {AbsoluteFill, Audio, interpolate, Sequence} from 'remotion';
 import {SceneRenderer} from './SceneRenderer';
 import type {RenderIR, Transition} from './ir';
-import {asset, transitionFrames} from './ir';
+import {asset, setAssetBase, transitionFrames} from './ir';
 import {ThemeProvider, themeOf} from './theme';
 import type {Theme} from './theme';
 import {StyleProvider, styleOf} from './styles';
@@ -39,6 +39,7 @@ function duckGain(m: Music, t: number): number {
 // next scene; the next scene (later in DOM = on top) animates in over that
 // overlap, driven by the previous scene's transition.
 export const MainVideo: React.FC<{ir: RenderIR}> = ({ir}) => {
+  setAssetBase((ir.metadata as {asset_base?: string}).asset_base);
   const {fps, total_frames: totalFrames} = ir.metadata;
   const music = ir.metadata.music as Music | undefined;
   const pack = styleOf(ir);
