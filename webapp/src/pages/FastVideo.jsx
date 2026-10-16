@@ -1,10 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
 import { Player } from '@remotion/player';
+import { prefetch } from 'remotion';
 import { MainVideo } from '@renderer/MainVideo';
 import Box from '../lib/Box.jsx';
 import { css } from '../lib/css.js';
 import { navigate, currentQuery } from '../lib/router.js';
-import { apiBase, createFastVideo, getIR, getProject, getPlaybackUrl } from '../lib/api.js';
+import { apiBase, createFastVideo, getIR, getProject, getPlaybackUrl, rerenderFastVideo } from '../lib/api.js';
 
 /**
  * Fast mode (`#/fast`, `#/fast?id=…`): paste a link or type a topic, and the
@@ -47,6 +48,27 @@ export default function FastVideo() {
     if (id && !ir) getIR(id).then(setIr).catch((e) => setError(String(e.message || e)));
   }, [id, ir]);
 
+  // Load every picture/sound up front so scenes never flash blank while an
+  // image is still downloading (the Player uses the prefetched copies).
+  useEffect(() => {
+    if (!id || !ir) return undefined;
+    const paths = new Set();
+    const walk = (v) => {
+      if (typeof v === 'string') { if (/^assets\/.+\.(jpe?g|png|svg|webp|mp3)$/i.test(v)) paths.add(v); }
+      else if (Array.isArray(v)) v.forEach(walk);
+      else if (v && typeof v === 'object') Object.values(v).forEach(walk);
+    };
+    walk(ir);
+    const handles = [...paths].map((p) => prefetch(`${apiBase}/api/projects/${id}/assets/${p}`, { method: 'blob-url' }));
+    return () => handles.forEach((h) => h.free());
+  }, [id, ir]);
+
+  const [poll, setPoll] = useState(0);
+  const renderAgain = async () => {
+    try { setProject(await rerenderFastVideo(id)); setPoll((n) => n + 1); }
+    catch (e) { setError(String(e.message || e)); }
+  };
+
   // Poll for the background MP4.
   useEffect(() => {
     if (!id) return undefined;
@@ -63,7 +85,7 @@ export default function FastVideo() {
     };
     tick();
     return () => { alive = false; clearTimeout(timer); };
-  }, [id]);
+  }, [id, poll]);
 
   useEffect(() => {
     if (!busy) return undefined;
@@ -153,7 +175,12 @@ export default function FastVideo() {
               <Box t="a" href={downloadHref} download={fileName} s="display:inline-flex;align-items:center;gap:9px;border-radius:12px;padding:12px 20px;font-size:14.5px;font-weight:600;background:var(--accent);color:#0B0B0E;text-decoration:none" sh="filter:brightness(1.1)">Download MP4</Box>
             ) : (
               <span style={{ fontFamily: mono, fontSize: 12, color: 'rgba(244,243,240,0.55)' }}>
-                {project?.status === 'failed' ? project.error : 'MP4 rendering in the background…'}
+                {project?.status === 'failed' ? (
+                  <>
+                    {project.error}{' '}
+                    <button type="button" onClick={renderAgain} style={css('margin-left:8px;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;border:0;cursor:pointer;background:var(--accent);color:#0B0B0E')}>Render MP4 again</button>
+                  </>
+                ) : 'MP4 rendering in the background…'}
               </span>
             )}
           </div>

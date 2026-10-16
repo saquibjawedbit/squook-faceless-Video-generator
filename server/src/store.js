@@ -275,6 +275,17 @@ export async function reconcileInterrupted() {
   if (error) console.warn('[db] reconcile failed:', error.message);
 }
 
+// Fast-mode videos whose MP4 was cut off by a restart in the last day: their
+// preview is backed up, so the server can simply render the MP4 again.
+export async function listInterruptedFast() {
+  if (!persistenceEnabled) return [];
+  const since = new Date(Date.now() - 24 * 3600 * 1000).toISOString();
+  const { data, error } = await admin.from('projects').select('*')
+    .eq('genre', 'fast').eq('error', RESTART_ERROR).gte('created_at', since).limit(20);
+  if (error) { console.warn('[db] interrupted lookup failed:', error.message); return []; }
+  return (data || []).map(fromRow);
+}
+
 function fromRow(r) {
   return {
     id: r.id, userId: r.user_id, prompt: r.prompt, title: r.title,

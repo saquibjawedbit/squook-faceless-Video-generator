@@ -10,7 +10,7 @@ import { requireAuth } from './auth.js';
 import { ensureBucket } from './supabaseAdmin.js';
 import { enqueueProject, enqueueRerender, enqueueRevoice, enqueueLanding, isBusy } from './jobs.js';
 import { LANDING_STAGES, validateLandingUrl, landingOptions } from './landing.js';
-import { countLandingSince, createProject, updateProject, finishProject, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
+import { countLandingSince, createProject, updateProject, finishProject, rehydrate, listInterruptedFast, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
 import { generateFastVideo, renderFastMp4, fastBusy, saveFastSource, ensureFastSource } from './fastVideo.js';
 import { makeThumb } from './pipeline.js';
 import { warmRenderer } from './renderService.js';
@@ -199,13 +199,42 @@ app.post('/api/fast', requireAuth, async (req, res) => {
   saveFastSource(p).catch((e) => log(`could not back up the preview source: ${e.message}`));
 
   // MP4 in the background; the browser already plays the preview.
-  renderFastMp4(p.id, () => {})
+  startFastRender(p, ir);
+});
+
+// Render (or re-render) a fast video's MP4 from its saved IR and publish it.
+function startFastRender(p, ir) {
+  rehydrate(p);
+  updateProject(p.id, { status: 'running', stage: 'rendering', progress: 60, error: null });
+  return renderFastMp4(p.id, () => {})
     .then(async (videoPath) => finishProject(p.id, {
       videoPath, thumbPath: await makeThumb(videoPath, p.id).catch(() => null),
       title: ir.metadata.title, durationS: ir.metadata.total_duration_seconds,
     }))
-    .catch((e) => { log(`render failed: ${e.message}`); updateProject(p.id, { status: 'failed', error: `MP4 render failed: ${e.message}` }); });
+    .catch((e) => { console.warn(`[fast ${p.id.slice(0, 8)}] render failed: ${e.message}`); updateProject(p.id, { status: 'failed', error: `MP4 render failed: ${e.message}` }); });
+}
+
+// "Render MP4 again" — after a failure or an interrupted render.
+app.post('/api/fast/:id/render', requireAuth, async (req, res) => {
+  const p = await ownedProject(req, res);
+  if (!p) return;
+  if (p.genre !== 'fast') return res.status(400).json({ error: 'not a fast-mode video' });
+  if (p.status === 'running') return res.json(publicView(p));
+  if (!(await ensureFastSource(p).catch(() => false))) return res.status(404).json({ error: 'this video’s source is gone — please make it again' });
+  startFastRender(p, await readIr(p.id));
+  res.json(publicView(p));
 });
+
+// After a restart: re-render MP4s that the restart cut off.
+async function resumeInterruptedFast() {
+  for (const p of await listInterruptedFast()) {
+    try {
+      if (!(await ensureFastSource(p))) continue;
+      console.log(`[fast ${p.id.slice(0, 8)}] resuming the MP4 render cut off by a restart`);
+      startFastRender(p, await readIr(p.id));
+    } catch (e) { console.warn(`[fast ${p.id.slice(0, 8)}] resume failed: ${e.message}`); }
+  }
+}
 
 app.get('/api/landing/quota', requireAuth, async (req, res) => {
   try { res.json(await landingQuota(req.user)); }
@@ -604,6 +633,6 @@ ensureBucket().finally(async () => {
   app.listen(config.port, () => {
     console.log(`Squook API on http://localhost:${config.port}  (pipeline: ${config.pipelineMode}, auth: ${authEnabled ? 'on' : 'off'}, persistence: ${persistenceEnabled ? 'on' : 'off'})`);
     // Fast mode: bundle the renderer + open its browser now, not on the first video.
-    if (config.pipelineMode === 'real') warmRenderer();
+    if (config.pipelineMode === 'real') { warmRenderer(); resumeInterruptedFast().catch((e) => console.warn('[fast] resume failed:', e.message)); }
   });
 });
