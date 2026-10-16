@@ -775,7 +775,7 @@ const TEMPLATE_GUIDE = `Scene templates ("template" field) and their fields — 
 - "visual": a full-screen picture that SHOWS the sentence (a person, place, object or moment), with title (≤6 words) and caption (≤12 words). Needs "image". layout "left"|"center"|"right".
 - "cta": closing. title, subtitle, button (≤3 words), url. Always the last scene.
 
-Real footage: any picture-led scene (visual/hero/kinetic/stat/cta) may instead add "stock": a 2–4 word search for REAL stock video of a generic everyday moment (e.g. "busy indian market", "students studying", "chef cooking") — never the product, a brand, a screen or a specific person. Prefer "stock" over "image" for people, places and actions.
+Real footage: any picture-led scene (visual/hero/kinetic/stat/cta) may instead add "stock": a 2–5 word search for REAL stock video of a generic everyday moment that names the setting or people when it matters (e.g. "indian family eating dinner", "indian students studying", "street food stall india") — never the product, a brand, a screen or a specific person. Prefer "stock" over "image" for people, places and actions.
 Pictures: any scene may add "image": a vivid description of a real-world picture for it (subject, setting, action, mood, camera angle; Indian context when the audience is Indian). It becomes the background of hero/kinetic/quote/stat/stats/cta scenes and the whole frame of "visual". Never ask for text, words, logos, screens or UI in a picture.`;
 
 // ── the customer's own photos and clips ─────────────────────────────────────
@@ -817,13 +817,35 @@ async function toClip(src, dir, base) {
 
 /** Free real footage (Pexels/Pixabay) for a search phrase, matching the frame's orientation. */
 const stockReady = () => Boolean(config.pexelsKey || config.pixabayKey);
-async function stockClip(query, format, dir, base) {
+async function stockClip(query, format, dir, base, { scene = '', context = '' } = {}) {
   const tall = format === '9:16';
   const hits = (await searchStock(query, { mediaType: 'video', perPage: 12 }).catch(() => []))
     .filter((h) => ['pexels', 'pixabay'].includes(h.provider) && h.type === 'video' && h.download && (!h.duration || (h.duration >= 4 && h.duration <= 40)));
   if (!hits.length) return null;
   const fits = (h) => (tall ? h.height > h.width : h.width >= h.height);
-  const best = hits.find(fits) || hits[0];
+  // Look at the top candidates and keep one that really fits the scene and its
+  // audience (a Ranchi restaurant shouldn't get a snowy European family).
+  const pool = [...hits.filter(fits), ...hits.filter((h) => !fits(h))].slice(0, 6);
+  const thumbs = await Promise.all(pool.map(async (h) => {
+    try {
+      const r = await fetch(h.thumb, { signal: AbortSignal.timeout(8000) });
+      return r.ok ? `data:image/jpeg;base64,${Buffer.from(await r.arrayBuffer()).toString('base64')}` : null;
+    } catch { return null; }
+  }));
+  const cands = pool.map((h, i) => ({ h, img: thumbs[i] })).filter((c) => c.img);
+  if (!cands.length) return null;
+  let pickN = 0;
+  try {
+    const ask = `You pick stock footage for one scene of a short video.
+Video context (data): "${String(context).slice(0, 400)}"
+This scene says (data): "${String(scene).slice(0, 300)}"
+The ${cands.length} attached images are thumbnails of candidate clips, numbered 1 to ${cands.length} in order. Pick the ONE that clearly fits this scene AND the audience and place (people, setting, culture and season must make sense). If none fits well, answer 0: a wrong clip is worse than none.
+Reply ONLY JSON: {"pick": <number>}`;
+    const verdict = await chat([{ type: 'text', text: ask }, ...cands.map((c) => ({ type: 'image_url', image_url: { url: c.img } }))], { maxTokens: 50, temperature: 0, timeout: 45_000 });
+    pickN = Number(verdict?.pick) || 0;
+  } catch { pickN = 0; }
+  if (!(pickN >= 1 && pickN <= cands.length)) return null;
+  const best = cands[pickN - 1].h;
   const tmp = join(dir, `${base}.src`);
   const r = await fetch(best.download, { signal: AbortSignal.timeout(60_000) });
   if (!r.ok) return null;
@@ -1412,7 +1434,7 @@ async function prepareScene(project, source, sc, { revoice = false, repicture = 
   if (!m && s.stock && typeof s.stock === 'string' && (repicture || sc.stockFor !== s.stock)) {
     jobs.push((async () => {
       try {
-        const got = stockReady() ? await stockClip(str(s.stock, 60), source.format, dir, `${REL}/stock_${tag}`) : null;
+        const got = stockReady() ? await stockClip(str(s.stock, 60), source.format, dir, `${REL}/stock_${tag}`, { scene: str(s.narration, 300), context: `${source.title || ''}. ${source.topic || source.url || ''}` }) : null;
         if (got) { sc.clip = got.mp4; sc.picture = got.jpg; sc.clipFrom = 'stock'; sc.stockFor = s.stock; sc.credit = got.credit; return; }
       } catch { /* fall back to a picture */ }
       // No footage found: an AI picture of the same moment instead.
