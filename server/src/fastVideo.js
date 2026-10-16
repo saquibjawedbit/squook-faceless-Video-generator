@@ -22,6 +22,7 @@ import { config, ARTIFACTS_DIR, RENDERER_DIR, SERVER_DIR } from './config.js';
 import { retime } from './ir.js';
 import { assetSnapshotDir, irSnapshotPath } from './snapshot.js';
 import { iconSvgUrl } from './icons.js';
+import { searchStock } from './stock.js';
 import { sanitizeMotion } from './directorAgent.js';
 import { renderStills, renderMp4 } from './renderService.js';
 import { MUSIC_MOODS, getTrack, pickTrack, trackFile, musicStart, videoBeats, nextBeat, nearestBeat } from './music.js';
@@ -774,6 +775,7 @@ const TEMPLATE_GUIDE = `Scene templates ("template" field) and their fields — 
 - "visual": a full-screen picture that SHOWS the sentence (a person, place, object or moment), with title (≤6 words) and caption (≤12 words). Needs "image". layout "left"|"center"|"right".
 - "cta": closing. title, subtitle, button (≤3 words), url. Always the last scene.
 
+Real footage: any picture-led scene (visual/hero/kinetic/stat/cta) may instead add "stock": a 2–4 word search for REAL stock video of a generic everyday moment (e.g. "busy indian market", "students studying", "chef cooking") — never the product, a brand, a screen or a specific person. Prefer "stock" over "image" for people, places and actions.
 Pictures: any scene may add "image": a vivid description of a real-world picture for it (subject, setting, action, mood, camera angle; Indian context when the audience is Indian). It becomes the background of hero/kinetic/quote/stat/stats/cta scenes and the whole frame of "visual". Never ask for text, words, logos, screens or UI in a picture.`;
 
 // ── the customer's own photos and clips ─────────────────────────────────────
@@ -801,6 +803,58 @@ async function importMedia(files, dir, rel, onStep = () => {}) {
     } catch (e) { onStep(`couldn't use ${f.name} (${String(e.message).slice(0, 80)})`); }
   }
   return out;
+}
+
+// ── moving footage: real stock clips, or a still picture brought to life ────
+
+// Any file → a web-ready, silent H.264 clip (≤20 s) plus a poster frame.
+async function toClip(src, dir, base) {
+  const mp4 = `${base}.mp4`, jpg = `${base}.jpg`;
+  await run('ffmpeg', ['-v', 'error', '-y', '-i', src, '-t', '20', '-an', '-vf', "scale='if(gt(iw,ih),min(1920,iw),-2)':'if(gt(iw,ih),-2,min(1920,ih))'", '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', join(dir, mp4)]);
+  await run('ffmpeg', ['-v', 'error', '-y', '-ss', '0.5', '-i', join(dir, mp4), '-frames:v', '1', '-q:v', '3', join(dir, jpg)]);
+  return { mp4, jpg };
+}
+
+/** Free real footage (Pexels/Pixabay) for a search phrase, matching the frame's orientation. */
+const stockReady = () => Boolean(config.pexelsKey || config.pixabayKey);
+async function stockClip(query, format, dir, base) {
+  const tall = format === '9:16';
+  const hits = (await searchStock(query, { mediaType: 'video', perPage: 12 }).catch(() => []))
+    .filter((h) => ['pexels', 'pixabay'].includes(h.provider) && h.type === 'video' && h.download && (!h.duration || (h.duration >= 4 && h.duration <= 40)));
+  if (!hits.length) return null;
+  const fits = (h) => (tall ? h.height > h.width : h.width >= h.height);
+  const best = hits.find(fits) || hits[0];
+  const tmp = join(dir, `${base}.src`);
+  const r = await fetch(best.download, { signal: AbortSignal.timeout(60_000) });
+  if (!r.ok) return null;
+  await writeFile(tmp, Buffer.from(await r.arrayBuffer()));
+  const out = await toClip(tmp, dir, base);
+  return { ...out, credit: best.credit || best.provider };
+}
+
+/** fal.ai image-to-video: a still picture → a few seconds of motion. */
+async function animatePicture(picFile, motion, format, dir, base) {
+  if (!config.falKey) return null;
+  const img = `data:image/jpeg;base64,${(await readFile(picFile)).toString('base64')}`;
+  const H = { Authorization: `Key ${config.falKey}`, 'Content-Type': 'application/json' };
+  const sub = await fetch(`https://queue.fal.run/${config.falVideoModel}`, {
+    method: 'POST', headers: H, signal: AbortSignal.timeout(30_000),
+    body: JSON.stringify({ image_url: img, prompt: `${motion}. Subtle, natural, cinematic camera movement. No text.`, duration: 6, resolution: '720p', aspect_ratio: format === '9:16' ? '9:16' : '16:9', generate_audio: false }),
+  });
+  if (!sub.ok) throw new Error(`fal ${sub.status}: ${(await sub.text()).slice(0, 160)}`);
+  const job = await sub.json();
+  for (let i = 0; i < 90; i++) { // up to ~3 minutes
+    await new Promise((r) => setTimeout(r, 2000));
+    const st = await (await fetch(job.status_url, { headers: H })).json().catch(() => ({}));
+    if (st.status === 'COMPLETED') break;
+    if (st.status === 'FAILED' || st.error) throw new Error(`fal failed: ${JSON.stringify(st).slice(0, 160)}`);
+  }
+  const res = await (await fetch(job.response_url, { headers: H })).json();
+  const url = res?.video?.url;
+  if (!url) return null;
+  const tmp = join(dir, `${base}.src`);
+  await writeFile(tmp, Buffer.from(await (await fetch(url, { signal: AbortSignal.timeout(60_000) })).arrayBuffer()));
+  return toClip(tmp, dir, base);
 }
 
 function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook, uploads = [] }) {
@@ -840,6 +894,7 @@ Rules:
 - ${shots.some((x) => x.appStep) ? 'REAL APP WALKTHROUGH: the "walkthrough step" screenshots were recorded in the real app, in order. Build the middle of the video from them, in order, one "screen" scene each, with focus on the element the user clicks (action "click") and narration explaining what the user sees and does. Only the hook and the cta may use other screenshots.' : ''}
 - ${shots.some((x) => x.product) ? 'SHOW HOW IT WORKS: the PRODUCT UI screenshots are real screens of the app. Use every one of them (as "screen" or "split") for the scenes that explain what the product does, in the order a user would meet them. Use landing-page sections only for the hook or proof.' : 'Show the product working wherever you can, not just marketing headlines.'}
 - Write like a sharp human copywriter: plain, specific, natural spoken English. No clichés ("game-changer", "seamless", "unlock"), no filler ("every single day", "while you breathe"), no odd metaphors, no names or terms a stranger wouldn't understand.
+- ${stockReady() ? 'Use "stock" (real footage) on 1–3 scenes about people, places or everyday moments.' : 'No stock footage library is connected: never use "stock".'}
 - On-screen text must support the voice-over, not repeat it word for word.
 - Numbers: never invent statistics, results or customer claims. Use only numbers printed on the website${site ? '' : ' (there is none: use only well-known public facts, or label a number clearly as an example, e.g. "say, 3 wrong items a day")'}. No fake quotes or testimonials.
 - Every "cue" must be a single word that appears in that scene's narration.
@@ -1309,6 +1364,11 @@ export async function generateFastVideo(project, { url, topic, style, look, form
     scenes: [],
   };
   source.scenes = scenes.map((spec) => ({ id: source.nextId++, spec }));
+  // Bring up to 3 AI pictures to life when fal.ai is set up (cost control).
+  if (config.falKey) {
+    let left = 3;
+    for (const sc of source.scenes) if (left > 0 && sc.spec.image && !sc.spec.media && !sc.spec.stock && ['visual', 'hero', 'kinetic', 'cta'].includes(sc.spec.template)) { sc.spec.animate = true; left--; }
+  }
   await Promise.all(source.scenes.map((sc) => prepareScene(project, source, sc)));
   source.fontCss = await brandFontCss;
   mark(`voice-over + word timings ready; ${source.scenes.filter((x) => x.picture).length} pictures`);
@@ -1346,12 +1406,31 @@ async function prepareScene(project, source, sc, { revoice = false, repicture = 
     })());
   }
   const m = (source.media || []).find((x) => x.n === Number(s.media));
-  if (m) { sc.picture = m.path; sc.clip = m.video || null; }
-  else if (sc.clip) sc.clip = null;
-  if (!m && s.image && typeof s.image === 'string' && (repicture || sc.picture === undefined)) {
+  if (m) { sc.picture = m.path; sc.clip = m.video || null; sc.clipFrom = 'media'; }
+  else if (sc.clipFrom === 'media') { sc.clip = null; sc.clipFrom = null; }
+  // Real stock footage for a generic moment (falls back to the AI picture).
+  if (!m && s.stock && typeof s.stock === 'string' && (repicture || sc.stockFor !== s.stock)) {
+    jobs.push((async () => {
+      try {
+        const got = stockReady() ? await stockClip(str(s.stock, 60), source.format, dir, `${REL}/stock_${tag}`) : null;
+        if (got) { sc.clip = got.mp4; sc.picture = got.jpg; sc.clipFrom = 'stock'; sc.stockFor = s.stock; sc.credit = got.credit; return; }
+      } catch { /* fall back to a picture */ }
+      // No footage found: an AI picture of the same moment instead.
+      const file = `${REL}/pic_${tag}.jpg`;
+      try { sc.picture = (await makePicture(str(s.image || `${s.stock}, real photograph`, 600), source.styleId, source.format, join(dir, file))) ? file : null; } catch { sc.picture = null; }
+    })());
+  }
+  if (!m && !s.stock && s.image && typeof s.image === 'string' && (repicture || sc.picture === undefined)) {
     jobs.push((async () => {
       const file = `${REL}/pic_${tag}.jpg`;
       try { sc.picture = (await makePicture(str(s.image, 600), source.styleId, source.format, join(dir, file))) ? file : null; } catch { sc.picture = null; }
+      // …and, when chosen, a few seconds of motion from that picture.
+      if (s.animate && sc.picture && sc.clipFrom !== 'anim') {
+        try {
+          const got = await animatePicture(join(dir, sc.picture), str(s.image, 300), source.format, dir, `${REL}/anim_${tag}`);
+          if (got) { sc.clip = got.mp4; sc.clipFrom = 'anim'; }
+        } catch (e) { console.warn(`[fast] animate failed: ${String(e.message).slice(0, 160)}`); }
+      }
     })());
   }
   fixItems(s);

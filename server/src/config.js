@@ -48,6 +48,9 @@ export const config = {
   // (or both) may be blank — each provider is skipped when its key is absent.
   pexelsKey: process.env.PEXELS_API_KEY || '',
   pixabayKey: process.env.PIXABAY_API_KEY || '',
+  // fal.ai: turns still pictures into short moving clips (image-to-video).
+  falKey: process.env.FAL_KEY || '',
+  falVideoModel: process.env.FAL_VIDEO_MODEL || 'lightricks/ltx-2.5/image-to-video/fast',
   // NASA + Wikimedia are keyless. logo.dev needs a (free) publishable token;
   // the secret is optional and only enables brand-name → domain search.
   logoDevToken: process.env.LOGO_DEV_TOKEN || '',
