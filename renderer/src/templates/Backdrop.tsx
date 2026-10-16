@@ -15,7 +15,7 @@ export const Backdrop: React.FC<{kind?: string; image?: string}> = ({kind, image
     return (
       <AbsoluteFill style={{background: s.palette.bg, overflow: 'hidden'}}>
         <Img src={asset(image)} style={{width: '100%', height: '100%', objectFit: 'cover', transform: `scale(${1.06 + 0.12 * Math.min(1, frame / 240)})`}} />
-        <AbsoluteFill style={{background: `radial-gradient(ellipse 75% 70% at 50% 45%, ${alpha(s.palette.bg, 0.72)} 0%, ${alpha(s.palette.bg, 0.88)} 70%, ${s.palette.bg} 100%)`, opacity: 0.98 - 0 * t}} />
+        <AbsoluteFill style={{background: `radial-gradient(ellipse 75% 70% at 50% 45%, ${alpha(s.palette.bg, 0.5)} 0%, ${alpha(s.palette.bg, 0.66)} 70%, ${alpha(s.palette.bg, 0.85)} 100%)`, opacity: 0.98 - 0 * t}} />
       </AbsoluteFill>
     );
   }

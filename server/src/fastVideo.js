@@ -881,8 +881,10 @@ async function animatePicture(picFile, motion, format, dir, base) {
   return toClip(tmp, dir, base);
 }
 
-function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook, uploads = [] }) {
-  const scenes = Math.max(3, Math.min(30, Math.round(lengthS / 6)));
+function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook, uploads = [], format = '16:9' }) {
+  // Tall videos are reels: quick cuts (~3 s), short lines, a picture in every scene.
+  const reel = format === '9:16' && !site?.shots?.some((x) => x.appStep);
+  const scenes = Math.max(3, Math.min(30, Math.round(lengthS / (reel ? 3 : 6))));
   const shots = site?.shots || [];
   const shotList = shots.map((s, i) => s.appStep
     ? `Screenshot ${i + 1} — REAL APP, walkthrough step ${s.appStep} (logged in): ${s.say}${s.clicked ? ` Next the user clicks ${s.clicked}.` : ''} Elements:\n${s.elements.slice(0, 25).map((e) => `  ${e.id} [${e.kind}] "${e.text}"`).join('\n')}`
@@ -900,7 +902,7 @@ function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook, u
   const styleLine = look && STYLES[look]
     ? `Style pack: "${look}" (fixed by the user).`
     : `Pick the TWO style packs that would fit the brand best, best first, in "styles": ${Object.entries(STYLES).map(([k, v]) => `"${k}" (${v.desc})`).join('; ')}.`;
-  return `You are a senior motion designer and copywriter. Write a ${kind === 'explainer' ? 'clear, friendly explainer' : 'punchy product promo'} of about ${lengthS} seconds: exactly ${scenes} scenes, each with ONE spoken sentence of 10–18 words (about 6 seconds).
+  return `You are a senior motion designer and copywriter. Write a ${kind === 'explainer' ? 'clear, friendly explainer' : 'punchy product promo'} of about ${lengthS} seconds: exactly ${scenes} scenes, each with ONE spoken sentence of ${reel ? '5–9 words (about 3 seconds) — this is a vertical reel: fast cuts, one idea per scene' : '10–18 words (about 6 seconds)'}.
 ${notes ? `Creator's notes (data): """${notes}"""\n` : ''}
 ${source}
 ${uploads.length ? `\nCUSTOMER MEDIA — real photos and clips the customer gave you (attached after any screenshots, in this order):\n${uploads.map((m) => `Media ${m.n}: ${m.kind === 'clip' ? `video clip, ${m.dur}s` : 'photo'} "${m.label}"`).join('\n')}\nUse EVERY media item at least once by setting "media": <its number> on a scene — best on "visual" scenes (full-frame), or behind hero/kinetic/stat/cta. Describe what is really in them; never claim something they don't show. A scene with "media" gets no "image".\n` : ''}
@@ -919,7 +921,7 @@ Rules:
 - ${shots.some((x) => x.product) ? 'SHOW HOW IT WORKS: the PRODUCT UI screenshots are real screens of the app. Use every one of them (as "screen" or "split") for the scenes that explain what the product does, in the order a user would meet them. Use landing-page sections only for the hook or proof.' : 'Show the product working wherever you can, not just marketing headlines.'}
 - Write like a sharp human copywriter: plain, specific, natural spoken English. No clichés ("game-changer", "seamless", "unlock"), no filler ("every single day", "while you breathe"), no odd metaphors, no names or terms a stranger wouldn't understand.
 - ${stockReady() ? 'Use "stock" (real footage) on 1–3 scenes about people, places or everyday moments.' : 'No stock footage library is connected: never use "stock".'}
-- On-screen text must support the voice-over, not repeat it word for word.
+${reel ? `- REEL RULES: every scene must SHOW something real — mostly "visual" scenes with "stock", "media" or "image"; hero/kinetic/stat/cta only WITH a picture behind them; never a scene that is text on a plain background. If the subject is food, a product or a place, show it in close-up at least twice. Titles ≤4 words, big and punchy.\n` : ''}- On-screen text must support the voice-over, not repeat it word for word.
 - Numbers: never invent statistics, results or customer claims. Use only numbers printed on the website${site ? '' : ' (there is none: use only well-known public facts, or label a number clearly as an example, e.g. "say, 3 wrong items a day")'}. No fake quotes or testimonials.
 - Every "cue" must be a single word that appears in that scene's narration.
 - ${styleLine}
@@ -1353,7 +1355,7 @@ export async function generateFastVideo(project, { url, topic, style, look, form
   const direction = pick(rng, DIRECTIONS);
   const hook = pick(rng, HOOKS);
   onStep(`direction: ${direction}; hook: ${hook}`);
-  const script = await writeScript({ site, topic, kind: style, look: fixedStyle, lengthS, notes, direction, hook, uploads }, images.filter(Boolean));
+  const script = await writeScript({ site, topic, kind: style, look: fixedStyle, lengthS, notes, direction, hook, uploads, format }, images.filter(Boolean));
   const scenes = (Array.isArray(script.scenes) ? script.scenes : []).filter((s) => s && str(s.narration, 400)).slice(0, 30);
   if (scenes.length < 2) throw new Error('the writer produced too few scenes — please try again');
   // Every uploaded photo/clip appears at least once: unused ones go on scenes
