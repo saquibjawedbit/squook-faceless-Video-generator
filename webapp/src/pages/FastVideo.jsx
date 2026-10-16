@@ -278,7 +278,9 @@ export default function FastVideo() {
   const ar = ir ? ir.metadata.width / ir.metadata.height : ASPECT[format];
   const fileName = (ir?.metadata?.title || 'squook-video').replace(/[^\w-]+/g, '_') + '.mp4';
   const downloadHref = mp4 && mp4 + (mp4.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(fileName);
-  const stale = mp4 && ir && (ir.metadata.revision || 0) !== (ir.metadata.rendered_revision ?? (ir.metadata.revision || 0));
+  // An edited video whose MP4 doesn't record the same edit is out of date (a
+  // restart can lose the record, which errs toward offering an update).
+  const stale = mp4 && ir && (ir.metadata.revision || 0) > 0 && ir.metadata.rendered_revision !== ir.metadata.revision;
   const pct = project?.progress > 60 ? Math.round(((project.progress - 60) / 39) * 100) : 0;
   const lines = editable?.scenes?.map((s) => s.spec.narration) || [];
   const active = selected ?? playing;
