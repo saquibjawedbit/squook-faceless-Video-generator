@@ -206,7 +206,11 @@ app.post('/api/fast', requireAuth, async (req, res) => {
 function startFastRender(p, ir) {
   rehydrate(p);
   updateProject(p.id, { status: 'running', stage: 'rendering', progress: 60, error: null });
-  return renderFastMp4(p.id, () => {})
+  // Progress 60→99% while frames render, so a stuck render is visible.
+  return renderFastMp4(p.id, (line) => {
+    const m = /render (\d+)%/.exec(line);
+    if (m) updateProject(p.id, { progress: 60 + Math.round(Number(m[1]) * 0.39), stage: 'rendering' });
+  })
     .then(async (videoPath) => finishProject(p.id, {
       videoPath, thumbPath: await makeThumb(videoPath, p.id).catch(() => null),
       title: ir.metadata.title, durationS: ir.metadata.total_duration_seconds,

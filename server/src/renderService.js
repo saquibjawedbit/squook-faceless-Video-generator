@@ -83,6 +83,8 @@ export async function renderMp4(projectId, ir, outputLocation, onProgress = () =
     composition: comp, serveUrl: url, codec: 'h264', outputLocation, inputProps,
     concurrency: Math.max(1, Math.min(6, cpus().length)),
     imageFormat: 'jpeg', jpegQuality: 85, chromiumOptions: CHROMIUM, overwrite: true,
+    // A frame that can't load its media within 60 s fails the render instead of hanging forever.
+    timeoutInMilliseconds: 60_000,
     onProgress: ({ progress }) => onProgress(progress),
   });
   return outputLocation;
