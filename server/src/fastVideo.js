@@ -993,7 +993,15 @@ async function fetchTo(url, dest) {
  * null when the scene can't be built (e.g. a screenshot that doesn't exist) —
  * the caller then falls back to a kinetic/hero scene so nothing is ever blank.
  */
+// Writers sometimes name a scene's list after its template ("icons": [...])
+// instead of "items"; treat those the same so the scene still builds.
+function fixItems(s) {
+  if (s && !Array.isArray(s.items)) for (const k of ['icons', 'stats', 'steps', 'bars', 'features', 'points']) if (Array.isArray(s[k]) && typeof s[k][0] === 'object') { s.items = s[k]; break; }
+  return s;
+}
+
 function buildTemplate(s, ctx) {
+  fixItems(s);
   const { site, timed, offset, icons, usedShots } = ctx;
   if (s.template === 'visual' && !ctx.picture) return null;
   const kind = TEMPLATE_KINDS.includes(s.template) ? s.template : null;
@@ -1299,6 +1307,7 @@ async function prepareScene(project, source, sc, { revoice = false, repicture = 
       try { sc.picture = (await makePicture(str(s.image, 600), source.styleId, source.format, join(dir, file))) ? file : null; } catch { sc.picture = null; }
     })());
   }
+  fixItems(s);
   if (s.template === 'icons' && (!sc.icons || sc.iconsFor !== JSON.stringify(arr(s.items, 4).map((it) => it?.icon || it?.label)))) {
     jobs.push((async () => {
       const tint = legible(source.accent, ['clean', 'playful', 'editorial'].includes(source.styleId));
