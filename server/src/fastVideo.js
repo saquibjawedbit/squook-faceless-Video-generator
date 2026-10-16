@@ -567,6 +567,162 @@ Reply ONLY JSON: {"say":"…","done":false,"el":"e#","action":"click"|"type","te
   }
 }
 
+// ── Chrome extensions: install from the Web Store and film them working ────
+
+const STORE_RE = /chromewebstore\.google\.com\/detail\/(?:[^/]+\/)?([a-p]{32})/;
+export const isExtensionUrl = (u) => STORE_RE.test(String(u || ''));
+
+// Extensions need full Chrome for Testing (headless-shell can't load them).
+let extChromePath;
+async function extensionChrome() {
+  if (extChromePath !== undefined) return extChromePath;
+  extChromePath = process.env.EXT_CHROME_PATH || await findChrome(join(homedir(), '.cache', 'cft')) || null;
+  return extChromePath;
+}
+
+// The .crx from Google's update service → an unpacked folder.
+async function downloadExtension(id, dir) {
+  const r = await fetch(`https://clients2.google.com/service/update2/crx?response=redirect&prodversion=131.0.0.0&acceptformat=crx2,crx3&x=id%3D${id}%26uc`, { redirect: 'follow', signal: AbortSignal.timeout(30_000) });
+  if (!r.ok) throw new Error(`extension download failed (${r.status})`);
+  const buf = Buffer.from(await r.arrayBuffer());
+  if (buf.toString('latin1', 0, 4) !== 'Cr24') throw new Error('not a Chrome extension package');
+  const version = buf.readUInt32LE(4);
+  const start = version === 3 ? 12 + buf.readUInt32LE(8) : 16 + buf.readUInt32LE(8) + buf.readUInt32LE(12);
+  await mkdir(dir, { recursive: true });
+  const zip = join(dir, '..', `${id}.zip`);
+  await writeFile(zip, buf.subarray(start));
+  await run('python3', ['-m', 'zipfile', '-e', zip, dir]);
+  return JSON.parse((await readFile(join(dir, 'manifest.json'), 'utf8')).replace(/^﻿/, ''));
+}
+
+// Runs on the store listing: name, text, users, icon and the developer's own screenshots.
+function readListing() {
+  const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+  const main = document.querySelector('main') || document.body;
+  const imgs = [...document.querySelectorAll('img')].map((i) => ({ src: i.currentSrc || i.src, w: i.naturalWidth, h: i.naturalHeight }));
+  const users = /([\d,.]+\s*[KkMm]?\+?)\s+users/.exec(main.innerText || '')?.[1] || '';
+  return {
+    name: clean(document.querySelector('h1')?.innerText) || document.title.replace(/ - Chrome Web Store$/, ''),
+    description: document.querySelector('meta[property="og:description"]')?.content || '',
+    text: clean(main.innerText).slice(0, 4000),
+    users,
+    hasVideo: Boolean(document.querySelector('iframe[src*="youtube"], [data-video-id]')),
+    icon: imgs.find((i) => /googleusercontent/.test(i.src) && i.w >= 64 && i.w === i.h && i.w <= 260)?.src || null,
+    shots: [...new Set(imgs.filter((i) => /googleusercontent/.test(i.src) && i.w >= 600 && i.w / i.h > 1.2).map((i) => i.src.replace(/=[a-z0-9-]+$/i, '=s1280')))].slice(0, 5),
+  };
+}
+
+/**
+ * A Chrome Web Store link → a "site" for the writer whose product shots are
+ * the extension really running: its popup over a page, its side panel, a page
+ * its content script works on, its options page, plus the listing's own
+ * screenshots. The extension runs in a throwaway browser with no accounts.
+ */
+export async function captureExtension(storeUrl, outDir, rel, onStep = () => {}) {
+  const id = STORE_RE.exec(storeUrl)?.[1];
+  if (!id) throw new Error('not a Chrome Web Store link');
+  // Running the extension itself (third-party code) is opt-in: EXT_RUN=1 and an
+  // extension-capable Chrome. Otherwise only the public listing is used: the
+  // developer's own screenshots of the extension, its text and its icon.
+  const exe = process.env.EXT_RUN === '1' ? await extensionChrome() : null;
+  let manifest = {};
+  const extDir = join(outDir, '..', `ext_${id}`);
+  if (exe) {
+    manifest = await downloadExtension(id, extDir);
+    onStep(`downloaded the extension (manifest v${manifest.manifest_version})`);
+  }
+  const browser = await puppeteer.launch({
+    executablePath: exe || await chromeExecutable(), headless: true, ...(exe ? { enableExtensions: true, pipe: true } : {}),
+    args: ['--no-sandbox', '--disable-dev-shm-usage', '--hide-scrollbars', '--mute-audio'],
+  });
+  const settle = (ms) => new Promise((r) => setTimeout(r, ms));
+  const shots = [];
+  let n = 0;
+  const save = async (page, label, opts = {}) => {
+    const p = `${rel}/shot_${++n}.jpg`;
+    await page.screenshot({ path: join(outDir, p), type: 'jpeg', quality: 90, ...opts });
+    return p;
+  };
+  try {
+    const extId = exe ? await browser.installExtension(extDir) : null;
+    // 1. the listing
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 4 / 3 });
+    await page.goto(`https://chromewebstore.google.com/detail/${id}`, { waitUntil: 'networkidle2', timeout: 30_000 }).catch(() => {});
+    await settle(1200);
+    const listing = await page.evaluate(readListing).catch(() => ({ name: manifest.name || '', description: manifest.description || '', text: '', shots: [] }));
+    onStep(`listing: ${listing.name}${listing.users ? ` (${listing.users} users)` : ''}${listing.hasVideo ? ' — already has a video' : ''}`);
+
+    if (extId) {
+    // 2. a page to show it on: a site its content script targets, else a neutral article
+    const hosts = (manifest.content_scripts || []).flatMap((c) => c.matches || [])
+      .map((m) => /^(?:\*|https?):\/\/(?:\*\.)?([^/*]+)\//.exec(m)?.[1]).filter((h) => h && h.includes('.') && !/^\*/.test(h));
+    const stage = hosts.length ? `https://${hosts[0].replace(/^www\./, 'www.')}/` : 'https://en.wikipedia.org/wiki/Productivity';
+    await page.goto(stage, { waitUntil: 'networkidle2', timeout: 30_000 }).catch(() => {});
+    await settle(2500);
+    await page.evaluate(hideOverlays).catch(() => {});
+    const stagePath = await save(page, 'page');
+    if (hosts.length || (manifest.content_scripts || []).length) {
+      shots.push({ path: stagePath, label: `${listing.name} running on ${new URL(stage).hostname}`, product: true, w: 1920, h: 1200, elements: [] });
+    }
+
+    // 3. the popup, laid over the page like a real click on the toolbar icon
+    const popup = manifest.action?.default_popup || manifest.browser_action?.default_popup;
+    const panel = manifest.side_panel?.default_path;
+    for (const [kind, path] of [['popup', popup], ['side panel', panel]]) {
+      if (!path) continue;
+      try {
+        const pp = await browser.newPage();
+        await pp.setViewport({ width: kind === 'popup' ? 400 : 420, height: kind === 'popup' ? 600 : 900, deviceScaleFactor: 4 / 3 });
+        await pp.goto(`chrome-extension://${extId}/${path.replace(/^\//, '')}`, { waitUntil: 'networkidle2', timeout: 15_000 }).catch(() => {});
+        await settle(1500);
+        const size = await pp.evaluate(() => ({ w: Math.min(800, Math.max(260, document.body.scrollWidth)), h: Math.min(600, Math.max(160, document.body.scrollHeight)) }));
+        const raw = join(outDir, rel, `${kind.replace(' ', '_')}_raw.png`);
+        await pp.screenshot({ path: raw, clip: kind === 'popup' ? { x: 0, y: 0, width: size.w, height: size.h } : undefined });
+        // Composite onto the page screenshot (1920×1200): top-right under the toolbar, or docked right.
+        const p = `${rel}/shot_${++n}.jpg`;
+        const x = kind === 'popup' ? 'W-w-40' : 'W-w', y = kind === 'popup' ? '24' : '0';
+        await run('ffmpeg', ['-v', 'error', '-y', '-i', join(outDir, stagePath), '-i', raw, '-filter_complex',
+          kind === 'popup' ? `[1]pad=iw+6:ih+6:3:3:color=0x00000033[f];[0][f]overlay=${x}:${y}` : `[1]scale=-1:1200[f];[0][f]overlay=${x}:${y}`,
+          '-q:v', '3', join(outDir, p)]);
+        shots.push({ path: p, label: `${listing.name} ${kind}`, product: true, w: 1920, h: 1200, elements: [] });
+        await pp.close();
+      } catch (e) { onStep(`${kind} skipped (${e.message})`); }
+    }
+
+    // 4. the options page
+    const options = manifest.options_ui?.page || manifest.options_page;
+    if (options) {
+      try {
+        await page.goto(`chrome-extension://${extId}/${options.replace(/^\//, '')}`, { waitUntil: 'networkidle2', timeout: 15_000 }).catch(() => {});
+        await settle(1200);
+        shots.push({ path: await save(page, 'options'), label: `${listing.name} settings`, product: true, w: 1920, h: 1200, elements: [] });
+      } catch { /* none */ }
+    }
+
+    }
+    // 5. the developer's own listing screenshots (real UI, chosen by them)
+    for (const src of listing.shots || []) {
+      try {
+        const p = `${rel}/shot_${++n}.jpg`;
+        await fetchTo(src, join(outDir, p));
+        shots.push({ path: p, label: `${listing.name} (store screenshot)`, product: true, w: 1280, h: 800, elements: [] });
+      } catch { n--; }
+    }
+    let logo = null;
+    if (listing.icon) { try { logo = `${rel}/logo_brand.png`; await fetchTo(listing.icon.replace(/=[a-z0-9-]+$/i, '=s256'), join(outDir, logo)); } catch { logo = null; } }
+    onStep(`captured ${shots.length} real screens of the extension`);
+    return {
+      url: storeUrl, title: listing.name || manifest.name, description: listing.description || manifest.description || '',
+      text: `${listing.name} is a Chrome extension${listing.users ? ` used by ${listing.users} people` : ''}.\n${listing.text || listing.description}`,
+      colors: [], ctaColor: '', headingFont: '', bodyFont: '', logoTone: 'dark',
+      shots: shots.slice(0, 8), mobile: null, logo, customerLogos: [], extension: { id, name: listing.name, users: listing.users, hasVideo: listing.hasVideo },
+    };
+  } finally {
+    await browser.close().catch(() => {});
+  }
+}
+
 const toHex = (c) => {
   const m = /rgba?\((\d+), (\d+), (\d+)/.exec(c || '');
   return m ? '#' + [m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, '0')).join('') : null;
@@ -1047,7 +1203,8 @@ export async function generateFastVideo(project, { url, topic, style, look, form
   let site = null;
   if (url) {
     try {
-      site = await captureSite(url, dir, rel);
+      site = isExtensionUrl(url) ? await captureExtension(url, dir, rel, onStep) : await captureSite(url, dir, rel);
+      if (site.extension) notes = `${notes ? `${notes}\n` : ''}This is a Chrome extension (${site.extension.name}). Make a Chrome Web Store promo video: show what it does in the browser, using the real screens of the extension running. The call to action is "Add to Chrome".`;
       mark(`captured ${site.shots.length} screenshots${site.mobile ? ' + mobile' : ''}${site.logo ? ' + logo' : ''}`);
     } catch (e) {
       onStep(`screenshots failed (${e.message}) — reading the page without them`);
