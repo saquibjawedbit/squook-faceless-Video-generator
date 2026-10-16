@@ -228,3 +228,5 @@ textarea.fx-field { resize: vertical; line-height: 1.45; }
   .fx-offer { grid-template-columns: 1fr; }
   .fx-offer-buy { border-left: 0; padding-left: 0; border-top: 1px solid var(--line); padding-top: 16px; }
 }
+.fx-play { position: absolute; inset: 0; margin: auto; width: 84px; height: 84px; border-radius: 50%; border: 0; cursor: pointer; background: var(--accent); color: #fff; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
+.fx-play:hover { transform: scale(1.06); }

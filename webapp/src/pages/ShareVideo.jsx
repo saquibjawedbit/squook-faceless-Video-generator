@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Player } from '@remotion/player';
 import { prefetch } from 'remotion';
 import { MainVideo } from '@renderer/MainVideo';
@@ -20,6 +20,8 @@ export default function ShareVideo() {
   const ref = currentQuery().get('r') || '';
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
+  const [started, setStarted] = useState(false);
+  const playerRef = useRef(null);
 
   if (data) globalThis.__SQUOOK_ASSET_RESOLVE__ = (p) => `${apiBase}/api/projects/${data.id}/assets/${p}`;
 
@@ -58,13 +60,24 @@ export default function ShareVideo() {
             <p className="sub">Made from your website by Squook, in under a minute. No editing, no filming.</p>
             <div className="fx-share-frame" style={{ '--ar': ar, maxWidth: ar < 1 ? 380 : 960 }}>
               {ir ? (
+                <>
                 <Player
+                  ref={playerRef}
+                  // Show a frame with the opening title instead of a blank first frame.
+                  initialFrame={Math.min(45, ir.metadata.total_frames - 1)}
                   component={MainVideo} inputProps={{ ir }}
                   durationInFrames={ir.metadata.total_frames} fps={ir.metadata.fps}
                   compositionWidth={ir.metadata.width} compositionHeight={ir.metadata.height}
                   style={{ width: '100%', height: '100%' }}
-                  controls numberOfSharedAudioTags={24} acknowledgeRemotionLicense
+                  controls={started} numberOfSharedAudioTags={24} acknowledgeRemotionLicense
                 />
+                {!started ? (
+                  <button type="button" className="fx-play" aria-label="Play video"
+                    onClick={() => { setStarted(true); playerRef.current?.seekTo(0); playerRef.current?.play(); }}>
+                    <svg width="30" height="30" viewBox="0 0 24 24"><path d="M8 5v14l11-7z" fill="currentColor" /></svg>
+                  </button>
+                ) : null}
+                </>
               ) : <div className="fx-skeleton">Loading the video…</div>}
             </div>
             {credit ? <div className="fx-credit" style={{ marginTop: 8 }}>{credit}</div> : null}
