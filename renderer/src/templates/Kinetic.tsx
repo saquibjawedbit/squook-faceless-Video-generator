@@ -33,7 +33,9 @@ export const Kinetic: React.FC<TemplateProps> = ({p, layout, beats, fps, duratio
 
   // ── type size: fill the width with the longest line, within limits ────────
   const upper = s.headingCase === 'upper';
-  const cw = ({bold: 0.45, clean: 0.52, tech: 0.55, playful: 0.6, corporate: 0.62, editorial: 0.5} as Record<string, number>)[s.id] ?? 0.56;
+  // Estimated glyph width per font size; capitals (and brand fonts we can't
+  // measure) run wider, so upper-case gets extra room — never clip a line.
+  const cw = (({bold: 0.45, clean: 0.52, tech: 0.55, playful: 0.6, corporate: 0.62, editorial: 0.5} as Record<string, number>)[s.id] ?? 0.56) * (upper ? 1.22 : 1.06);
   const maxLen = Math.max(...lines.map((l) => l.length));
   const longestWord = Math.max(...lines.flatMap((l) => l.split(' ').map((w) => w.length)));
   const visible = Math.min(n, 4);
