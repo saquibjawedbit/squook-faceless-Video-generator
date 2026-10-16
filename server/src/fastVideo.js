@@ -1431,9 +1431,14 @@ async function assemble(project, source) {
   // Sound design, used sparingly: a few whooshes on bigger cuts (varied pitch),
   // pops only on the first list that builds, a riser into the finale, a soft
   // hit when the closing logo lands, clicks on cursor clicks.
+  // At most ONE whoosh per video, and only on a cut where the look changes
+  // (e.g. into a full-screen picture); most cuts are silent under the music.
   const whooshAt = new Set();
-  for (let i = 1; i < scenes.length - 1; i++) if (whooshAt.size < 3 && rng() < 0.4) whooshAt.add(i);
-  let popsLeft = 3;
+  const looks = scenes.map((x) => (['visual', 'screen', 'split', 'phone'].includes(x.spec.template) ? x.spec.template : 'type'));
+  const candidates = [];
+  for (let i = 2; i < scenes.length - 1; i++) if (looks[i] !== looks[i - 1]) candidates.push(i);
+  if (candidates.length && rng() < 0.6) whooshAt.add(pick(rng, candidates));
+  let popsLeft = styleId === 'playful' ? 2 : 0;
 
   const usedShots = new Set();
   const [width, height] = SIZES[source.format] || SIZES['16:9'];
@@ -1470,13 +1475,13 @@ async function assemble(project, source) {
     layers.push(layer);
 
     const fx = (src, volume, start_s, rate = 1) => layers.push({ type: 'audio', src, volume, start_s: Math.max(0, +start_s.toFixed(3)), ...(rate !== 1 ? { playback_rate: +rate.toFixed(2) } : {}) });
-    if (whooshAt.has(i)) fx(sfx.whoosh, pack.sfx * 0.6, 0, 0.85 + rng() * 0.3);
+    if (whooshAt.has(i)) fx(sfx.whoosh, pack.sfx * 0.35, 0, 0.9 + rng() * 0.2);
     if (popsLeft > 0 && layer.beats?.some(Number.isFinite)) {
       for (const b of layer.beats.filter(Number.isFinite).slice(0, popsLeft)) { fx(sfx.pop, 0.07, b, 0.9 + rng() * 0.25); popsLeft--; }
     }
-    if (i === scenes.length - 2 && ['bold', 'tech', 'playful'].includes(styleId)) fx(sfx.riser, 0.12, Math.max(0, durs[i] - 1.5));
-    if (last) fx(sfx.impact, 0.16, 0.12, 1.15);
-    for (const f of layer.props?.focus || []) if (f.action === 'click') fx(sfx.click, 0.32, f.at);
+    if (i === scenes.length - 2 && styleId === 'bold') fx(sfx.riser, 0.08, Math.max(0, durs[i] - 1.5));
+    if (last) fx(sfx.impact, 0.1, 0.12, 1.15);
+    for (const f of layer.props?.focus || []) if (f.action === 'click') fx(sfx.click, 0.18, f.at);
 
     layers.push({ type: 'audio', src: file, volume: 1, start_s: VO_OFFSET });
     // Over a photo, captions get a dark box and white text whatever the pack says.
