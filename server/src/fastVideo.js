@@ -494,13 +494,18 @@ async function wordTimes(buf) {
 
 const norm = (w) => String(w || '').toLowerCase().replace(/[^a-z0-9₹$£€%]/g, '');
 
-// Caption words: the script's own words (exact spelling) on Whisper's timing
-// when the counts line up; Whisper's words otherwise; even spacing as a last resort.
+// Caption words: the script's own words (exact spelling) on Whisper's timing;
+// even spacing when there are no timings.
 function captionWords(text, timed, offset, dur) {
   const words = text.split(/\s+/).filter(Boolean);
   if (timed?.length) {
-    if (timed.length === words.length) return words.map((word, i) => ({ word, start_s: +(offset + timed[i].start).toFixed(2), end_s: +(offset + timed[i].end).toFixed(2) }));
-    return timed.map((w) => ({ word: w.word, start_s: +(offset + w.start).toFixed(2), end_s: +(offset + w.end).toFixed(2) }));
+    // Always show the script's own words (brand names spelled right); take
+    // timing from Whisper, mapping word i proportionally when counts differ.
+    const m = timed.length, n = words.length;
+    return words.map((word, i) => {
+      const w = timed[n === m ? i : Math.min(m - 1, Math.round((i * (m - 1)) / Math.max(1, n - 1)))];
+      return { word, start_s: +(offset + w.start).toFixed(2), end_s: +(offset + w.end).toFixed(2) };
+    });
   }
   const step = dur / Math.max(1, words.length);
   return words.map((word, i) => ({ word, start_s: +(offset + i * step).toFixed(2), end_s: +(offset + (i + 1) * step).toFixed(2) }));
