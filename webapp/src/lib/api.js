@@ -60,7 +60,7 @@ export const createLandingVideo = ({ url, style, format, duration, notes }) =>
 // Fast mode: a link or a topic → { project, ir } in seconds. The IR plays in the
 // browser right away; the MP4 renders in the background (poll the project).
 // Render a fast video's MP4 again (after a failure or an interrupted render).
-export const rerenderFastVideo = (id) => jfetch(`/api/fast/${id}/render`, { method: 'POST' });
+export const rerenderFastVideo = (id, quality) => jfetch(`/api/fast/${id}/render`, json({ quality }));
 
 export const createFastVideo = ({ url, topic, style, look, format, duration, notes }) =>
   jfetch('/api/fast', { method: 'POST', headers: { 'Content-Type': 'application/json' },

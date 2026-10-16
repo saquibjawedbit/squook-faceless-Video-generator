@@ -75,12 +75,18 @@ export async function renderStills(projectId, ir, frames, outDir, scale = 0.4) {
   return out;
 }
 
-/** Full MP4. */
-export async function renderMp4(projectId, ir, outputLocation, onProgress = () => {}) {
+/**
+ * MP4. Default export is 720p with the light effect set (≈3–4× faster on a
+ * CPU-only box); quality 'hd' renders the full look at the IR's full size.
+ */
+export async function renderMp4(projectId, ir, outputLocation, onProgress = () => {}, quality = 'standard') {
   const { renderMedia } = req('@remotion/renderer');
-  const { url, inputProps, comp } = await composition(projectId, ir);
+  const hd = quality === 'hd';
+  const { url, inputProps, comp } = await composition(projectId, { ...ir, metadata: { ...ir.metadata, lite: !hd } });
   await renderMedia({
     composition: comp, serveUrl: url, codec: 'h264', outputLocation, inputProps,
+    scale: hd ? 1 : 2 / 3, // 1920×1080 → 1280×720, 1080×1920 → 720×1280
+    x264Preset: hd ? 'medium' : 'veryfast',
     concurrency: Math.max(1, Math.min(6, cpus().length)),
     imageFormat: 'jpeg', jpegQuality: 85, chromiumOptions: CHROMIUM, overwrite: true,
     // A frame that can't load its media within 60 s fails the render instead of hanging forever.

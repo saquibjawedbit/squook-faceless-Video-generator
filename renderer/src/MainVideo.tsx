@@ -4,7 +4,7 @@ import type {RenderIR, Transition} from './ir';
 import {asset, setAssetBase, transitionFrames} from './ir';
 import {ThemeProvider, themeOf} from './theme';
 import type {Theme} from './theme';
-import {StyleProvider, styleOf} from './styles';
+import {StyleProvider, styleOf, setLite} from './styles';
 import type {StylePack} from './styles';
 import {BrandFont} from './templates/BrandFont';
 
@@ -40,6 +40,7 @@ function duckGain(m: Music, t: number): number {
 // overlap, driven by the previous scene's transition.
 export const MainVideo: React.FC<{ir: RenderIR}> = ({ir}) => {
   setAssetBase((ir.metadata as {asset_base?: string}).asset_base);
+  setLite((ir.metadata as {lite?: boolean}).lite);
   const {fps, total_frames: totalFrames} = ir.metadata;
   const music = ir.metadata.music as Music | undefined;
   const pack = styleOf(ir);

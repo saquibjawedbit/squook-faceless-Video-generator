@@ -2,6 +2,7 @@ import {AbsoluteFill, interpolate, spring, useCurrentFrame, useVideoConfig} from
 import type {CSSProperties} from 'react';
 import type {TemplateProps} from '.';
 import {alpha, luminance, useStyle} from '../styles';
+import {isLite} from '../styles';
 import {Logo, isCenter, useBeat, useEnter, useProgress} from './kit';
 
 // Opening title scene. Logo → eyebrow (with drawn rules) → headline revealed
@@ -70,7 +71,7 @@ export const WordReveal: React.FC<{text: string; delay: number; size: number; al
                   transform: `translateY(${(1 - p) * 110}%) rotate(${(1 - p) * 3}deg)`,
                   transformOrigin: '0% 100%',
                   opacity: o,
-                  filter: s.enter === 'blur' ? `blur(${(1 - o) * 10}px)` : undefined,
+                  filter: s.enter === 'blur' && !isLite() && o < 0.99 ? `blur(${(1 - o) * 10}px)` : undefined,
                   color: last ? s.palette.accent : undefined,
                 }}
               >

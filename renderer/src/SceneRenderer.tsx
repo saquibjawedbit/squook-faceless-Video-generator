@@ -12,6 +12,7 @@ import {ShaderLayer} from './layers/ShaderLayer';
 import {MotionLayer} from './layers/MotionLayer';
 import {LayerBox} from './layers/LayerBox';
 import {TemplateLayer} from './templates';
+import {isLite} from './styles';
 
 export const SceneRenderer: React.FC<{
   scene: IRScene;
@@ -92,7 +93,7 @@ export const SceneRenderer: React.FC<{
       style={{
         opacity,
         transform: `translateX(${translateX}px) scale(${scale})`,
-        filter: blur ? `blur(${blur}px)` : undefined,
+        filter: blur > 0.3 && !isLite() ? `blur(${blur}px)` : undefined,
         clipPath: clip,
       }}
     >

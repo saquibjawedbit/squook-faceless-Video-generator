@@ -1044,13 +1044,13 @@ let pending = 0;
 // The Cloudflare wrapper keeps the container awake while this is true.
 export const fastBusy = () => pending > 0;
 
-export function renderFastMp4(projectId, onLog = () => {}) {
+export function renderFastMp4(projectId, onLog = () => {}, quality = 'standard') {
   pending++;
   const job = renderChain.then(async () => {
     const ir = JSON.parse(await readFile(irSnapshotPath(projectId), 'utf8'));
     const dest = join(ARTIFACTS_DIR, `${projectId}.mp4`);
     let last = -1;
-    await renderMp4(projectId, ir, dest, (p) => { const pct = Math.floor(p * 10) * 10; if (pct !== last) { last = pct; onLog(`render ${pct}%`); } });
+    await renderMp4(projectId, ir, dest, (p) => { const pct = Math.floor(p * 10) * 10; if (pct !== last) { last = pct; onLog(`render ${pct}%`); } }, quality);
     return dest;
   }).finally(() => { pending--; });
   renderChain = job.catch(() => {});

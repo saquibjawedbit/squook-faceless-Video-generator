@@ -2,6 +2,7 @@ import {useEffect, useRef} from 'react';
 import {AbsoluteFill, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {ShaderIRLayer} from '../ir';
 import {hexToRgb, useTheme} from '../theme';
+import {isLite} from '../styles';
 
 // Ambient shader backgrounds. Rendered at half resolution (soft gradients
 // don't need more) and driven by uTime = frame / fps, so output is
@@ -166,8 +167,10 @@ export const ShaderLayer: React.FC<{layer: ShaderIRLayer}> = ({layer}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const stateRef = useRef<GLState | null>(null);
 
-  const w = Math.round(width / 2);
-  const h = Math.round(height / 2);
+  // Lite exports draw the (blurry, ambient) shader at quarter resolution.
+  const div = isLite() ? 4 : 2;
+  const w = Math.round(width / div);
+  const h = Math.round(height / div);
 
   useEffect(() => {
     const canvas = canvasRef.current;

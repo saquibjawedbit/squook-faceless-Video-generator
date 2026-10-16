@@ -1,7 +1,7 @@
 import {AbsoluteFill, Img, interpolate, spring, useCurrentFrame, useVideoConfig} from 'remotion';
 import type {CSSProperties, ReactNode} from 'react';
 import {asset} from '../ir';
-import {alpha, luminance, useStyle} from '../styles';
+import {alpha, isLite, luminance, useStyle} from '../styles';
 import type {EnterKind} from '../styles';
 
 // Shared building blocks for scene templates. Every template should build from
@@ -34,7 +34,8 @@ export function useEnter(delay = 0, kind?: EnterKind): CSSProperties {
     case 'pop':
       return {opacity: o, transform: `scale(${0.6 + 0.4 * p})`};
     case 'blur':
-      return {opacity: o, filter: `blur(${(1 - o) * 14}px)`, transform: `translateY(${(1 - p) * 24}px)`};
+      // No filter once settled (a blur(0) still costs a compositing pass), none at all in lite exports.
+      return {opacity: o, filter: !isLite() && o < 0.99 ? `blur(${(1 - o) * 14}px)` : undefined, transform: `translateY(${(1 - p) * 24}px)`};
     case 'slide':
       return {opacity: o, transform: `translateX(${(1 - p) * -80}px)`};
     case 'mask':

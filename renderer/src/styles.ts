@@ -169,6 +169,13 @@ export const styleOf = (ir: RenderIR): StylePack | null => {
   return {...build(md.style as StyleId, md.theme?.palette || {}, md.brand_font), logoTone: md.logo_tone};
 };
 
+// Export "lite" mode (server MP4s): skips the costliest effects — blur
+// filters and full-resolution shader backgrounds — that a CPU-only renderer
+// draws slowly. The browser preview always shows the full look.
+let lite = false;
+export const setLite = (v?: boolean) => { lite = Boolean(v); };
+export const isLite = () => lite;
+
 const StyleContext = createContext<StylePack | null>(null);
 export const StyleProvider = StyleContext.Provider;
 export const useStyleOrNull = () => useContext(StyleContext);

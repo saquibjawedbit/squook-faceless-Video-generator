@@ -3,6 +3,7 @@ import type {CSSProperties} from 'react';
 import type {TemplateProps} from '.';
 import {isCenter} from './kit';
 import {alpha, useStyle} from '../styles';
+import {isLite} from '../styles';
 
 // Kinetic type: one big line per beat. Each new line lands in the pack's manner
 // and pushes the stack up; earlier lines dim, the last line is in the accent.
@@ -153,7 +154,7 @@ const Line: React.FC<{rows: string[]; p: number; style: CSSProperties}> = ({rows
       inner = {opacity: clamp01(p * 2.2), transform: `scale(${1 + (1 - p) * 0.55})`, transformOrigin: style.textAlign === 'center' ? '50% 60%' : '0% 60%'};
       break;
     case 'blur':
-      inner = {opacity: o, filter: `blur(${(1 - o) * 22}px)`, letterSpacing: `${(1 - o) * 0.12 + s.headingTracking}em`};
+      inner = {opacity: o, filter: !isLite() && o < 0.99 ? `blur(${(1 - o) * 22}px)` : undefined, letterSpacing: `${(1 - o) * 0.12 + s.headingTracking}em`};
       break;
     case 'slide':
       inner = {opacity: o, transform: `translateX(${(1 - p) * -fs * 1.6}px)`};

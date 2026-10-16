@@ -65,8 +65,8 @@ export default function FastVideo() {
 
   const [poll, setPoll] = useState(0);
   const autoRetried = useRef(false);
-  const renderAgain = async () => {
-    try { setProject(await rerenderFastVideo(id)); setPoll((n) => n + 1); }
+  const renderAgain = async (quality) => {
+    try { setMp4(null); setProject(await rerenderFastVideo(id, quality)); setPoll((n) => n + 1); }
     catch (e) { setError(String(e.message || e)); }
   };
 
@@ -177,15 +177,25 @@ export default function FastVideo() {
               </div>
             </div>
             {mp4 ? (
-              <Box t="a" href={downloadHref} download={fileName} s="display:inline-flex;align-items:center;gap:9px;border-radius:12px;padding:12px 20px;font-size:14.5px;font-weight:600;background:var(--accent);color:#0B0B0E;text-decoration:none" sh="filter:brightness(1.1)">Download MP4</Box>
+              <div style={css('display:flex;gap:10px;align-items:center;flex-wrap:wrap')}>
+                {project?.quality !== 'hd' ? (
+                  <button type="button" onClick={() => renderAgain('hd')} title="Full resolution with every effect — takes a few minutes longer"
+                    style={css('border-radius:12px;padding:12px 16px;font-size:13.5px;font-weight:600;cursor:pointer;background:transparent;color:#F4F3F0;border:1px solid rgba(255,255,255,0.2)')}>
+                    Export full HD
+                  </button>
+                ) : null}
+                <Box t="a" href={downloadHref} download={fileName} s="display:inline-flex;align-items:center;gap:9px;border-radius:12px;padding:12px 20px;font-size:14.5px;font-weight:600;background:var(--accent);color:#0B0B0E;text-decoration:none" sh="filter:brightness(1.1)">
+                  Download MP4{project?.quality === 'hd' ? ' (full HD)' : project?.quality === '720p' ? ' (720p)' : ''}
+                </Box>
+              </div>
             ) : (
               <span style={{ fontFamily: mono, fontSize: 12, color: 'rgba(244,243,240,0.55)' }}>
                 {project?.status === 'failed' ? (
                   <>
                     {project.error}{' '}
-                    <button type="button" onClick={renderAgain} style={css('margin-left:8px;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;border:0;cursor:pointer;background:var(--accent);color:#0B0B0E')}>Render MP4 again</button>
+                    <button type="button" onClick={() => renderAgain()} style={css('margin-left:8px;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;border:0;cursor:pointer;background:var(--accent);color:#0B0B0E')}>Render MP4 again</button>
                   </>
-                ) : 'MP4 rendering in the background…'}
+                ) : `MP4 rendering in the background… ${project?.progress > 60 ? Math.round(((project.progress - 60) / 39) * 100) + '%' : ''}`}
               </span>
             )}
           </div>

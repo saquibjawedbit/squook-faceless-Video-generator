@@ -203,14 +203,15 @@ app.post('/api/fast', requireAuth, async (req, res) => {
 });
 
 // Render (or re-render) a fast video's MP4 from its saved IR and publish it.
-function startFastRender(p, ir) {
+function startFastRender(p, ir, quality = 'standard') {
   rehydrate(p);
+  p.quality = quality === 'hd' ? 'hd' : '720p';
   updateProject(p.id, { status: 'running', stage: 'rendering', progress: 60, error: null });
   // Progress 60→99% while frames render, so a stuck render is visible.
   return renderFastMp4(p.id, (line) => {
     const m = /render (\d+)%/.exec(line);
     if (m) updateProject(p.id, { progress: 60 + Math.round(Number(m[1]) * 0.39), stage: 'rendering' });
-  })
+  }, quality)
     .then(async (videoPath) => finishProject(p.id, {
       videoPath, thumbPath: await makeThumb(videoPath, p.id).catch(() => null),
       title: ir.metadata.title, durationS: ir.metadata.total_duration_seconds,
@@ -232,7 +233,7 @@ app.post('/api/fast/:id/render', requireAuth, async (req, res) => {
   if (p.genre !== 'fast') return res.status(400).json({ error: 'not a fast-mode video' });
   if (p.status === 'running') return res.json(publicView(p));
   if (!(await ensureFastSource(p).catch(() => false))) return res.status(404).json({ error: 'this video’s source is gone — please make it again' });
-  startFastRender(p, await readIr(p.id));
+  startFastRender(p, await readIr(p.id), req.body?.quality === 'hd' ? 'hd' : 'standard');
   res.json(publicView(p));
 });
 

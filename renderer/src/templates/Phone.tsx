@@ -3,6 +3,7 @@ import type {CSSProperties} from 'react';
 import type {TemplateProps} from '.';
 import {asset} from '../ir';
 import {alpha, luminance, useStyle} from '../styles';
+import {isLite} from '../styles';
 import {useEnter, useProgress} from './kit';
 import {clamp01, useFrameBox} from './Hero';
 
@@ -66,7 +67,7 @@ const Device: React.FC<{src?: string | null; height: number; side: -1 | 0 | 1; d
           borderRadius: '50%',
           background: `radial-gradient(closest-side, ${dark ? alpha(s.palette.accent, 0.28) : 'rgba(17,19,23,0.22)'}, rgba(0,0,0,0))`,
           transform: `scale(${1 - float / (H * 0.03)})`,
-          filter: `blur(${H * 0.01}px)`,
+          filter: isLite() ? undefined : `blur(${H * 0.01}px)`,
         }}
       />
       <div
