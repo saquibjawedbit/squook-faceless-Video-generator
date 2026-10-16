@@ -211,7 +211,14 @@ function startFastRender(p, ir) {
       videoPath, thumbPath: await makeThumb(videoPath, p.id).catch(() => null),
       title: ir.metadata.title, durationS: ir.metadata.total_duration_seconds,
     }))
-    .catch((e) => { console.warn(`[fast ${p.id.slice(0, 8)}] render failed: ${e.message}`); updateProject(p.id, { status: 'failed', error: `MP4 render failed: ${e.message}` }); });
+    .catch((e) => {
+      const msg = String(e.message || e);
+      console.warn(`[fast ${p.id.slice(0, 8)}] render failed: ${msg.slice(-300)}`);
+      // A restart/deploy kills the renderer mid-way: label it so it's resumed automatically.
+      const killed = /signal 15|SIGTERM|SIGKILL|Target closed|browser has disconnected|Session closed|Protocol error/i.test(msg);
+      const last = msg.trim().split('\n').filter(Boolean).pop() || msg;
+      updateProject(p.id, { status: 'failed', error: killed ? 'interrupted by a server restart' : `MP4 render failed: ${last.slice(0, 200)}` });
+    });
 }
 
 // "Render MP4 again" — after a failure or an interrupted render.
