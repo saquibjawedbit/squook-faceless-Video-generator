@@ -169,6 +169,9 @@ export default function FastVideo() {
                 style={{ width: '100%', height: '100%' }}
                 controls
                 autoPlay
+                // Music + voice + overlapping whooshes/pops at a transition can
+                // exceed the default of 5 simultaneous audio tags.
+                numberOfSharedAudioTags={24}
                 acknowledgeRemotionLicense
               />
             </div>
