@@ -377,8 +377,8 @@ const TEMPLATE_GUIDE = `Scene templates ("template" field) and their fields — 
 - "split": text beside a screenshot. shot, title, text (≤14 words) or bullets (2–3, ≤5 words each, with cues). layout "left"|"right" (image side).
 - "phone": the mobile site in a phone mockup. title, text. layout "left"|"right". Only if a mobile screenshot exists.
 - "chat": a WhatsApp-style conversation. contact, app, messages: [{from:"them"|"me", text (≤12 words), cue}], optional result: {title, rows:[{left, right, flag?}]} (a clean table the messages turn into).
-- "stat": one big number. number (plain number), prefix ("₹","$",""), suffix ("%","x","+","k",""), label, context (≤8 words). Only true or clearly illustrative numbers.
-- "stats": 2–3 numbers. items:[{number,prefix,suffix,label,cue}].
+- "stat": one big number. number = exactly the digits shown before the suffix (12 billion → number 12, suffix "B+"; 2,999 rupees → prefix "₹", number 2999), prefix ("₹","$",""), suffix ("%","x","+","K","M","B","B+",""), label, context (≤8 words). Only true or clearly illustrative numbers.
+- "stats": 2–3 numbers, same number rules as "stat". items:[{number,prefix,suffix,label,cue}].
 - "icons": 2–4 features. items:[{icon (concept word like "clock","shield","whatsapp"), label (≤3 words), text (≤8 words), cue}].
 - "chart": bar chart. title, unit, items:[{label,value}] (3–6), highlight (index of the bar to emphasise).
 - "steps": a 3–4 step process. title, items:[{title (≤4 words), text (≤8 words), cue}].
@@ -717,7 +717,8 @@ function textFields(props, prefix = '', out = []) {
 
 async function qualityCheck(project, ir, dir, styleId, onStep) {
   const fps = ir.metadata.fps;
-  const frames = ir.scenes.map((s) => s.start_frame + Math.round(Math.min(s.duration_s * 0.72, s.duration_s - 0.35) * fps));
+  // Just before each scene ends: every item has landed and counters have finished.
+  const frames = ir.scenes.map((s) => s.start_frame + Math.max(0, s.duration_frames - Math.round(0.35 * fps)));
   const stills = await renderStills(project.id, ir, frames, join(dir, 'check'));
   const images = await Promise.all(stills.map(async (f) => `data:image/jpeg;base64,${(await readFile(f)).toString('base64')}`));
   const list = ir.scenes.map((s, i) => {
@@ -725,6 +726,7 @@ async function qualityCheck(project, ir, dir, styleId, onStep) {
     return `Scene ${i + 1} (image ${i + 1}): template ${l?.kind || l?.type}${l?.layout ? `, layout ${l.layout}` : ''}${s.layers.some((x) => x.props?.image && x.kind === 'backdrop') ? ', has background picture' : ''}\n  text: ${textFields(l?.props).join('; ') || '(none)'}`;
   }).join('\n');
   const prompt = `You are the final quality reviewer of a ${ir.metadata.width}x${ir.metadata.height} video. The attached images are one frame from each scene, in order. Captions at the bottom are added separately — ignore them.
+Each frame is taken just before its scene ends, so animations have finished; numbers and lists shown are final. Do not flag anything you are unsure about.
 Look for real, visible problems only: text cut off at an edge or overflowing its box, text overlapping other text or images, text unreadable against its background, a blank/empty-looking scene, a broken image, an awkward layout that wastes most of the frame.
 ${list}
 
@@ -948,7 +950,9 @@ export async function generateFastVideo(project, { url, topic, style, look, form
     for (const f of layer.props?.focus || []) if (f.action === 'click') fx(sfx.click, 0.32, f.at);
 
     layers.push({ type: 'audio', src: `${rel}/vo_${i + 1}.mp3`, volume: 1, start_s: VO_OFFSET });
-    layers.push({ type: 'captions', words: captionWords(narration, timed, VO_OFFSET, dur) });
+    // Over a photo, captions get a dark box and white text whatever the pack says.
+    const onPhoto = layer.kind === 'visual';
+    layers.push({ type: 'captions', words: captionWords(narration, timed, VO_OFFSET, dur), ...(onPhoto ? { style: { bg: 'rgba(0,0,0,0.6)', color: '#ffffff' } } : {}) });
     return {
       scene: i + 1, start_frame: 0, duration_frames: 0,
       duration_s: durs[i],

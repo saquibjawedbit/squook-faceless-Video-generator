@@ -57,7 +57,7 @@ export const CaptionLayer: React.FC<{
   const lightBg = pack ? luminance(pack.palette.bg) > 0.4 : false;
   const highlight = style?.highlight ?? cap?.highlight ?? theme.palette.accent;
   const fontFamily = resolveFont(style?.font_family) ?? (pack ? pack.font.body : theme.font.family);
-  const boxed = cap ? cap.box : true;
+  const boxed = style?.bg ? true : cap ? cap.box : true;
   const boxBg = style?.bg ?? (pack ? (lightBg ? 'rgba(255,255,255,0.92)' : 'rgba(0,0,0,0.62)') : 'rgba(0, 0, 0, 0.6)');
 
   return (
