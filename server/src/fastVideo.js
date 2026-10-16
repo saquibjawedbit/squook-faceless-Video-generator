@@ -817,6 +817,8 @@ async function toClip(src, dir, base) {
 
 /** Free real footage (Pexels/Pixabay) for a search phrase, matching the frame's orientation. */
 const stockReady = () => Boolean(config.pexelsKey || config.pixabayKey);
+// A slow provider must never stall a whole video: give up and fall back.
+const within = (ms, p) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`timed out after ${ms / 1000}s`)), ms))]);
 async function stockClip(query, format, dir, base, { scene = '', context = '' } = {}) {
   const tall = format === '9:16';
   const hits = (await searchStock(query, { mediaType: 'video', perPage: 12 }).catch(() => []))
@@ -867,11 +869,11 @@ async function animatePicture(picFile, motion, format, dir, base) {
   const job = await sub.json();
   for (let i = 0; i < 90; i++) { // up to ~3 minutes
     await new Promise((r) => setTimeout(r, 2000));
-    const st = await (await fetch(job.status_url, { headers: H })).json().catch(() => ({}));
+    const st = await fetch(job.status_url, { headers: H, signal: AbortSignal.timeout(15_000) }).then((r) => r.json()).catch(() => ({}));
     if (st.status === 'COMPLETED') break;
     if (st.status === 'FAILED' || st.error) throw new Error(`fal failed: ${JSON.stringify(st).slice(0, 160)}`);
   }
-  const res = await (await fetch(job.response_url, { headers: H })).json();
+  const res = await (await fetch(job.response_url, { headers: H, signal: AbortSignal.timeout(20_000) })).json();
   const url = res?.video?.url;
   if (!url) return null;
   const tmp = join(dir, `${base}.src`);
@@ -1434,7 +1436,7 @@ async function prepareScene(project, source, sc, { revoice = false, repicture = 
   if (!m && s.stock && typeof s.stock === 'string' && (repicture || sc.stockFor !== s.stock)) {
     jobs.push((async () => {
       try {
-        const got = stockReady() ? await stockClip(str(s.stock, 60), source.format, dir, `${REL}/stock_${tag}`, { scene: str(s.narration, 300), context: `${source.title || ''}. ${source.topic || source.url || ''}` }) : null;
+        const got = stockReady() ? await within(90_000, stockClip(str(s.stock, 60), source.format, dir, `${REL}/stock_${tag}`, { scene: str(s.narration, 300), context: `${source.title || ''}. ${source.topic || source.url || ''}` })) : null;
         if (got) { sc.clip = got.mp4; sc.picture = got.jpg; sc.clipFrom = 'stock'; sc.stockFor = s.stock; sc.credit = got.credit; return; }
       } catch { /* fall back to a picture */ }
       // No footage found: an AI picture of the same moment instead.
@@ -1449,7 +1451,7 @@ async function prepareScene(project, source, sc, { revoice = false, repicture = 
       // …and, when chosen, a few seconds of motion from that picture.
       if (s.animate && sc.picture && sc.clipFrom !== 'anim') {
         try {
-          const got = await animatePicture(join(dir, sc.picture), str(s.image, 300), source.format, dir, `${REL}/anim_${tag}`);
+          const got = await within(210_000, animatePicture(join(dir, sc.picture), str(s.image, 300), source.format, dir, `${REL}/anim_${tag}`));
           if (got) { sc.clip = got.mp4; sc.clipFrom = 'anim'; }
         } catch (e) { console.warn(`[fast] animate failed: ${String(e.message).slice(0, 160)}`); }
       }

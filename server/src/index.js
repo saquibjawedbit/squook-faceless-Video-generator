@@ -442,7 +442,8 @@ app.get('/api/projects', requireAuth, async (req, res) => {
 // Poll a project's status.
 app.get('/api/projects/:id', requireAuth, async (req, res) => {
   const p = await ownedProject(req, res);
-  if (p) res.json(publicView(p));
+  // Fast videos also show their last steps, so a slow run can be diagnosed.
+  if (p) res.json({ ...publicView(p), ...(p.genre === 'fast' && p.log?.length ? { log: p.log.slice(-25) } : {}) });
 });
 
 // A playable URL for the video: short-lived signed Storage URL, or the local
