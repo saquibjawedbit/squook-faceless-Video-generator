@@ -27,14 +27,14 @@ async function httpGet(url, opts = {}) {
  * @param {string} query
  * @param {{provider?:string, perPage?:number, mediaType?:'video'|'photo'}} opts
  */
-export async function searchStock(query, { provider = 'all', perPage = 24, mediaType = 'video' } = {}) {
+export async function searchStock(query, { provider = 'all', perPage = 24, mediaType = 'video', orientation = 'landscape' } = {}) {
   const q = String(query || '').trim();
   if (!q) return [];
   const type = mediaType === 'photo' ? 'photo' : 'video';
   const names = provider === 'all' ? ORDER : (PROVIDERS[provider] ? [provider] : []);
   const active = names.filter((n) => PROVIDERS[n].configured());
   const settled = await Promise.allSettled(
-    active.map((n) => PROVIDERS[n].search(q, { perPage, mediaType: type })),
+    active.map((n) => PROVIDERS[n].search(q, { perPage, mediaType: type, orientation })),
   );
   const out = [];
   settled.forEach((r, i) => {
@@ -58,7 +58,7 @@ function pickMp4(files, cap = 1920) {
 
 const pexels = {
   configured: () => Boolean(config.pexelsKey),
-  async search(query, { perPage, mediaType }) {
+  async search(query, { perPage, mediaType, orientation = 'landscape' }) {
     const headers = { Authorization: config.pexelsKey };
     if (mediaType === 'photo') {
       const url = `https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}`
@@ -77,7 +77,7 @@ const pexels = {
       }).filter(Boolean);
     }
     const url = `https://api.pexels.com/videos/search?query=${encodeURIComponent(query)}`
-      + `&per_page=${perPage}&orientation=landscape&size=medium`;
+      + `&per_page=${perPage}&orientation=${orientation === 'portrait' ? 'portrait' : 'landscape'}&size=medium`;
     const data = await (await httpGet(url, { headers })).json();
     return (data.videos || []).map((v) => {
       const file = pickMp4(v.video_files);

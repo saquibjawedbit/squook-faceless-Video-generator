@@ -821,7 +821,7 @@ const stockReady = () => Boolean(config.pexelsKey || config.pixabayKey);
 const within = (ms, p) => Promise.race([p, new Promise((_, rej) => setTimeout(() => rej(new Error(`timed out after ${ms / 1000}s`)), ms))]);
 async function stockClip(query, format, dir, base, { scene = '', context = '' } = {}) {
   const tall = format === '9:16';
-  const hits = (await searchStock(query, { mediaType: 'video', perPage: 12 }).catch(() => []))
+  const hits = (await searchStock(query, { mediaType: 'video', perPage: 12, orientation: tall ? 'portrait' : 'landscape' }).catch(() => []))
     .filter((h) => ['pexels', 'pixabay'].includes(h.provider) && h.type === 'video' && h.download && (!h.duration || (h.duration >= 4 && h.duration <= 40)));
   if (!hits.length) return null;
   const fits = (h) => (tall ? h.height > h.width : h.width >= h.height);
