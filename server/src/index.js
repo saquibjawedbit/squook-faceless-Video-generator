@@ -11,7 +11,7 @@ import { ensureBucket } from './supabaseAdmin.js';
 import { enqueueProject, enqueueRerender, enqueueRevoice, enqueueLanding, isBusy } from './jobs.js';
 import { LANDING_STAGES, validateLandingUrl, landingOptions } from './landing.js';
 import { countLandingSince, createProject, updateProject, finishProject, rehydrate, listInterruptedFast, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
-import { generateFastVideo, renderFastMp4, fastBusy, saveFastSource, ensureFastSource } from './fastVideo.js';
+import { generateFastVideo, renderFastMp4, fastBusy, saveFastSource, ensureFastSource, applyEdits, followUp, editableView } from './fastVideo.js';
 import { makeThumb } from './pipeline.js';
 import { warmRenderer } from './renderService.js';
 import { runDirectorChat, runDirectorChatStream } from './directorAgent.js';
@@ -235,6 +235,51 @@ app.post('/api/fast/:id/render', requireAuth, async (req, res) => {
   if (!(await ensureFastSource(p).catch(() => false))) return res.status(404).json({ error: 'this video’s source is gone — please make it again' });
   startFastRender(p, await readIr(p.id), req.body?.quality === 'hd' ? 'hd' : 'standard');
   res.json(publicView(p));
+});
+
+// ————— Fast mode: editing (manual edits + follow-up requests) —————
+// One edit at a time per video; each returns the rebuilt IR for the live preview.
+const editing = new Map();
+async function withEditLock(id, fn) {
+  if (editing.has(id)) { const e = new Error('Another change to this video is still being applied'); e.status = 409; throw e; }
+  editing.set(id, true);
+  try { return await fn(); } finally { editing.delete(id); }
+}
+async function editableProject(req, res) {
+  const p = await ownedProject(req, res);
+  if (!p) return null;
+  if (p.genre !== 'fast') { res.status(400).json({ error: 'only fast-mode videos can be edited here' }); return null; }
+  if (!(await ensureFastSource(p).catch(() => false))) { res.status(404).json({ error: 'this video’s source is gone — please make it again' }); return null; }
+  try { await editableView(p); } catch { res.status(409).json({ error: 'this video was made before editing existed — make it again to edit it' }); return null; }
+  return p;
+}
+
+app.get('/api/fast/:id/edit', requireAuth, async (req, res) => {
+  const p = await editableProject(req, res);
+  if (!p) return;
+  res.json(await editableView(p));
+});
+
+app.post('/api/fast/:id/edit', requireAuth, async (req, res) => {
+  const p = await editableProject(req, res);
+  if (!p) return;
+  try {
+    const out = await withEditLock(p.id, () => applyEdits(p, req.body?.ops, (l) => console.log(`[fast ${p.id.slice(0, 8)}] ${l}`)));
+    saveFastSource(p).catch((e) => console.warn(`[fast ${p.id.slice(0, 8)}] backup after edit failed: ${e.message}`));
+    res.json({ ir: out.ir, done: out.done, editable: await editableView(p) });
+  } catch (e) { res.status(e.status || 500).json({ error: String(e.message || e) }); }
+});
+
+app.post('/api/fast/:id/followup', requireAuth, async (req, res) => {
+  const p = await editableProject(req, res);
+  if (!p) return;
+  const message = String(req.body?.message || '').trim();
+  if (!message) return res.status(400).json({ error: 'Say what you’d like to change' });
+  try {
+    const out = await withEditLock(p.id, () => followUp(p, message, (l) => console.log(`[fast ${p.id.slice(0, 8)}] ${l}`)));
+    saveFastSource(p).catch((e) => console.warn(`[fast ${p.id.slice(0, 8)}] backup after follow-up failed: ${e.message}`));
+    res.json({ ir: out.ir, done: out.done, reply: out.reply, editable: await editableView(p) });
+  } catch (e) { res.status(e.status || 500).json({ error: String(e.message || e) }); }
 });
 
 // After a restart: re-render MP4s that the restart cut off.

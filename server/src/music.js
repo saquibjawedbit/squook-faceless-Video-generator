@@ -44,6 +44,11 @@ const NEAR = {
   chill: ['calm', 'tech'], playful: ['uplifting', 'chill'],
 };
 
+/** A library track by id (for re-assembling an edited video). */
+export async function getTrack(id) {
+  return (await loadLibrary()).find((t) => t.id === id) || null;
+}
+
 /** Pick a track for a mood: random among the matches, never the one used last. */
 let lastId = null;
 export async function pickTrack(mood, rng, minSeconds = 0) {

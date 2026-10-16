@@ -5,6 +5,7 @@ import { MainVideo } from '@renderer/MainVideo';
 import Box from '../lib/Box.jsx';
 import { css } from '../lib/css.js';
 import { navigate, currentQuery } from '../lib/router.js';
+import FastEditor from './FastEditor.jsx';
 import { apiBase, createFastVideo, getIR, getProject, getPlaybackUrl, rerenderFastVideo } from '../lib/api.js';
 
 /**
@@ -80,7 +81,10 @@ export default function FastVideo() {
         const p = await getProject(id);
         if (!alive) return;
         setProject(p);
-        if (p.status === 'done') setMp4(await getPlaybackUrl(id));
+        if (p.status === 'done') {
+          setMp4(await getPlaybackUrl(id));
+          getIR(id).then(setIr).catch(() => {}); // picks up which edit the MP4 now matches
+        }
         else if (p.status === 'failed' && /server restart/i.test(p.error || '') && !autoRetried.current) {
           // A deploy/restart cut the MP4 off: render it again without asking.
           autoRetried.current = true;
@@ -176,7 +180,12 @@ export default function FastVideo() {
                 {Math.round(ir.metadata.total_duration_seconds)}s · {ir.scenes.length} scenes · {ir.metadata.style ? `${ir.metadata.style} style · ` : ''}{fmt}{took ? ` · ready in ${took}s` : ''}
               </div>
             </div>
-            {mp4 ? (
+            {mp4 && (ir.metadata.revision || 0) !== (ir.metadata.rendered_revision ?? (ir.metadata.revision || 0)) ? (
+              <div style={css('display:flex;gap:10px;align-items:center;flex-wrap:wrap')}>
+                <span style={{ fontFamily: mono, fontSize: 12, color: 'rgba(244,243,240,0.6)' }}>Your edits aren’t in the MP4 yet</span>
+                <button type="button" onClick={() => renderAgain()} style={css('border-radius:12px;padding:12px 18px;font-size:14px;font-weight:600;border:0;cursor:pointer;background:var(--accent);color:#0B0B0E')}>Update MP4</button>
+              </div>
+            ) : mp4 ? (
               <div style={css('display:flex;gap:10px;align-items:center;flex-wrap:wrap')}>
                 {project?.quality !== 'hd' ? (
                   <button type="button" onClick={() => renderAgain('hd')} title="Full resolution with every effect — takes a few minutes longer"
@@ -207,6 +216,7 @@ export default function FastVideo() {
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: aspect === '9 / 16' ? 'min(100%, 420px)' : '100%', aspectRatio: aspect, borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#000' }}>
               <Player
+                key={`${id}-${ir.metadata.revision || 0}`}
                 component={MainVideo}
                 inputProps={{ ir }}
                 durationInFrames={ir.metadata.total_frames}
@@ -223,6 +233,7 @@ export default function FastVideo() {
               />
             </div>
           </div>
+          {id ? <FastEditor key={id} id={id} onIr={setIr} /> : null}
         </>
       )}
     </div>

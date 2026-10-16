@@ -59,6 +59,11 @@ export const createLandingVideo = ({ url, style, format, duration, notes }) =>
 
 // Fast mode: a link or a topic → { project, ir } in seconds. The IR plays in the
 // browser right away; the MP4 renders in the background (poll the project).
+// Fast-mode editing: the editable recipe, manual edit operations, follow-up requests.
+export const getFastEditable = (id) => jfetch(`/api/fast/${id}/edit`);
+export const editFastVideo = (id, ops) => jfetch(`/api/fast/${id}/edit`, json({ ops }));
+export const followUpFastVideo = (id, message) => jfetch(`/api/fast/${id}/followup`, json({ message }));
+
 // Render a fast video's MP4 again (after a failure or an interrupted render).
 export const rerenderFastVideo = (id, quality) => jfetch(`/api/fast/${id}/render`, json({ quality }));
 
