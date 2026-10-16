@@ -1280,10 +1280,10 @@ export async function generateFastVideo(project, { url, topic, style, look, form
   const spare = uploads.filter((m) => !usedMedia.has(m.n));
   for (const sc of scenes) {
     if (!spare.length) break;
-    if (sc.media || ['screen', 'split', 'phone', 'chat', 'logos', 'motion'].includes(sc.template)) continue;
+    // Only scenes that show a picture full-frame or behind their text.
+    if (sc.media || !['visual', 'hero', 'kinetic', 'quote', 'stat', 'stats', 'cta'].includes(sc.template)) continue;
     sc.media = spare.shift().n;
     delete sc.image;
-    if (['icons', 'steps', 'chart', 'compare', 'before_after'].includes(sc.template)) continue; // picture stays a backdrop-free graphic
   }
   mark(`outlined ${scenes.length} scenes`);
   await writeDetails(scenes, { site, topic, title: str(script.title || site?.title || topic, 100) });
