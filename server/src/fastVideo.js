@@ -250,6 +250,84 @@ function markLogos() {
   return { brand: Boolean(brand), customers: n };
 }
 
+
+// Runs in the page: hide cookie banners, consent walls and chat widgets so they
+// never cover the product in a screenshot.
+function hideOverlays() {
+  const words = /cookie|consent|gdpr|we use cookies|accept all|reject all|privacy preferences/i;
+  const ids = /intercom|crisp|drift|hubspot-messages|tawk|zendesk|zsiq|freshchat|onetrust|cookie|consent|cky-|cmp|didomi|usercentrics|termly|iubenda|osano|klaro/i;
+  let n = 0;
+  for (const el of document.querySelectorAll('body *')) {
+    const st = getComputedStyle(el);
+    if (st.position !== 'fixed' && st.position !== 'sticky') continue;
+    const tag = `${el.id} ${typeof el.className === 'string' ? el.className : ''}`;
+    if (words.test((el.innerText || '').slice(0, 800)) || ids.test(tag) || (el.tagName === 'IFRAME' && /chat|widget|messenger/i.test(el.src || el.title || ''))) {
+      el.style.setProperty('display', 'none', 'important'); n++;
+    }
+  }
+  for (const el of [document.documentElement, document.body]) { el.style.setProperty('overflow', 'auto', 'important'); }
+  return n;
+}
+
+// Runs in the page: the biggest pictures of the product itself (app screenshots,
+// dashboards, demo videos) — what makes a video show how it works, not just the
+// landing page around it. Returned in document coordinates.
+function findProductShots(max) {
+  const vw = window.innerWidth;
+  const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+  const found = [];
+  for (const el of document.querySelectorAll('img, video, canvas, picture, [class*="screenshot" i], [class*="mockup" i], [class*="dashboard" i], [class*="product-image" i]')) {
+    const r = el.getBoundingClientRect();
+    if (r.width < 460 || r.height < 250 || r.width > vw * 0.98) continue;
+    const ar = r.width / r.height;
+    if (ar < 0.85 || ar > 2.8) continue;
+    const st = getComputedStyle(el);
+    if (st.visibility === 'hidden' || st.display === 'none' || Number(st.opacity) < 0.3) continue;
+    const hint = `${el.getAttribute('alt') || ''} ${el.currentSrc || el.src || ''} ${typeof el.className === 'string' ? el.className : ''}`.toLowerCase();
+    let score = (r.width * r.height) / 1e5;
+    if (/dash|app|screen|ui\b|product|demo|interface|preview|mock|platform|editor|inbox|workflow|feature|builder|console|report/.test(hint)) score += 6;
+    if (el.tagName === 'VIDEO') score += 4;
+    if (/background|bg[-_]|avatar|team|portrait|person|people|founder|hero-image|illustration|pattern|gradient/.test(hint)) score -= 8;
+    // Name it after the nearest heading above it.
+    let label = clean(el.getAttribute('alt'));
+    for (let p = el.parentElement, i = 0; p && i < 6 && !label; p = p.parentElement, i++) {
+      const h = p.querySelector('h1, h2, h3');
+      if (h) label = clean(h.innerText);
+    }
+    found.push({ score, x: r.left + window.scrollX, y: r.top + window.scrollY, w: r.width, h: r.height, label: (label || 'product').slice(0, 70) });
+  }
+  found.sort((a, b) => b.score - a.score);
+  const keep = [];
+  for (const f of found) {
+    if (f.score < 3) continue;
+    const overlaps = keep.some((k) => !(f.x + f.w < k.x || k.x + k.w < f.x || f.y + f.h < k.y || k.y + k.h < f.y));
+    if (!overlaps) keep.push(f);
+    if (keep.length >= max) break;
+  }
+  return keep;
+}
+
+// Runs in the page: same-site pages that explain the product (features, how it
+// works, tour, docs), best first.
+function productLinks(max) {
+  const good = /feature|product|how[- ]it[- ]works|tour|demo|platform|solution|use[- ]?case|walkthrough|overview|docs|guide|integrations?/i;
+  const bad = /login|log-in|signin|sign-in|signup|sign-up|register|pricing|blog|career|jobs|legal|privacy|terms|contact|about|press|status|changelog|#/i;
+  const seen = new Set();
+  const out = [];
+  for (const a of document.querySelectorAll('a[href]')) {
+    let u;
+    try { u = new URL(a.getAttribute('href'), location.href); } catch { continue; }
+    if (u.origin !== location.origin || u.pathname === '/' || u.pathname === location.pathname) continue;
+    const key = u.origin + u.pathname;
+    const text = `${(a.innerText || '').trim()} ${u.pathname}`;
+    if (seen.has(key) || !good.test(text) || bad.test(u.pathname)) continue;
+    seen.add(key);
+    out.push(key);
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
 export async function captureSite(url, outDir, rel, { maxShots = 6 } = {}) {
   const executablePath = await chromeExecutable();
   if (!executablePath) throw new Error('no headless Chrome found');
@@ -260,8 +338,8 @@ export async function captureSite(url, outDir, rel, { maxShots = 6 } = {}) {
   const settle = (ms) => new Promise((r) => setTimeout(r, ms));
   const T0 = Date.now();
   const dbg = (m) => { if (process.env.FAST_DEBUG) console.log(`[capture +${((Date.now() - T0) / 1000).toFixed(1)}s] ${m}`); };
-  const open = async (page) => {
-    await page.goto(url, { waitUntil: 'networkidle2', timeout: 30_000 }).catch((e) => {
+  const open = async (page, at = url) => {
+    await page.goto(at, { waitUntil: 'networkidle2', timeout: 30_000 }).catch((e) => {
       if (!/timeout/i.test(e.message)) throw e; // slow trackers: shoot what has loaded
     });
     // Scroll through once so lazy images and on-scroll reveals load, then back up.
@@ -274,6 +352,7 @@ export async function captureSite(url, outDir, rel, { maxShots = 6 } = {}) {
       window.scrollTo(0, 0);
     });
     await settle(500);
+    await page.evaluate(hideOverlays).catch(() => {});
   };
   try {
     // Desktop and mobile load in parallel.
@@ -309,14 +388,45 @@ export async function captureSite(url, outDir, rel, { maxShots = 6 } = {}) {
         } catch (e) { dbg(`logo ${id} skipped: ${e.message}`); }
       }
       const shots = [];
-      for (const [i, s] of info.stops.entries()) {
-        await page.evaluate((y) => window.scrollTo(0, y), s.y);
+      let n = 0;
+      const sectionShot = async (y, label) => {
+        await page.evaluate((top) => window.scrollTo(0, top), y);
         await settle(300);
-        const p = `${rel}/shot_${i + 1}.jpg`;
+        await page.evaluate(hideOverlays).catch(() => {});
+        const p = `${rel}/shot_${++n}.jpg`;
         await page.screenshot({ path: join(outDir, p), type: 'jpeg', quality: 86 });
         const elements = (await page.evaluate(elementsInView, 12)).map((e, k) => ({ id: `e${k + 1}`, ...e }));
-        shots.push({ path: p, label: s.label || `section ${i + 1}`, w: 1920, h: 1200, elements });
-        dbg(`shot ${i + 1}`);
+        shots.push({ path: p, label, w: 1920, h: 1200, elements });
+        dbg(`shot ${n}`);
+      };
+      // Real product pictures, cut out at full resolution.
+      const productShots = async (max) => {
+        for (const f of await page.evaluate(findProductShots, max).catch(() => [])) {
+          try {
+            await page.evaluate((y) => window.scrollTo(0, Math.max(0, y - 120)), f.y);
+            await settle(450);
+            const p = `${rel}/shot_${++n}.jpg`;
+            await Promise.race([
+              page.screenshot({ path: join(outDir, p), type: 'jpeg', quality: 90, captureBeyondViewport: true, clip: { x: f.x, y: f.y, width: f.w, height: f.h } }),
+              settle(6000).then(() => { throw new Error('timeout'); }),
+            ]);
+            shots.push({ path: p, label: f.label, product: true, w: Math.round(f.w * 4 / 3), h: Math.round(f.h * 4 / 3), elements: [] });
+            dbg(`product shot ${n}`);
+          } catch (e) { n--; dbg(`product shot skipped: ${e.message}`); }
+        }
+      };
+      for (const st of info.stops.slice(0, Math.max(3, maxShots - 2))) await sectionShot(st.y, st.label || `section ${n + 1}`);
+      await productShots(3);
+      // Pages that explain the product: their top section and product pictures.
+      const links = await page.evaluate(productLinks, 2).catch(() => []);
+      for (const link of links) {
+        if (Date.now() - T0 > 45_000) break; // never let exploring stall a video
+        try {
+          await open(page, link);
+          const title = await page.evaluate(() => (document.querySelector('h1')?.innerText || document.title).replace(/\s+/g, ' ').trim().slice(0, 70));
+          await sectionShot(0, `${new URL(link).pathname} — ${title}`);
+          await productShots(2);
+        } catch (e) { dbg(`subpage ${link} skipped: ${e.message}`); }
       }
       return { info, shots, logos };
     })();
@@ -397,7 +507,9 @@ Pictures: any scene may add "image": a vivid description of a real-world picture
 function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook }) {
   const scenes = Math.max(3, Math.min(30, Math.round(lengthS / 6)));
   const shots = site?.shots || [];
-  const shotList = shots.map((s, i) => `Screenshot ${i + 1} (section "${s.label}") elements:\n${s.elements.map((e) => `  ${e.id} [${e.kind}] "${e.text}"`).join('\n') || '  (none)'}`).join('\n');
+  const shotList = shots.map((s, i) => s.product
+    ? `Screenshot ${i + 1} — PRODUCT UI (a real screen of the app: "${s.label}")`
+    : `Screenshot ${i + 1} (section "${s.label}") elements:\n${s.elements.map((e) => `  ${e.id} [${e.kind}] "${e.text}"`).join('\n') || '  (none)'}`).join('\n');
   const assets = site ? [
     shots.length ? `${shots.length} desktop screenshots (images attached in order)` : 'no screenshots',
     site.mobile ? 'a mobile screenshot (for "phone")' : 'no mobile screenshot',
@@ -423,6 +535,8 @@ Rules:
 - Never use the same template 3 times in a row.
 - ${site?.shots?.length ? 'Give 2–3 scenes an "image" (real screenshots carry the rest).' : 'Give at least half the scenes an "image", and use "visual" 2–3 times — a topic video needs real pictures, not only text.'}
 - Vary templates; never the same template twice in a row. ${shots.length ? `Use the real screenshots well: about a third of scenes are "screen" or "split", each screenshot at most once, and point the camera (focus) at the exact element the sentence talks about.` : ''}
+- ${shots.some((x) => x.product) ? 'SHOW HOW IT WORKS: the PRODUCT UI screenshots are real screens of the app. Use every one of them (as "screen" or "split") for the scenes that explain what the product does, in the order a user would meet them. Use landing-page sections only for the hook or proof.' : 'Show the product working wherever you can, not just marketing headlines.'}
+- Write like a sharp human copywriter: plain, specific, natural spoken English. No clichés ("game-changer", "seamless", "unlock"), no filler ("every single day", "while you breathe"), no odd metaphors, no names or terms a stranger wouldn't understand.
 - On-screen text must support the voice-over, not repeat it word for word.
 - Numbers: never invent statistics, results or customer claims. Use only numbers printed on the website${site ? '' : ' (there is none: use only well-known public facts, or label a number clearly as an example, e.g. "say, 3 wrong items a day")'}. No fake quotes or testimonials.
 - Every "cue" must be a single word that appears in that scene's narration.
@@ -591,7 +705,8 @@ function cueTimes(cues, timed, offset) {
 
 // ── 4. map onto the templates ───────────────────────────────────────────────
 
-const str = (s, n) => String(s ?? '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '').trim().slice(0, n);
+// Also puts the missing space back after commas the writer sometimes drops ("Approve,Scale").
+const str = (s, n) => String(s ?? '').replace(/[\u{1F000}-\u{1FAFF}\u{2600}-\u{27BF}\u{FE0F}\u{200D}]/gu, '').replace(/([a-z\u00C0-\u024F])([,;])(?=[A-Za-z])/g, '$1$2 ').trim().slice(0, n);
 const arr = (a, n) => (Array.isArray(a) ? a : []).slice(0, n);
 const num = (v) => { const n = Number(String(v ?? '').replace(/[^\d.-]/g, '')); return Number.isFinite(n) ? n : null; };
 
