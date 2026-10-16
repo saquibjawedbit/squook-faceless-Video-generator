@@ -1274,6 +1274,17 @@ export async function generateFastVideo(project, { url, topic, style, look, form
   const script = await writeScript({ site, topic, kind: style, look: fixedStyle, lengthS, notes, direction, hook, uploads }, images.filter(Boolean));
   const scenes = (Array.isArray(script.scenes) ? script.scenes : []).filter((s) => s && str(s.narration, 400)).slice(0, 30);
   if (scenes.length < 2) throw new Error('the writer produced too few scenes — please try again');
+  // Every uploaded photo/clip appears at least once: unused ones go on scenes
+  // that would otherwise get an AI picture or plain type (screens stay screens).
+  const usedMedia = new Set(scenes.map((x) => Number(x.media)).filter(Boolean));
+  const spare = uploads.filter((m) => !usedMedia.has(m.n));
+  for (const sc of scenes) {
+    if (!spare.length) break;
+    if (sc.media || ['screen', 'split', 'phone', 'chat', 'logos', 'motion'].includes(sc.template)) continue;
+    sc.media = spare.shift().n;
+    delete sc.image;
+    if (['icons', 'steps', 'chart', 'compare', 'before_after'].includes(sc.template)) continue; // picture stays a backdrop-free graphic
+  }
   mark(`outlined ${scenes.length} scenes`);
   await writeDetails(scenes, { site, topic, title: str(script.title || site?.title || topic, 100) });
   // Auto style: the writer names its two best fits; take the first most of the time.
