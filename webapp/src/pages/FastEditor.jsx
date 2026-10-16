@@ -15,7 +15,8 @@ const btn = (primary) => `border-radius:10px;padding:8px 13px;font-size:13px;fon
 const label = `font-family:${mono};font-size:10.5px;letter-spacing:0.12em;text-transform:uppercase;color:rgba(244,243,240,0.45);margin:10px 0 5px`;
 
 // Editable copy inside a scene spec: top-level strings + strings inside lists.
-const SKIP = new Set(['template', 'narration', 'layout', 'image', 'shot', 'icon_src']);
+// Technical fields (camera targets, cue words, element ids…) stay out of the editor.
+const SKIP = new Set(['template', 'narration', 'layout', 'image', 'shot', 'icon_src', 'el', 'action', 'cue', 'from', 'icon', 'time', 'move', 'kind', 'x', 'y', 'fill', 'stroke']);
 function textFields(spec) {
   const out = [];
   for (const [k, v] of Object.entries(spec || {})) {
@@ -24,7 +25,7 @@ function textFields(spec) {
     else if (Array.isArray(v)) {
       v.forEach((it, i) => {
         if (typeof it === 'string') out.push({ path: `${k}.${i}`, value: it });
-        else if (it && typeof it === 'object') for (const [kk, vv] of Object.entries(it)) if (typeof vv === 'string' && !SKIP.has(kk) && kk !== 'cue' && kk !== 'from' && kk !== 'icon') out.push({ path: `${k}.${i}.${kk}`, value: vv });
+        else if (it && typeof it === 'object') for (const [kk, vv] of Object.entries(it)) if (typeof vv === 'string' && !SKIP.has(kk)) out.push({ path: `${k}.${i}.${kk}`, value: vv });
       });
     } else if (v && typeof v === 'object') {
       for (const [kk, vv] of Object.entries(v)) if (typeof vv === 'string') out.push({ path: `${k}.${kk}`, value: vv });
@@ -32,7 +33,7 @@ function textFields(spec) {
   }
   return out.slice(0, 24);
 }
-const pretty = (path) => path.replace(/\.(\d+)\./g, (_, n) => ` ${Number(n) + 1} `).replace(/\.(\d+)$/, (_, n) => ` ${Number(n) + 1}`).replace(/_/g, ' ');
+const pretty = (path) => path.replace(/^focus\.(\d+)\.label$/, (_, n) => `zoom ${Number(n) + 1} label`).replace(/\.(\d+)\./g, (_, n) => ` ${Number(n) + 1} `).replace(/\.(\d+)$/, (_, n) => ` ${Number(n) + 1}`).replace(/_/g, ' ');
 
 export default function FastEditor({ id, onIr }) {
   const [data, setData] = useState(null);       // editable view from the server
