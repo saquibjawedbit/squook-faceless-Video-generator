@@ -11,7 +11,7 @@ import { ensureBucket } from './supabaseAdmin.js';
 import { enqueueProject, enqueueRerender, enqueueRevoice, enqueueLanding, isBusy } from './jobs.js';
 import { LANDING_STAGES, validateLandingUrl, landingOptions } from './landing.js';
 import { countLandingSince, createProject, updateProject, finishProject, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
-import { generateFastVideo, renderFastMp4, fastBusy } from './fastVideo.js';
+import { generateFastVideo, renderFastMp4, fastBusy, saveFastSource, ensureFastSource } from './fastVideo.js';
 import { makeThumb } from './pipeline.js';
 import { runDirectorChat, runDirectorChatStream } from './directorAgent.js';
 import { appendChat, readChat, clearChat } from './chatStore.js';
@@ -195,6 +195,7 @@ app.post('/api/fast', requireAuth, async (req, res) => {
   }
   await updateProject(p.id, { status: 'running', stage: 'rendering', progress: 60, title: ir.metadata.title });
   res.status(201).json({ project: publicView(p), ir });
+  saveFastSource(p).catch((e) => log(`could not back up the preview source: ${e.message}`));
 
   // MP4 in the background; the browser already plays the preview.
   renderFastMp4(p.id, () => {})
@@ -315,6 +316,7 @@ app.get('/api/projects/:id/thumb', requireAuth, async (req, res) => {
 app.get('/api/projects/:id/ir', requireAuth, async (req, res) => {
   const p = await ownedProject(req, res);
   if (!p) return;
+  if (p.genre === 'fast') await ensureFastSource(p).catch(() => {});
   try { res.json({ ir: await readIr(p.id) }); }
   catch { res.status(404).json({ error: 'no editable source for this project' }); }
 });
@@ -336,6 +338,7 @@ app.put('/api/projects/:id/ir', requireAuth, async (req, res) => {
 app.get('/api/projects/:id/assets/*', async (req, res) => {
   const p = await getProject(req.params.id);
   if (!p) return res.status(404).end();
+  if (p.genre === 'fast') await ensureFastSource(p).catch(() => {});
   const dir = assetSnapshotDir(p.id);
   const filePath = resolve(dir, req.params[0] || '');
   if (!filePath.startsWith(dir + '/')) return res.status(404).end(); // traversal guard

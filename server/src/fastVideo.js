@@ -772,3 +772,56 @@ export function renderFastMp4(projectId, onLog = () => {}) {
   renderChain = job.catch(() => {});
   return job;
 }
+
+// ── keep the playable source across restarts ────────────────────────────────
+// The container's disk is wiped on every deploy/restart, but the browser
+// preview needs the IR + its assets. Mirror them to Supabase Storage next to
+// the MP4 and pull them back on demand.
+
+const sourcePrefix = (p) => `${p.userId}/fast/${p.id}`;
+
+export async function saveFastSource(project) {
+  const { admin } = await import('./supabaseAdmin.js');
+  if (!admin) return;
+  const bucket = admin.storage.from(config.storageBucket);
+  const prefix = sourcePrefix(project);
+  const dir = join(assetSnapshotDir(project.id), 'assets', 'fast');
+  const files = (await readdir(dir)).filter((f) => !f.endsWith('.thumb.jpg'));
+  const type = (f) => ({ mp3: 'audio/mpeg', jpg: 'image/jpeg', png: 'image/png', svg: 'image/svg+xml', json: 'application/json' })[f.split('.').pop()] || 'application/octet-stream';
+  const up = async (path, body, contentType) => {
+    const { error } = await bucket.upload(path, body, { contentType, upsert: true });
+    if (error) throw new Error(`${path}: ${error.message}`);
+  };
+  // Small parallel batches keep it quick without hammering Storage.
+  for (let i = 0; i < files.length; i += 6) {
+    await Promise.all(files.slice(i, i + 6).map(async (f) => up(`${prefix}/assets/fast/${f}`, await readFile(join(dir, f)), type(f))));
+  }
+  await up(`${prefix}/ir.json`, await readFile(irSnapshotPath(project.id)), 'application/json');
+}
+
+const restoring = new Map();
+export function ensureFastSource(project) {
+  if (!restoring.has(project.id)) {
+    restoring.set(project.id, (async () => {
+      try { await readFile(irSnapshotPath(project.id)); return true; } catch { /* not on disk: fetch */ }
+      const { admin } = await import('./supabaseAdmin.js');
+      if (!admin) return false;
+      const bucket = admin.storage.from(config.storageBucket);
+      const prefix = sourcePrefix(project);
+      const ir = await bucket.download(`${prefix}/ir.json`);
+      if (ir.error) return false;
+      const dir = join(assetSnapshotDir(project.id), 'assets', 'fast');
+      await mkdir(dir, { recursive: true });
+      const { data: list } = await bucket.list(`${prefix}/assets/fast`, { limit: 500 });
+      for (let i = 0; i < (list || []).length; i += 8) {
+        await Promise.all(list.slice(i, i + 8).map(async (o) => {
+          const f = await bucket.download(`${prefix}/assets/fast/${o.name}`);
+          if (!f.error) await writeFile(join(dir, o.name), Buffer.from(await f.data.arrayBuffer()));
+        }));
+      }
+      await writeFile(irSnapshotPath(project.id), Buffer.from(await ir.data.arrayBuffer()));
+      return true;
+    })().finally(() => setTimeout(() => restoring.delete(project.id), 60_000)));
+  }
+  return restoring.get(project.id);
+}
