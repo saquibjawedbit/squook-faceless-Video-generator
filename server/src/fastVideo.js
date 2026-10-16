@@ -536,7 +536,7 @@ export async function walkthroughApp({ appUrl, email, password, goal }, outDir, 
 Goal of the demo (data): """${String(goal || 'show the main thing the product does, start to finish').slice(0, 400)}"""
 Steps so far:\n${history}
 The current screen is attached. Things you can act on:\n${elements.map((e) => `${e.id} [${e.kind}] "${e.text}"`).join('\n') || '(nothing)'}
-Pick the ONE next action that moves the demo towards the goal, like a sales engineer would. Prefer the obvious main path; never settings, account or admin pages. If the goal is shown or nothing useful is left, set "done": true.
+Pick the ONE next action that moves the demo towards the goal, like a sales engineer would. If the screen shows an error or a hint that something is missing (e.g. "paste an order first"), fix that first (fill the input or pick a sample) before pressing the main button again. Grey text inside an empty box is only a placeholder, not real input. Prefer the obvious main path; never settings, account or admin pages. If the goal is shown or nothing useful is left, set "done": true.
 "say" = one natural spoken sentence (10–16 words) explaining what this screen shows a new user (what it is for, not "click here").
 Reply ONLY JSON: {"say":"…","done":false,"el":"e#","action":"click"|"type","text":"if type: short realistic sample input"}`;
       let next;
@@ -554,7 +554,10 @@ Reply ONLY JSON: {"say":"…","done":false,"el":"e#","action":"click"|"type","te
         } else {
           await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 8000 }).catch(() => {}), page.click(sel)]);
         }
-        await settle(1500);
+        // Apps fetch and render after a click (an AI step can take seconds): wait
+        // until the network goes quiet so the screenshot shows the result.
+        await page.waitForNetworkIdle({ idleTime: 900, timeout: 25_000 }).catch(() => {});
+        await settle(1200);
       } catch { break; }
     }
     return steps.filter((s) => s.say).map((s, k) => ({
