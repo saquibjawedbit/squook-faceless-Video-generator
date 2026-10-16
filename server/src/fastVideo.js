@@ -352,7 +352,7 @@ const TEMPLATE_GUIDE = `Scene templates ("template" field) and their fields — 
 - "chart": bar chart. title, unit, items:[{label,value}] (3–6), highlight (index of the bar to emphasise).
 - "steps": a 3–4 step process. title, items:[{title (≤4 words), text (≤8 words), cue}].
 - "before_after": before:{label, items:[3 short pains]}, after:{label, items:[3 short gains]}.
-- "compare": us vs the old way. columns:[us, them], rows:[{label, a: true|false|short text, b: …}] (3–5 rows).
+- "compare": us vs the old way. columns:[us, them], rows:[{label, a: true|false|short text, b: …}] (3–5 rows). A tick (true) must always mean GOOD: phrase every row as a benefit (e.g. "No card machine needed": us true, them false), never as a cost.
 - "quote": a testimonial or punchy statement. text (≤22 words), author, role. Only real quotes from the page, or none.
 - "kinetic": big bold words. lines: 2–4 lines (≤4 words each), with cues.
 - "logos": customer logos wall. title. Only if customer logos exist.
@@ -607,6 +607,17 @@ function buildTemplate(s, ctx) {
 
 const words4 = (t) => t.split(/\s+/).slice(0, 4).join(' ');
 
+const lum = (h) => {
+  const [r, g, b] = [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16) / 255).map((c) => (c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const mixHex = (a, b, t) => '#' + [1, 3, 5].map((i) => Math.round(parseInt(a.slice(i, i + 2), 16) * (1 - t) + parseInt(b.slice(i, i + 2), 16) * t).toString(16).padStart(2, '0')).join('');
+function legible(accent, lightBg) {
+  const L = lum(accent);
+  if (lightBg) return L > 0.45 ? mixHex(accent, '#000000', 0.45) : accent;
+  return L < 0.2 ? mixHex(accent, '#ffffff', 0.4) : accent;
+}
+
 /**
  * Generate a fast video for one project: writes `<id>.ir.json` + `<id>-assets/`
  * (the same snapshot shape the editor and re-render use) and returns the IR.
@@ -647,6 +658,9 @@ export async function generateFastVideo(project, { url, topic, style, look, form
   // 3. voice → word timings, all lines in parallel; icons meanwhile.
   const voice = VOICES.includes(script.voice) ? script.voice : 'luna';
   const accentGuess = HEX.test(script.palette?.accent) ? script.palette.accent : toHex(site?.ctaColor) || '#4f7cff';
+  // Icons are tinted server-side, so match the renderer's legibility rule
+  // (styles.ts legibleAccent): a dark brand colour on a dark pack is lightened.
+  const iconTint = legible(accentGuess, ['clean', 'playful', 'editorial'].includes(styleId));
   const audio = await Promise.all(scenes.map(async (s, i) => {
     const buf = await speak(str(s.narration, 400), voice);
     await writeFile(join(dir, rel, `vo_${i + 1}.mp3`), buf);
@@ -658,7 +672,7 @@ export async function generateFastVideo(project, { url, topic, style, look, form
     if (s.template !== 'icons') return;
     icons[i] = await Promise.all(arr(s.items, 4).map(async (it, k) => {
       try {
-        const u = await iconSvgUrl(it?.icon || it?.label, accentGuess);
+        const u = await iconSvgUrl(it?.icon || it?.label, iconTint);
         if (!u) return null;
         const p = `${rel}/icon_${i + 1}_${k}.svg`;
         await fetchTo(u, join(dir, p));
