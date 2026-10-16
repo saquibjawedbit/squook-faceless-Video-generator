@@ -181,3 +181,8 @@ export const uploadAsset = (id, file) => {
   fd.append('file', file);
   return jfetch(`/api/projects/${id}/assets/upload`, { method: 'POST', body: fd });
 };
+
+// Public share links: the owner gets a token; anyone with it can watch.
+export const getShareToken = (id) => jfetch(`/api/fast/${id}/share`);
+export const getShared = (token, ref) => jfetch(`/api/share/${encodeURIComponent(token)}${ref ? `?r=${encodeURIComponent(ref)}` : ''}`);
+export const getShareViews = () => jfetch('/api/share-views');

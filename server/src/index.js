@@ -2,12 +2,13 @@ import express from 'express';
 import cors from 'cors';
 import multer from 'multer';
 import { createReadStream } from 'node:fs';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { stat, unlink } from 'node:fs/promises';
 import { extname, resolve } from 'node:path';
 import { config, authEnabled, persistenceEnabled, UPLOADS_DIR, WEBAPP_DIST } from './config.js';
 import { existsSync, readFileSync } from 'node:fs';
 import { requireAuth } from './auth.js';
-import { ensureBucket } from './supabaseAdmin.js';
+import { ensureBucket, admin } from './supabaseAdmin.js';
 import { enqueueProject, enqueueRerender, enqueueRevoice, enqueueLanding, isBusy } from './jobs.js';
 import { LANDING_STAGES, validateLandingUrl, landingOptions } from './landing.js';
 import { countLandingSince, createProject, updateProject, finishProject, rehydrate, listInterruptedFast, getProject, listProjects, deleteProject, playbackUrl, thumbUrl, publicView, reconcileInterrupted, rehydrateFromArtifacts } from './store.js';
@@ -153,7 +154,8 @@ async function landingQuota(user) {
   const userLimit = unlimited ? 0 : config.landingDailyLimit;
   return {
     left: left(userLimit, userLimit ? await countLandingSince(user.id, since) : 0),
-    globalLeft: left(config.landingGlobalDailyLimit, config.landingGlobalDailyLimit ? await countLandingSince(null, since) : 0),
+    // The owner's own videos (e.g. pitches for prospects) don't use up everyone's daily pool.
+    globalLeft: unlimited ? null : left(config.landingGlobalDailyLimit, config.landingGlobalDailyLimit ? await countLandingSince(null, since) : 0),
     limit: userLimit || null,
   };
 }
@@ -292,6 +294,56 @@ async function resumeInterruptedFast() {
     } catch (e) { console.warn(`[fast ${p.id.slice(0, 8)}] resume failed: ${e.message}`); }
   }
 }
+
+// ————— Public share links (sales: a video made for a prospect) —————
+// A share token is `<id>.<sig>`; only the owner can get the signature, so a
+// shared video is viewable without sign-in but other videos stay private.
+const shareSig = (id) => createHmac('sha256', config.serviceRoleKey || config.supabaseKey || 'squook-dev').update(`share:${id}`).digest('base64url').slice(0, 16);
+function shareId(token) {
+  const [id, sig] = String(token || '').split('.');
+  if (!id || !sig) return null;
+  const want = Buffer.from(shareSig(id));
+  const got = Buffer.from(sig);
+  return want.length === got.length && timingSafeEqual(want, got) ? id : null;
+}
+const isOwnerAdmin = (user) => config.landingUnlimitedEmails.includes(String(user?.email || '').toLowerCase());
+
+app.get('/api/fast/:id/share', requireAuth, async (req, res) => {
+  const p = await ownedProject(req, res);
+  if (p) res.json({ token: `${p.id}.${shareSig(p.id)}` });
+});
+
+app.get('/api/share/:token', async (req, res) => {
+  const id = shareId(req.params.token);
+  const p = id && await getProject(id);
+  if (!p || p.genre !== 'fast') return res.status(404).json({ error: 'This video link is not valid.' });
+  await ensureFastSource(p).catch(() => {});
+  let ir;
+  try { ir = await readIr(p.id); } catch { return res.status(404).json({ error: 'This video is no longer available.' }); }
+  // Record the view (who opened which pitch, and when) — Storage keeps it across restarts.
+  const view = { at: new Date().toISOString(), title: p.title, ref: String(req.query.r || '').slice(0, 80), ua: String(req.get('user-agent') || '').slice(0, 160), country: req.get('cf-ipcountry') || '' };
+  console.log(`[share] view ${p.id.slice(0, 8)} ${view.ref} ${view.country}`);
+  if (admin) admin.storage.from(config.storageBucket).upload(`shares/${p.id}/${Date.now()}.json`, JSON.stringify(view), { contentType: 'application/json', upsert: true }).catch(() => {});
+  res.json({ id: p.id, title: ir.metadata.title, ir });
+});
+
+// Who watched the shared videos (owner only).
+app.get('/api/share-views', requireAuth, async (req, res) => {
+  if (!isOwnerAdmin(req.user) || !admin) return res.status(404).json({ error: 'not found' });
+  const bucket = admin.storage.from(config.storageBucket);
+  const { data: dirs } = await bucket.list('shares', { limit: 500 });
+  const out = [];
+  for (const d of dirs || []) {
+    const { data: files } = await bucket.list(`shares/${d.name}`, { limit: 200 });
+    const p = await getProject(d.name).catch(() => null);
+    const views = await Promise.all((files || []).map(async (f) => {
+      const { data } = await bucket.download(`shares/${d.name}/${f.name}`);
+      try { return JSON.parse(await data.text()); } catch { return null; }
+    }));
+    out.push({ id: d.name, title: p?.title, views: views.filter(Boolean).sort((a, b) => a.at.localeCompare(b.at)) });
+  }
+  res.json(out);
+});
 
 app.get('/api/landing/quota', requireAuth, async (req, res) => {
   try { res.json(await landingQuota(req.user)); }
@@ -675,6 +727,7 @@ if (existsSync(WEBAPP_DIST)) {
   const html = readFileSync(resolve(WEBAPP_DIST, 'index.html'), 'utf8');
   const runtime = JSON.stringify({
     supabaseUrl: config.supabaseUrl, supabaseAnonKey: config.supabaseKey, landingOnly: config.landingOnly,
+    salesLink: process.env.SALES_LINK || '', salesPrice: process.env.SALES_PRICE || '$29/month',
   }).replace(/</g, '\\u003c');
   const page = html.replace('</head>', `<script>window.__SQUOOK__=${runtime}</script></head>`);
   app.get(['/', '/index.html'], (_req, res) => res.type('html').send(page));

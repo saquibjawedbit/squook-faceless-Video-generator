@@ -6,6 +6,7 @@ import SquookHome from './pages/SquookHome.jsx';
 import SquookEditor from './pages/SquookEditor.jsx';
 import WatchVideo from './pages/WatchVideo.jsx';
 import FastVideo from './pages/FastVideo.jsx';
+import ShareVideo from './pages/ShareVideo.jsx';
 import AuthGate from './components/AuthGate.jsx';
 import { useRoute } from './lib/router.js';
 
@@ -15,6 +16,8 @@ export default function App() {
   // The editor is a self-contained, full-viewport surface with its own
   // vignette + grain overlays, so it renders without the site Atmosphere.
   if (route === 'editor') return <AuthGate><SquookEditor /></AuthGate>;
+  // Public share page for a video made for a prospect: no sign-in.
+  if (route.startsWith('v/')) return <ShareVideo />;
   // Fast mode is a light, full-viewport studio of its own.
   if (route === 'fast') return <AuthGate><FastVideo /></AuthGate>;
 

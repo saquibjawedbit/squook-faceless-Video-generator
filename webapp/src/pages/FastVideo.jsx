@@ -7,7 +7,7 @@ import FastEditor from './FastEditor.jsx';
 import './fast.css';
 import {
   apiBase, createFastVideo, getIR, getProject, getPlaybackUrl, rerenderFastVideo,
-  getFastEditable, editFastVideo, followUpFastVideo,
+  getFastEditable, editFastVideo, followUpFastVideo, getShareToken,
 } from '../lib/api.js';
 
 /**
@@ -57,6 +57,7 @@ export default function FastVideo() {
   const [selected, setSelected] = useState(null); // scene index
   const [playing, setPlaying] = useState(0);      // scene index under the playhead
   const started = useRef(0);
+  const [shared, setShared] = useState('');
   const playerRef = useRef(null);
   const scrollRef = useRef(null);
 
@@ -219,6 +220,17 @@ export default function FastVideo() {
     } finally { setBusy(''); }
   };
 
+  // Public link anyone can watch without signing in (for sending to prospects).
+  const share = async () => {
+    try {
+      const { token } = await getShareToken(id);
+      const link = `${window.location.origin}/#/v/${token}`;
+      try { await navigator.clipboard.writeText(link); } catch { /* shown below */ }
+      setShared(link);
+      setChat((c) => [...c, { role: 'note', text: `Share link copied: ${link}` }]);
+    } catch (e) { setChat((c) => [...c, { role: 'err', text: String(e.message || e) }]); }
+  };
+
   const selectScene = (i) => {
     setSelected(i);
     const s = ir?.scenes?.[i];
@@ -306,6 +318,7 @@ export default function FastVideo() {
         <span className="fx-title">{ir?.metadata?.title || 'New video'}</span>
         {ir ? <span className="fx-pill hide-sm">{Math.round(ir.metadata.total_duration_seconds)}s · {ir.scenes.length} scenes</span> : null}
         <span style={{ flex: 1 }} />
+        {ir ? <button type="button" className="fx-btn" onClick={share} title={shared || 'Copy a link anyone can watch'}>{shared ? 'Link copied' : 'Share'}</button> : null}
         {exportArea}
         <button type="button" className="fx-btn ghost" onClick={newVideo} disabled={making}>New video</button>
       </header>
