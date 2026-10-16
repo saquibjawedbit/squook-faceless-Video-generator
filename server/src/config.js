@@ -48,6 +48,8 @@ export const config = {
   // (or both) may be blank — each provider is skipped when its key is absent.
   pexelsKey: process.env.PEXELS_API_KEY || '',
   pixabayKey: process.env.PIXABAY_API_KEY || '',
+  // Sarvam AI (Bulbul): natural Indian English and Hinglish voices.
+  sarvamKey: process.env.SARVAM_API_KEY || '',
   // fal.ai: turns still pictures into short moving clips (image-to-video).
   falKey: process.env.FAL_KEY || '',
   falVideoModel: process.env.FAL_VIDEO_MODEL || 'lightricks/ltx-2.5/image-to-video/fast',

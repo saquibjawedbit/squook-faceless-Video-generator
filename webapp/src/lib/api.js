@@ -67,14 +67,14 @@ export const followUpFastVideo = (id, message) => jfetch(`/api/fast/${id}/follow
 // Render a fast video's MP4 again (after a failure or an interrupted render).
 export const rerenderFastVideo = (id, quality) => jfetch(`/api/fast/${id}/render`, json({ quality }));
 
-export function createFastVideo({ url, topic, style, look, format, duration, notes, demo, files = [] }) {
+export function createFastVideo({ url, topic, style, look, format, duration, notes, demo, voiceLang, files = [] }) {
   if (!files.length) {
     return jfetch('/api/fast', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url, topic, style, look, format, duration, notes, demo }) });
+      body: JSON.stringify({ url, topic, style, look, format, duration, notes, demo, voiceLang }) });
   }
   // With the customer's own photos/clips: multipart.
   const fd = new FormData();
-  for (const [k, v] of Object.entries({ url, topic, style, look, format, duration, notes })) if (v !== undefined && v !== null && v !== '') fd.append(k, String(v));
+  for (const [k, v] of Object.entries({ url, topic, style, look, format, duration, notes, voiceLang })) if (v !== undefined && v !== null && v !== '') fd.append(k, String(v));
   if (demo) fd.append('demo', JSON.stringify(demo));
   for (const f of files) fd.append('media', f);
   return jfetch('/api/fast', { method: 'POST', body: fd });

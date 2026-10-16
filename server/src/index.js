@@ -209,7 +209,7 @@ app.post('/api/fast', requireAuth, fastUpload.array('media', 12), async (req, re
   await updateProject(p.id, { status: 'running', stage: 'writing', progress: 10 });
   let ir;
   try {
-    ir = await generateFastVideo(p, { url, topic, style, look: String(b.look || ''), format, lengthS, notes: String(b.notes || '').slice(0, 1000), demo, media }, log);
+    ir = await generateFastVideo(p, { url, topic, style, look: String(b.look || ''), format, lengthS, notes: String(b.notes || '').slice(0, 1000), demo, media, voiceLang: String(b.voiceLang || 'auto') }, log);
   } catch (e) {
     await updateProject(p.id, { status: 'failed', error: String(e.message || e) });
     return res.status(502).json({ error: String(e.message || e) });

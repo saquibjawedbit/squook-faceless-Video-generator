@@ -43,6 +43,7 @@ export default function FastVideo() {
   const [format, setFormat] = useState('16:9');
   const [duration, setDuration] = useState(30);
   const [look, setLook] = useState('');
+  const [voiceLang, setVoiceLang] = useState('auto');
   const [demoOpen, setDemoOpen] = useState(false);
   const [files, setFiles] = useState([]);
   const fileRef = useRef(null);
@@ -176,7 +177,7 @@ export default function FastVideo() {
     started.current = Date.now();
     try {
       const withDemo = demoOpen && demo.appUrl.trim() ? { demo: { ...demo, appUrl: demo.appUrl.trim() } } : {};
-      const r = await createFastVideo({ ...(isUrl ? { url: text } : { topic: text }), style, look, format, duration, ...withDemo, files });
+      const r = await createFastVideo({ ...(isUrl ? { url: text } : { topic: text }), style, look, format, duration, voiceLang, ...withDemo, files });
       setId(r.project.id);
       setIr(r.ir);
       window.history.replaceState(null, '', `#/fast?id=${r.project.id}`);
@@ -273,6 +274,12 @@ export default function FastVideo() {
               </div>
               <select className="fx-mini-select" value={look} onChange={(e) => setLook(e.target.value)}>
                 {LOOKS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <select className="fx-mini-select" value={voiceLang} onChange={(e) => setVoiceLang(e.target.value)} title="Voice language">
+                <option value="auto">Auto voice</option>
+                <option value="en">American English</option>
+                <option value="en-IN">Indian English</option>
+                <option value="hinglish">Hinglish</option>
               </select>
               <label className="fx-length">
                 <input type="range" min={min} max={max} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />

@@ -61,7 +61,13 @@ const CF_BASE = () => `https://api.cloudflare.com/client/v4/accounts/${config.cf
 const cfHeaders = () => ({ Authorization: `Bearer ${config.cfApiToken}`, 'Content-Type': 'application/json' });
 
 const SIZES = { '16:9': [1920, 1080], '9:16': [1080, 1920], '1:1': [1080, 1080] };
-const VOICES = ['luna', 'thalia', 'apollo', 'orion', 'asteria', 'arcas', 'helena', 'zeus'];
+const US_VOICES = ['luna', 'thalia', 'apollo', 'orion', 'asteria', 'arcas', 'helena', 'zeus'];
+// Indian voices (Sarvam Bulbul v3): female first, then male.
+const IN_VOICES = ['in:ritu', 'in:priya', 'in:neha', 'in:kavya', 'in:shubh', 'in:aditya', 'in:rahul', 'in:amit'];
+const VOICES = [...US_VOICES, ...IN_VOICES];
+// Spoken language: American English, Indian English, or Hinglish (Roman script).
+const LANGS = ['en', 'en-IN', 'hinglish'];
+const INDIA = /\b(india|indian|bharat|ranchi|jharkhand|delhi|mumbai|bangalore|bengaluru|kolkata|chennai|hyderabad|pune|patna|lucknow|jaipur|ahmedabad|surat|rupee|rupees|kirana|dhaba|thali|litti|chai)\b|₹/i;
 const HEX = /^#[0-9a-f]{6}$/i;
 const MEDIA_DIR = resolve(SERVER_DIR, 'media');
 
@@ -881,7 +887,7 @@ async function animatePicture(picFile, motion, format, dir, base) {
   return toClip(tmp, dir, base);
 }
 
-function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook, uploads = [], format = '16:9' }) {
+function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook, uploads = [], format = '16:9', lang = 'en' }) {
   // Tall videos are reels: quick cuts (~3 s), short lines, a picture in every scene.
   const reel = format === '9:16' && !site?.shots?.some((x) => x.appStep);
   const scenes = Math.max(3, Math.min(30, Math.round(lengthS / (reel ? 3 : 6))));
@@ -921,7 +927,7 @@ Rules:
 - ${shots.some((x) => x.product) ? 'SHOW HOW IT WORKS: the PRODUCT UI screenshots are real screens of the app. Use every one of them (as "screen" or "split") for the scenes that explain what the product does, in the order a user would meet them. Use landing-page sections only for the hook or proof.' : 'Show the product working wherever you can, not just marketing headlines.'}
 - Write like a sharp human copywriter: plain, specific, natural spoken English. No clichés ("game-changer", "seamless", "unlock"), no filler ("every single day", "while you breathe"), no odd metaphors, no names or terms a stranger wouldn't understand.
 - ${stockReady() ? 'Use "stock" (real footage) on 1–3 scenes about people, places or everyday moments.' : 'No stock footage library is connected: never use "stock".'}
-${reel ? `- REEL RULES: every scene must SHOW something real — mostly "visual" scenes with "stock", "media" or "image"; hero/kinetic/stat/cta only WITH a picture behind them; never a scene that is text on a plain background. If the subject is food, a product or a place, show it in close-up at least twice. Titles ≤4 words, big and punchy.\n` : ''}- On-screen text must support the voice-over, not repeat it word for word.
+${reel ? `- REEL RULES: every scene must SHOW something real — mostly "visual" scenes with "stock", "media" or "image"; hero/kinetic/stat/cta only WITH a picture behind them; never a scene that is text on a plain background. If the subject is food, a product or a place, show it in close-up at least twice. Titles ≤4 words, big and punchy.\n` : ''}${lang === 'hinglish' ? '- LANGUAGE: write every narration in natural Hinglish — Hindi and English mixed the way people in North India actually talk (e.g. "Is weekend ghar pe hi enjoy karo, order WhatsApp pe!"), in Roman script, never Devanagari. Keep English words for brand and product names. On-screen titles: short Hinglish or English.\n' : lang === 'en-IN' ? '- LANGUAGE: simple Indian English, as an Indian brand would say it; Indian names and words are fine.\n' : ''}- On-screen text must support the voice-over, not repeat it word for word.
 - Numbers: never invent statistics, results or customer claims. Use only numbers printed on the website${site ? '' : ' (there is none: use only well-known public facts, or label a number clearly as an example, e.g. "say, 3 wrong items a day")'}. No fake quotes or testimonials.
 - Every "cue" must be a single word that appears in that scene's narration.
 - ${styleLine}
@@ -1021,7 +1027,9 @@ async function makePicture(prompt, styleId, format, dest) {
 
 // ── 3. voice-over + word timings ─────────────────────────────────────────────
 
-async function speak(text, speaker) {
+async function speak(text, speaker, lang = 'en') {
+  if (String(speaker).startsWith('in:') && config.sarvamKey) return speakIndian(text, speaker.slice(3), lang);
+  if (!US_VOICES.includes(speaker)) speaker = 'luna';
   for (let attempt = 0; attempt < 3; attempt++) {
     const r = await fetch(`${CF_BASE()}/run/@cf/deepgram/aura-2-en`, {
       method: 'POST', headers: cfHeaders(), signal: AbortSignal.timeout(60_000),
@@ -1032,6 +1040,27 @@ async function speak(text, speaker) {
     await new Promise((s) => setTimeout(s, 1000 * (attempt + 1)));
   }
   throw new Error('voice failed after retries');
+}
+
+// Sarvam Bulbul → the same 48 kbps CBR MP3 Aura gives, so timing code is shared.
+async function speakIndian(text, speaker, lang) {
+  let r;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    r = await fetch('https://api.sarvam.ai/text-to-speech', {
+      method: 'POST', signal: AbortSignal.timeout(60_000),
+      headers: { 'api-subscription-key': config.sarvamKey, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text: String(text).slice(0, 2400), target_language_code: lang === 'hinglish' ? 'hi-IN' : 'en-IN', model: 'bulbul:v3', speaker }),
+    });
+    if (r.ok) break;
+    if (r.status < 500 && r.status !== 429) throw new Error(`indian voice failed: ${r.status} ${(await r.text()).slice(0, 120)}`);
+    await new Promise((s) => setTimeout(s, 1000 * (attempt + 1)));
+  }
+  if (!r.ok) throw new Error('indian voice failed after retries');
+  const wav = Buffer.from((await r.json()).audios[0], 'base64');
+  const tmp = join(ARTIFACTS_DIR, `tts_${Date.now()}_${Math.random().toString(36).slice(2)}`);
+  await writeFile(`${tmp}.wav`, wav);
+  await run('ffmpeg', ['-v', 'error', '-y', '-i', `${tmp}.wav`, '-ac', '1', '-ar', '24000', '-c:a', 'libmp3lame', '-b:a', '48k', `${tmp}.mp3`]);
+  return readFile(`${tmp}.mp3`);
 }
 
 // Constant-bitrate MP3 (Aura returns 48 kbps): duration from size.
@@ -1310,7 +1339,7 @@ function legible(accent, lightBg) {
  * Generate a fast video for one project: writes `<id>.ir.json` + `<id>-assets/`
  * (the same snapshot shape the editor and re-render use) and returns the IR.
  */
-export async function generateFastVideo(project, { url, topic, style, look, format, lengthS, notes, demo, media = [] }, onStep = () => {}) {
+export async function generateFastVideo(project, { url, topic, style, look, format, lengthS, notes, demo, media = [], voiceLang = 'auto' }, onStep = () => {}) {
   if (!config.cfApiToken || !config.cfAccountId) throw new Error('Workers AI is not configured');
   const t0 = Date.now();
   const mark = (what) => onStep(`${what} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
@@ -1355,7 +1384,11 @@ export async function generateFastVideo(project, { url, topic, style, look, form
   const direction = pick(rng, DIRECTIONS);
   const hook = pick(rng, HOOKS);
   onStep(`direction: ${direction}; hook: ${hook}`);
-  const script = await writeScript({ site, topic, kind: style, look: fixedStyle, lengthS, notes, direction, hook, uploads, format }, images.filter(Boolean));
+  // Spoken language: as asked, or Indian English when the video is clearly for India.
+  let lang = LANGS.includes(voiceLang) ? voiceLang : (INDIA.test(`${topic || ''} ${notes || ''} ${site?.title || ''} ${site?.text?.slice(0, 1500) || ''}`) || /\.in(\/|$)/.test(url || '') ? 'en-IN' : 'en');
+  if (lang !== 'en' && !config.sarvamKey) lang = 'en';
+  onStep(`voice language: ${lang}`);
+  const script = await writeScript({ site, topic, kind: style, look: fixedStyle, lengthS, notes, direction, hook, uploads, format, lang }, images.filter(Boolean));
   const scenes = (Array.isArray(script.scenes) ? script.scenes : []).filter((s) => s && str(s.narration, 400)).slice(0, 30);
   if (scenes.length < 2) throw new Error('the writer produced too few scenes — please try again');
   // Reels: no scene without a picture — a missing one is drawn from the line itself.
@@ -1386,10 +1419,10 @@ export async function generateFastVideo(project, { url, topic, style, look, form
 
   // 3. the recipe: every scene's spec + its voice, timings, picture, icons.
   // The writer's voice most of the time; sometimes another, for variety.
-  const voice = VOICES.includes(script.voice) && rng() < 0.65 ? script.voice : pick(rng, VOICES);
+  const voice = lang === 'en' ? (US_VOICES.includes(script.voice) && rng() < 0.65 ? script.voice : pick(rng, US_VOICES)) : pick(rng, IN_VOICES);
   const source = {
     v: 1, seed: randomInt(2 ** 31), url: url || null, topic: topic || null, kind: style, format, lengthS,
-    styleId, voice, title: str(script.title || site?.title || topic, 100),
+    styleId, voice, lang, title: str(script.title || site?.title || topic, 100),
     accent: HEX.test(script.palette?.accent) ? script.palette.accent : toHex(site?.ctaColor) || '#4f7cff',
     palette: script.palette || {}, musicMood: MUSIC_MOODS.includes(script.music_mood) ? script.music_mood : null,
     site: site ? { url: site.url, title: site.title, description: site.description, text: str(site.text, 2500), colors: site.colors, logo: site.logo || null, logoTone: site.logoTone, headingFont: site.headingFont, shots: site.shots || [], mobile: site.mobile || null, customerLogos: site.customerLogos || [] } : null,
@@ -1432,7 +1465,7 @@ async function prepareScene(project, source, sc, { revoice = false, repicture = 
   const jobs = [];
   if (revoice || !sc.audio) {
     jobs.push((async () => {
-      const buf = await speak(str(s.narration, 400), source.voice);
+      const buf = await speak(str(s.narration, 400), source.voice, source.lang || 'en');
       const file = `${REL}/vo_${tag}.mp3`;
       await writeFile(join(dir, file), buf);
       sc.audio = { file, dur: mp3Seconds(buf), timed: await wordTimes(buf) };
