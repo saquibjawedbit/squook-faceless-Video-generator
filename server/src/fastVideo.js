@@ -1358,6 +1358,13 @@ export async function generateFastVideo(project, { url, topic, style, look, form
   const script = await writeScript({ site, topic, kind: style, look: fixedStyle, lengthS, notes, direction, hook, uploads, format }, images.filter(Boolean));
   const scenes = (Array.isArray(script.scenes) ? script.scenes : []).filter((s) => s && str(s.narration, 400)).slice(0, 30);
   if (scenes.length < 2) throw new Error('the writer produced too few scenes — please try again');
+  // Reels: no scene without a picture — a missing one is drawn from the line itself.
+  if (format === '9:16' && !site?.shots?.some((x) => x.appStep)) {
+    for (const sc of scenes) {
+      if (sc.image || sc.stock || sc.media || ['screen', 'split', 'phone', 'chat', 'logos', 'motion'].includes(sc.template)) continue;
+      sc.image = `${str(sc.narration, 200)} (${str(script.title || topic || '', 80)}). Real, appetising, close-up photograph of exactly what the line mentions, natural light`;
+    }
+  }
   // Every uploaded photo/clip appears at least once: unused ones go on scenes
   // that would otherwise get an AI picture or plain type (screens stay screens).
   const usedMedia = new Set(scenes.map((x) => Number(x.media)).filter(Boolean));
@@ -1564,7 +1571,7 @@ async function assemble(project, source) {
       for (const f of layer.props.focus) f.at = +(nearestBeat(grid, starts[i] + f.at, 0.25) - starts[i]).toFixed(3);
     }
     // A picture sits behind text-led scenes; otherwise the pack's background.
-    const behind = sc.picture && ['hero', 'kinetic', 'quote', 'stat', 'stats', 'cta'].includes(layer.kind);
+    const behind = sc.picture && ['hero', 'kinetic', 'quote', 'stat', 'stats', 'cta', 'icons', 'steps'].includes(layer.kind);
     // The customer's own clip plays behind the scene (muted under the voice-over).
     const clipBehind = sc.clip && (behind || layer.kind === 'visual');
     if (clipBehind && layer.kind === 'visual') layer.props.image = null;
