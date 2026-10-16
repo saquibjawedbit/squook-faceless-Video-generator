@@ -172,12 +172,20 @@ app.post('/api/fast', requireAuth, async (req, res) => {
   if (b.url) {
     try { url = validateLandingUrl(b.url); }
     catch (e) { return res.status(400).json({ error: e.message }); }
-  } else if (!topic) return res.status(400).json({ error: 'Paste a link or describe a topic' });
+  } else if (!topic && !b.demo?.appUrl) return res.status(400).json({ error: 'Paste a link or describe a topic' });
   const quota = await landingQuota(req.user).catch((e) => ({ error: e.message }));
   if (quota.error) return res.status(503).json({ error: quota.error });
   if (quota.globalLeft === 0) return res.status(429).json({ error: 'We’ve hit today’s video limit — please try again tomorrow.' });
   if (quota.left === 0) return res.status(429).json({ error: `You’ve used your ${config.landingDailyLimit} videos for today — come back tomorrow.` });
 
+  // Optional demo login: the app is clicked through for real. Used for this
+  // run only — never stored with the project.
+  let demo = null;
+  if (b.demo?.appUrl) {
+    try { demo = { appUrl: validateLandingUrl(b.demo.appUrl), email: String(b.demo.email || '').slice(0, 200), password: String(b.demo.password || '').slice(0, 200), goal: String(b.demo.goal || '').slice(0, 400) }; }
+    catch (e) { return res.status(400).json({ error: `App link: ${e.message}` }); }
+    if (!url && !topic) url = demo.appUrl;
+  }
   const style = b.style === 'explainer' ? 'explainer' : 'promo';
   const format = ['16:9', '9:16', '1:1'].includes(b.format) ? b.format : '16:9';
   const lengthS = Math.max(15, Math.min(180, Math.round(Number(b.duration) || 30)));
@@ -191,7 +199,7 @@ app.post('/api/fast', requireAuth, async (req, res) => {
   await updateProject(p.id, { status: 'running', stage: 'writing', progress: 10 });
   let ir;
   try {
-    ir = await generateFastVideo(p, { url, topic, style, look: String(b.look || ''), format, lengthS, notes: String(b.notes || '').slice(0, 1000) }, log);
+    ir = await generateFastVideo(p, { url, topic, style, look: String(b.look || ''), format, lengthS, notes: String(b.notes || '').slice(0, 1000), demo }, log);
   } catch (e) {
     await updateProject(p.id, { status: 'failed', error: String(e.message || e) });
     return res.status(502).json({ error: String(e.message || e) });

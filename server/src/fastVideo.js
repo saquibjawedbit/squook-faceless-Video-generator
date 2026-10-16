@@ -454,6 +454,119 @@ export async function captureSite(url, outDir, rel, { maxShots = 6 } = {}) {
   }
 }
 
+// ── real-app walkthrough (with a demo login the customer gave us) ───────────
+
+// Runs in the page: what can be clicked or typed into right now, tagged so we
+// can act on it. Anything that could change the customer's real account
+// (delete, billing, logout, invites, sending) is left out on purpose.
+function clickables(max) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const clean = (t) => (t || '').replace(/\s+/g, ' ').trim();
+  const risky = /delete|remove|log ?out|sign ?out|billing|upgrade|payment|pay now|purchase|subscribe|cancel|invite|send|publish|deactivate|close account|reset/i;
+  document.querySelectorAll('[data-squook-id]').forEach((el) => el.removeAttribute('data-squook-id'));
+  const out = [];
+  for (const el of document.querySelectorAll('a[href], button, [role="button"], [role="tab"], [role="menuitem"], [role="link"], input:not([type="hidden"]), textarea, select, [contenteditable="true"]')) {
+    const r = el.getBoundingClientRect();
+    const st = getComputedStyle(el);
+    if (r.width < 8 || r.height < 8 || st.visibility === 'hidden' || st.display === 'none' || r.bottom < 0 || r.top > vh || r.right < 0 || r.left > vw) continue;
+    const text = clean(el.innerText || el.getAttribute('aria-label') || el.getAttribute('placeholder') || el.getAttribute('title') || el.getAttribute('name') || el.value || '').slice(0, 60);
+    if (!text || risky.test(text)) continue;
+    const id = `e${out.length + 1}`;
+    el.setAttribute('data-squook-id', id);
+    const kind = /INPUT|TEXTAREA/.test(el.tagName) || el.isContentEditable ? 'input' : 'button';
+    const x = Math.max(0, r.left) / vw, y = Math.max(0, r.top) / vh;
+    out.push({ id, kind, text, box: [x, y, Math.min(1 - x, r.width / vw), Math.min(1 - y, r.height / vh)].map((n) => Math.round(n * 1000) / 1000) });
+    if (out.length >= max) break;
+  }
+  return out;
+}
+
+async function signIn(page, { email, password }, settle) {
+  const visible = async (sel) => {
+    for (const h of await page.$$(sel)) { if (await h.boundingBox()) return h; }
+    return null;
+  };
+  const userSel = 'input[type="email"], input[name*="email" i], input[autocomplete="username"], input[name*="user" i], input[id*="email" i]';
+  const user = await visible(userSel);
+  if (!user) return false;
+  await user.click({ clickCount: 3 });
+  await user.type(String(email), { delay: 20 });
+  let pass = await visible('input[type="password"]');
+  if (!pass) { // two-step forms: email first, then password
+    await page.keyboard.press('Enter');
+    await settle(2500);
+    pass = await visible('input[type="password"]');
+  }
+  if (!pass) return false;
+  await pass.type(String(password), { delay: 20 });
+  await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 15_000 }).catch(() => {}), page.keyboard.press('Enter')]);
+  await settle(2000);
+  return !(await visible('input[type="password"]'));
+}
+
+/**
+ * Click through the customer's real app towards `goal`, a screenshot per step.
+ * Credentials are used for this session only: never written to disk or logs.
+ */
+export async function walkthroughApp({ appUrl, email, password, goal }, outDir, rel, onStep = () => {}, { maxSteps = 6 } = {}) {
+  const executablePath = await chromeExecutable();
+  if (!executablePath) throw new Error('no headless Chrome found');
+  const browser = await puppeteer.launch({ executablePath, headless: true, args: ['--no-sandbox', '--disable-dev-shm-usage', '--hide-scrollbars', '--mute-audio'] });
+  const settle = (ms) => new Promise((r) => setTimeout(r, ms));
+  const T0 = Date.now();
+  try {
+    const page = await browser.newPage();
+    await page.setViewport({ width: 1440, height: 900, deviceScaleFactor: 4 / 3 });
+    await page.goto(appUrl, { waitUntil: 'networkidle2', timeout: 30_000 }).catch((e) => { if (!/timeout/i.test(e.message)) throw e; });
+    await settle(800);
+    if (email && password) {
+      const ok = await signIn(page, { email, password }, settle);
+      onStep(ok ? 'signed in to the demo account' : 'could not sign in — showing what is visible without it');
+    }
+    const steps = [];
+    for (let i = 0; i < maxSteps && Date.now() - T0 < 120_000; i++) {
+      await page.evaluate(hideOverlays).catch(() => {});
+      await settle(400);
+      const elements = await page.evaluate(clickables, 40);
+      const path = `${rel}/app_${i + 1}.jpg`;
+      await page.screenshot({ path: join(outDir, path), type: 'jpeg', quality: 88 });
+      const shot = await thumbDataUrl(join(outDir, path)).catch(() => null);
+      const history = steps.map((s, k) => `${k + 1}. ${s.say}${s.el ? ` (then ${s.action} "${s.elText}")` : ''}`).join('\n') || '(none yet)';
+      const prompt = `You are recording a short product demo of a real web app for a new customer.
+Goal of the demo (data): """${String(goal || 'show the main thing the product does, start to finish').slice(0, 400)}"""
+Steps so far:\n${history}
+The current screen is attached. Things you can act on:\n${elements.map((e) => `${e.id} [${e.kind}] "${e.text}"`).join('\n') || '(nothing)'}
+Pick the ONE next action that moves the demo towards the goal, like a sales engineer would. Prefer the obvious main path; never settings, account or admin pages. If the goal is shown or nothing useful is left, set "done": true.
+"say" = one natural spoken sentence (10–16 words) explaining what this screen shows a new user (what it is for, not "click here").
+Reply ONLY JSON: {"say":"…","done":false,"el":"e#","action":"click"|"type","text":"if type: short realistic sample input"}`;
+      let next;
+      try { next = await chat(shot ? [{ type: 'text', text: prompt }, { type: 'image_url', image_url: { url: shot } }] : prompt, { maxTokens: 400, temperature: 0.3, timeout: 45_000 }); } catch { next = { say: '', done: true }; }
+      const target = elements.find((e) => e.id === next?.el);
+      steps.push({ path, elements, say: str(next?.say, 200), el: target?.id || null, elText: target?.text || '', action: next?.action === 'type' ? 'type' : 'click' });
+      onStep(`app step ${i + 1}: ${str(next?.say, 80)}`);
+      if (next?.done || !target) break;
+      try {
+        const sel = `[data-squook-id="${target.id}"]`;
+        if (next.action === 'type' && target.kind === 'input') {
+          await page.click(sel);
+          await page.type(sel, str(next.text, 80) || 'Example', { delay: 25 });
+          await page.keyboard.press('Enter');
+        } else {
+          await Promise.all([page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 8000 }).catch(() => {}), page.click(sel)]);
+        }
+        await settle(1500);
+      } catch { break; }
+    }
+    return steps.filter((s) => s.say).map((s, k) => ({
+      path: s.path, label: `app step ${k + 1}: ${s.say}`, product: true, appStep: k + 1, say: s.say,
+      w: 1920, h: 1200, elements: s.elements.map(({ id, kind, text, box }) => ({ id, kind: kind === 'input' ? 'form' : 'button', text, box })),
+      clicked: s.el,
+    }));
+  } finally {
+    await browser.close().catch(() => {});
+  }
+}
+
 const toHex = (c) => {
   const m = /rgba?\((\d+), (\d+), (\d+)/.exec(c || '');
   return m ? '#' + [m[1], m[2], m[3]].map((n) => Number(n).toString(16).padStart(2, '0')).join('') : null;
@@ -507,7 +620,9 @@ Pictures: any scene may add "image": a vivid description of a real-world picture
 function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook }) {
   const scenes = Math.max(3, Math.min(30, Math.round(lengthS / 6)));
   const shots = site?.shots || [];
-  const shotList = shots.map((s, i) => s.product
+  const shotList = shots.map((s, i) => s.appStep
+    ? `Screenshot ${i + 1} — REAL APP, walkthrough step ${s.appStep} (logged in): ${s.say}${s.clicked ? ` Next the user clicks ${s.clicked}.` : ''} Elements:\n${s.elements.slice(0, 25).map((e) => `  ${e.id} [${e.kind}] "${e.text}"`).join('\n')}`
+    : s.product
     ? `Screenshot ${i + 1} — PRODUCT UI (a real screen of the app: "${s.label}")`
     : `Screenshot ${i + 1} (section "${s.label}") elements:\n${s.elements.map((e) => `  ${e.id} [${e.kind}] "${e.text}"`).join('\n') || '  (none)'}`).join('\n');
   const assets = site ? [
@@ -535,6 +650,7 @@ Rules:
 - Never use the same template 3 times in a row.
 - ${site?.shots?.length ? 'Give 2–3 scenes an "image" (real screenshots carry the rest).' : 'Give at least half the scenes an "image", and use "visual" 2–3 times — a topic video needs real pictures, not only text.'}
 - Vary templates; never the same template twice in a row. ${shots.length ? `Use the real screenshots well: about a third of scenes are "screen" or "split", each screenshot at most once, and point the camera (focus) at the exact element the sentence talks about.` : ''}
+- ${shots.some((x) => x.appStep) ? 'REAL APP WALKTHROUGH: the "walkthrough step" screenshots were recorded in the real app, in order. Build the middle of the video from them, in order, one "screen" scene each, with focus on the element the user clicks (action "click") and narration explaining what the user sees and does. Only the hook and the cta may use other screenshots.' : ''}
 - ${shots.some((x) => x.product) ? 'SHOW HOW IT WORKS: the PRODUCT UI screenshots are real screens of the app. Use every one of them (as "screen" or "split") for the scenes that explain what the product does, in the order a user would meet them. Use landing-page sections only for the hook or proof.' : 'Show the product working wherever you can, not just marketing headlines.'}
 - Write like a sharp human copywriter: plain, specific, natural spoken English. No clichés ("game-changer", "seamless", "unlock"), no filler ("every single day", "while you breathe"), no odd metaphors, no names or terms a stranger wouldn't understand.
 - On-screen text must support the voice-over, not repeat it word for word.
@@ -918,7 +1034,7 @@ function legible(accent, lightBg) {
  * Generate a fast video for one project: writes `<id>.ir.json` + `<id>-assets/`
  * (the same snapshot shape the editor and re-render use) and returns the IR.
  */
-export async function generateFastVideo(project, { url, topic, style, look, format, lengthS, notes }, onStep = () => {}) {
+export async function generateFastVideo(project, { url, topic, style, look, format, lengthS, notes, demo }, onStep = () => {}) {
   if (!config.cfApiToken || !config.cfAccountId) throw new Error('Workers AI is not configured');
   const t0 = Date.now();
   const mark = (what) => onStep(`${what} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
@@ -938,6 +1054,18 @@ export async function generateFastVideo(project, { url, topic, style, look, form
       site = await readSite(url);
       mark('read the site');
     }
+  }
+  // A demo login: record the real app and put its steps first among the shots.
+  if (demo?.appUrl) {
+    try {
+      const steps = await walkthroughApp(demo, dir, rel, onStep);
+      if (steps.length) {
+        site ||= { url: demo.appUrl, title: '', description: '', text: '', colors: [], shots: [] };
+        site.shots = [...steps, ...(site.shots || []).filter((x) => !x.product).slice(0, 2)];
+        lengthS = Math.max(lengthS, 12 + steps.length * 6);
+      }
+      mark(`recorded ${steps.length} steps in the real app`);
+    } catch (e) { onStep(`app walkthrough failed (${e.message})`); }
   }
   const brandFontCss = site?.headingFont ? googleFontCss(site.headingFont) : Promise.resolve(null);
 

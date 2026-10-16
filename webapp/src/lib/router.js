@@ -14,8 +14,10 @@ export function currentQuery() {
 
 export function useRoute() {
   const [route, setRoute] = useState(currentRoute());
+  const [, setHash] = useState(window.location.hash); // re-render when only the query changes
   useEffect(() => {
     const onHash = () => {
+      setHash(window.location.hash);
       setRoute(currentRoute());
       window.scrollTo(0, 0);
     };

@@ -230,3 +230,8 @@ textarea.fx-field { resize: vertical; line-height: 1.45; }
 }
 .fx-play { position: absolute; inset: 0; margin: auto; width: 84px; height: 84px; border-radius: 50%; border: 0; cursor: pointer; background: var(--accent); color: #fff; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.35); display: flex; align-items: center; justify-content: center; transition: transform 0.15s; }
 .fx-play:hover { transform: scale(1.06); }
+.fx-demo { margin-top: 12px; padding: 10px 14px; box-shadow: none; }
+.fx-demo-toggle { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 13.5px; padding: 2px 0; }
+.fx-demo-toggle:hover { color: var(--ink); }
+.fx-demo-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.fx-demo-grid p { margin: 0 0 2px; font-size: 13px; color: var(--muted); line-height: 1.5; }

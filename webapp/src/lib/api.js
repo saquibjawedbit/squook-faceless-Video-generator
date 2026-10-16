@@ -67,9 +67,9 @@ export const followUpFastVideo = (id, message) => jfetch(`/api/fast/${id}/follow
 // Render a fast video's MP4 again (after a failure or an interrupted render).
 export const rerenderFastVideo = (id, quality) => jfetch(`/api/fast/${id}/render`, json({ quality }));
 
-export const createFastVideo = ({ url, topic, style, look, format, duration, notes }) =>
+export const createFastVideo = ({ url, topic, style, look, format, duration, notes, demo }) =>
   jfetch('/api/fast', { method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, topic, style, look, format, duration, notes }) });
+    body: JSON.stringify({ url, topic, style, look, format, duration, notes, demo }) });
 
 // Generate the script for review before rendering → { script, asset_plan }.
 export const previewScript = ({ prompt, format, duration, genre, voice, uploadNames }) =>

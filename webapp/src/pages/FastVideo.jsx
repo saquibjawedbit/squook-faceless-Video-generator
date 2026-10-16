@@ -43,6 +43,8 @@ export default function FastVideo() {
   const [format, setFormat] = useState('16:9');
   const [duration, setDuration] = useState(30);
   const [look, setLook] = useState('');
+  const [demoOpen, setDemoOpen] = useState(false);
+  const [demo, setDemo] = useState({ appUrl: '', email: '', password: '', goal: '' });
   const [making, setMaking] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [error, setError] = useState(null);
@@ -171,7 +173,8 @@ export default function FastVideo() {
     setSelected(null); setTab('chat'); setChat([{ role: 'user', text }]);
     started.current = Date.now();
     try {
-      const r = await createFastVideo({ ...(isUrl ? { url: text } : { topic: text }), style, look, format, duration });
+      const withDemo = demoOpen && demo.appUrl.trim() ? { demo: { ...demo, appUrl: demo.appUrl.trim() } } : {};
+      const r = await createFastVideo({ ...(isUrl ? { url: text } : { topic: text }), style, look, format, duration, ...withDemo });
       setId(r.project.id);
       setIr(r.ir);
       window.history.replaceState(null, '', `#/fast?id=${r.project.id}`);
@@ -274,8 +277,24 @@ export default function FastVideo() {
                 {duration}s
               </label>
               <span style={{ flex: 1 }} />
-              <button type="button" className="fx-send" disabled={!input.trim()} onClick={() => make()} aria-label="Make video"><Arrow /></button>
+              <button type="button" className="fx-send" disabled={!input.trim() && !(demoOpen && demo.appUrl.trim())} onClick={() => make(input.trim() || demo.appUrl.trim())} aria-label="Make video"><Arrow /></button>
             </div>
+          </div>
+          <div className="fx-composer fx-demo">
+            <button type="button" className="fx-demo-toggle" onClick={() => setDemoOpen((v) => !v)}>
+              {demoOpen ? '−' : '+'} Show the real app (add a demo login)
+            </button>
+            {demoOpen ? (
+              <div className="fx-demo-grid">
+                <p>Squook signs in and clicks through the app itself, so the video shows the product actually working. Use a demo or test account; the login is used once and never saved.</p>
+                <input className="fx-field" placeholder="App link, e.g. https://app.yourproduct.com/login" value={demo.appUrl} onChange={(e) => setDemo({ ...demo, appUrl: e.target.value })} />
+                <div className="fx-fields">
+                  <input className="fx-field" placeholder="Demo email" autoComplete="off" value={demo.email} onChange={(e) => setDemo({ ...demo, email: e.target.value })} />
+                  <input className="fx-field" type="password" placeholder="Demo password" autoComplete="new-password" value={demo.password} onChange={(e) => setDemo({ ...demo, password: e.target.value })} />
+                </div>
+                <input className="fx-field" placeholder="What should it show? e.g. create a chatbot from a PDF and ask it a question" value={demo.goal} onChange={(e) => setDemo({ ...demo, goal: e.target.value })} />
+              </div>
+            ) : null}
           </div>
           <div className="fx-examples">
             {EXAMPLES.map((x) => <button key={x} type="button" className="fx-chip" onClick={() => setInput(x)}>{x.replace(/^https:\/\//, '')}</button>)}
