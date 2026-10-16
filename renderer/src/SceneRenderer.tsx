@@ -100,7 +100,7 @@ export const SceneRenderer: React.FC<{
         // Audio is non-visual — no wrapper. SFX cues carry a start offset.
         if (layer.type === 'audio') {
           const from = Math.round((layer.start_s ?? 0) * fps);
-          const audio = <Audio src={asset(layer.src)} volume={layer.volume ?? 1} />;
+          const audio = <Audio src={asset(layer.src)} volume={layer.volume ?? 1} playbackRate={layer.playback_rate ?? 1} />;
           return from > 0 ? (
             <Sequence key={i} from={from} name="sfx">{audio}</Sequence>
           ) : (

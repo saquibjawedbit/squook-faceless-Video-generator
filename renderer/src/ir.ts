@@ -60,6 +60,7 @@ export type AudioLayer = {
   type: 'audio';
   src: string;
   volume?: number;
+  playback_rate?: number; // pitch/speed variation for repeated sound effects
   start_s?: number; // offset into the scene (SFX cues); default 0
 };
 

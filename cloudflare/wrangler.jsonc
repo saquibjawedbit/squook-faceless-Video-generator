@@ -31,6 +31,8 @@
     "LANDING_DAILY_LIMIT": "3",
     "LANDING_GLOBAL_DAILY_LIMIT": "20",
     "LANDING_UNLIMITED_EMAILS": "saquibjawed4444@gmail.com",
+    // Creative Commons music library (scripts/build_music_library.py) on R2.
+    "MUSIC_BASE_URL": "https://pub-58bdb8a7d44f4a978d19c61dc639ce0e.r2.dev",
     "LANDING_TIMEOUT_MIN": "90",
     "PIPELINE_MODE": "real",
     "ALLOW_ANON": "false"

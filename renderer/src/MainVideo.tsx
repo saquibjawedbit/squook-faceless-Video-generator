@@ -17,10 +17,30 @@ const themeFromPack = (base: Theme, s: StylePack): Theme => ({
 });
 
 // Each scene's sequence extends by its own transition_out frames into the
+// Music level at time t: full in the gaps, dipped to `duck` (relative) while
+// the voice speaks, with short ramps either side; a lift after `swell_at` for
+// the finale. Spans come from the voice-over's word timings.
+type Music = NonNullable<RenderIR['metadata']['music']> & {
+  start_s?: number; loop?: boolean; duck?: number; spans?: [number, number][]; swell_at?: number; swell?: number;
+};
+const RAMP = 0.3;
+function duckGain(m: Music, t: number): number {
+  const duck = m.duck ?? 1;
+  let g = 1;
+  for (const [a, b] of m.spans ?? []) {
+    if (t < a - RAMP || t > b + RAMP) continue;
+    const inRamp = t < a ? (a - t) / RAMP : t > b ? (t - b) / RAMP : 0;
+    g = Math.min(g, duck + (1 - duck) * inRamp);
+  }
+  if (m.swell_at !== undefined && t > m.swell_at) g *= 1 + ((m.swell ?? 1.4) - 1) * Math.min(1, (t - m.swell_at) / 0.8);
+  return g;
+}
+
 // next scene; the next scene (later in DOM = on top) animates in over that
 // overlap, driven by the previous scene's transition.
 export const MainVideo: React.FC<{ir: RenderIR}> = ({ir}) => {
-  const {fps, total_frames: totalFrames, music} = ir.metadata;
+  const {fps, total_frames: totalFrames} = ir.metadata;
+  const music = ir.metadata.music as Music | undefined;
   const pack = styleOf(ir);
   const theme = pack ? themeFromPack(themeOf(ir), pack) : themeOf(ir);
   const {brand_font: brandFont, brand_font_css: brandFontCss} = ir.metadata as {brand_font?: string; brand_font_css?: string};
@@ -28,25 +48,25 @@ export const MainVideo: React.FC<{ir: RenderIR}> = ({ir}) => {
     <StyleProvider value={pack}>
     <ThemeProvider value={theme}>
     {brandFont ? <BrandFont family={brandFont} href={brandFontCss} /> : null}
-    <AbsoluteFill style={{backgroundColor: '#000'}}>
+    <AbsoluteFill style={{backgroundColor: pack ? pack.palette.bg : '#000'}}>
       {music ? (
         <Audio
           src={asset(music.src)}
-          loop
+          loop={music.loop ?? true}
+          // Start partway into the track so its energy peak lands on the finale.
+          startFrom={music.start_s ? Math.round(music.start_s * fps) : undefined}
           volume={(f) => {
             // Fade in/out, but keep the interpolate input range strictly
             // increasing even for very short videos (else Remotion throws and
             // the whole render fails). Below ~4 frames, just hold the level.
             if (totalFrames < 4) return music.volume;
-            const fi = Math.max(1, Math.min(Math.round(fps * 2), Math.floor(totalFrames / 4)));
-            const fo = Math.min(totalFrames - 1, Math.max(fi + 1, totalFrames - Math.round(fps * 3)));
-            return (
-              music.volume *
-              interpolate(f, [0, fi, fo, totalFrames], [0, 1, 1, 0], {
-                extrapolateLeft: 'clamp',
-                extrapolateRight: 'clamp',
-              })
-            );
+            const fi = Math.max(1, Math.min(Math.round(fps * 1.2), Math.floor(totalFrames / 4)));
+            const fo = Math.min(totalFrames - 1, Math.max(fi + 1, totalFrames - Math.round(fps * 2.5)));
+            const fade = interpolate(f, [0, fi, fo, totalFrames], [0, 1, 1, 0], {
+              extrapolateLeft: 'clamp',
+              extrapolateRight: 'clamp',
+            });
+            return music.volume * fade * duckGain(music, f / fps);
           }}
         />
       ) : null}

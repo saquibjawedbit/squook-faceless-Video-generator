@@ -157,6 +157,11 @@ export default function FastVideo() {
               </span>
             )}
           </div>
+          {ir.metadata.credits ? (
+            <div style={{ fontFamily: mono, fontSize: 11.5, color: 'rgba(244,243,240,0.5)', margin: '-6px 0 14px' }}>
+              {ir.metadata.credits} — keep this credit in your video's description.
+            </div>
+          ) : null}
           <div style={{ display: 'flex', justifyContent: 'center' }}>
             <div style={{ width: aspect === '9 / 16' ? 'min(100%, 420px)' : '100%', aspectRatio: aspect, borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#000' }}>
               <Player
