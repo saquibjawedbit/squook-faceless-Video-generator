@@ -44,6 +44,8 @@ export default function FastVideo() {
   const [duration, setDuration] = useState(30);
   const [look, setLook] = useState('');
   const [demoOpen, setDemoOpen] = useState(false);
+  const [files, setFiles] = useState([]);
+  const fileRef = useRef(null);
   const [demo, setDemo] = useState({ appUrl: '', email: '', password: '', goal: '' });
   const [making, setMaking] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -166,7 +168,7 @@ export default function FastVideo() {
 
   const pickStyle = (s) => { setStyle(s); setDuration(LENGTHS[s][2]); };
 
-  const make = async (text = input.trim()) => {
+  const make = async (text = input.trim() || (files.length ? 'A short promo video made from these photos and clips' : '')) => {
     if (!text || making) return;
     const isUrl = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+(\/\S*)?$/i.test(text);
     setMaking(true); setError(null); setId(null); setIr(null); setMp4(null); setProject(null); setEditable(null);
@@ -174,7 +176,7 @@ export default function FastVideo() {
     started.current = Date.now();
     try {
       const withDemo = demoOpen && demo.appUrl.trim() ? { demo: { ...demo, appUrl: demo.appUrl.trim() } } : {};
-      const r = await createFastVideo({ ...(isUrl ? { url: text } : { topic: text }), style, look, format, duration, ...withDemo });
+      const r = await createFastVideo({ ...(isUrl ? { url: text } : { topic: text }), style, look, format, duration, ...withDemo, files });
       setId(r.project.id);
       setIr(r.ir);
       window.history.replaceState(null, '', `#/fast?id=${r.project.id}`);
@@ -276,10 +278,23 @@ export default function FastVideo() {
                 <input type="range" min={min} max={max} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
                 {duration}s
               </label>
+              <input ref={fileRef} type="file" accept="image/*,video/*" multiple hidden
+                onChange={(e) => { setFiles((f) => [...f, ...e.target.files].slice(0, 12)); e.target.value = ''; }} />
+              <button type="button" className="fx-chip" onClick={() => fileRef.current?.click()} title="Use your own photos or video clips">+ Photos / videos</button>
               <span style={{ flex: 1 }} />
-              <button type="button" className="fx-send" disabled={!input.trim() && !(demoOpen && demo.appUrl.trim())} onClick={() => make(input.trim() || demo.appUrl.trim())} aria-label="Make video"><Arrow /></button>
+              <button type="button" className="fx-send" disabled={!input.trim() && !files.length && !(demoOpen && demo.appUrl.trim())} onClick={() => make(input.trim() || demo.appUrl.trim() || undefined)} aria-label="Make video"><Arrow /></button>
             </div>
           </div>
+          {files.length ? (
+            <div className="fx-files">
+              {files.map((f, i) => (
+                <span key={i} className="fx-file">
+                  {f.type.startsWith('video/') ? '🎬' : '🖼'} {f.name.length > 22 ? `${f.name.slice(0, 20)}…` : f.name}
+                  <button type="button" aria-label="Remove" onClick={() => setFiles((x) => x.filter((_, k) => k !== i))}>×</button>
+                </span>
+              ))}
+            </div>
+          ) : null}
           <div className="fx-composer fx-demo">
             <button type="button" className="fx-demo-toggle" onClick={() => setDemoOpen((v) => !v)}>
               {demoOpen ? '−' : '+'} Show the real app (add a demo login)

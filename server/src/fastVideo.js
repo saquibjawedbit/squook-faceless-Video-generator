@@ -773,7 +773,34 @@ const TEMPLATE_GUIDE = `Scene templates ("template" field) and their fields — 
 
 Pictures: any scene may add "image": a vivid description of a real-world picture for it (subject, setting, action, mood, camera angle; Indian context when the audience is Indian). It becomes the background of hero/kinetic/quote/stat/stats/cta scenes and the whole frame of "visual". Never ask for text, words, logos, screens or UI in a picture.`;
 
-function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook }) {
+// ── the customer's own photos and clips ─────────────────────────────────────
+
+/** Uploaded files → web-ready assets (JPEG ≤1920px; MP4 ≤60 s, ≤1080p, with a poster). */
+async function importMedia(files, dir, rel, onStep = () => {}) {
+  const out = [];
+  for (const [i, f] of files.slice(0, 12).entries()) {
+    const k = i + 1;
+    const jpg = `${rel}/media_${k}.jpg`;
+    try {
+      if (/^video\//.test(f.type)) {
+        const mp4 = `${rel}/media_${k}.mp4`;
+        await run('ffmpeg', ['-v', 'error', '-y', '-i', f.path, '-t', '60', '-an', '-vf', "scale='if(gt(iw,ih),min(1920,iw),-2)':'if(gt(iw,ih),-2,min(1920,ih))'", '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', join(dir, mp4)]);
+        await run('ffmpeg', ['-v', 'error', '-y', '-ss', '1', '-i', join(dir, mp4), '-frames:v', '1', '-q:v', '3', join(dir, jpg)]).catch(() => run('ffmpeg', ['-v', 'error', '-y', '-i', join(dir, mp4), '-frames:v', '1', '-q:v', '3', join(dir, jpg)]));
+        const { stdout } = await run('ffprobe', ['-v', 'error', '-show_entries', 'format=duration:stream=width,height', '-of', 'json', join(dir, mp4)]);
+        const pr = JSON.parse(stdout);
+        out.push({ n: k, kind: 'clip', path: jpg, video: mp4, dur: +(+pr.format?.duration || 0).toFixed(1), w: pr.streams?.[0]?.width || 1920, h: pr.streams?.[0]?.height || 1080, label: str(f.name, 60) });
+      } else {
+        await run('ffmpeg', ['-v', 'error', '-y', '-i', f.path, '-vf', "scale='if(gt(iw,ih),min(1920,iw),-2)':'if(gt(iw,ih),-2,min(1920,ih))'", '-q:v', '3', join(dir, jpg)]);
+        const { stdout } = await run('ffprobe', ['-v', 'error', '-show_entries', 'stream=width,height', '-of', 'json', join(dir, jpg)]);
+        const st = JSON.parse(stdout).streams?.[0] || {};
+        out.push({ n: k, kind: 'photo', path: jpg, w: st.width || 1920, h: st.height || 1080, label: str(f.name, 60) });
+      }
+    } catch (e) { onStep(`couldn't use ${f.name} (${String(e.message).slice(0, 80)})`); }
+  }
+  return out;
+}
+
+function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook, uploads = [] }) {
   const scenes = Math.max(3, Math.min(30, Math.round(lengthS / 6)));
   const shots = site?.shots || [];
   const shotList = shots.map((s, i) => s.appStep
@@ -795,6 +822,7 @@ function promptFor({ site, topic, kind, look, lengthS, notes, direction, hook })
   return `You are a senior motion designer and copywriter. Write a ${kind === 'explainer' ? 'clear, friendly explainer' : 'punchy product promo'} of about ${lengthS} seconds: exactly ${scenes} scenes, each with ONE spoken sentence of 10–18 words (about 6 seconds).
 ${notes ? `Creator's notes (data): """${notes}"""\n` : ''}
 ${source}
+${uploads.length ? `\nCUSTOMER MEDIA — real photos and clips the customer gave you (attached after any screenshots, in this order):\n${uploads.map((m) => `Media ${m.n}: ${m.kind === 'clip' ? `video clip, ${m.dur}s` : 'photo'} "${m.label}"`).join('\n')}\nUse EVERY media item at least once by setting "media": <its number> on a scene — best on "visual" scenes (full-frame), or behind hero/kinetic/stat/cta. Describe what is really in them; never claim something they don't show. A scene with "media" gets no "image".\n` : ''}
 
 ${TEMPLATE_GUIDE}
 
@@ -818,7 +846,7 @@ Rules:
 
 This is the OUTLINE: per scene give only template, narration, layout and the short fields listed below. Each scene's detailed fields (items, messages, rows, focus, numbers, lines…) are written in a second step from your outline, so pick templates whose details the narration clearly implies.
 Reply with ONLY this JSON, no prose:
-{"title":"…","styles":["…","…"],"music_mood":"one of ${MUSIC_MOODS.join('|')}","palette":{"accent":"#hex brand colour","accent2":"#hex","bg":"#hex"},"voice":"one of ${VOICES.join('|')}","scenes":[{"template":"…","narration":"…","layout":"…","title":"≤6 words","subtitle":"optional","caption":"optional (visual)","eyebrow":"optional","button":"cta only","url":"cta only","shot":"screen/split only: screenshot number","image":"optional picture description"}]}`;
+{"title":"…","styles":["…","…"],"music_mood":"one of ${MUSIC_MOODS.join('|')}","palette":{"accent":"#hex brand colour","accent2":"#hex","bg":"#hex"},"voice":"one of ${VOICES.join('|')}","scenes":[{"template":"…","narration":"…","layout":"…","title":"≤6 words","subtitle":"optional","caption":"optional (visual)","eyebrow":"optional","button":"cta only","url":"cta only","shot":"screen/split only: screenshot number","media":"optional: customer media number","image":"optional picture description"}]}`;
 }
 
 // Templates whose details are written in parallel after the outline.
@@ -1198,7 +1226,7 @@ function legible(accent, lightBg) {
  * Generate a fast video for one project: writes `<id>.ir.json` + `<id>-assets/`
  * (the same snapshot shape the editor and re-render use) and returns the IR.
  */
-export async function generateFastVideo(project, { url, topic, style, look, format, lengthS, notes, demo }, onStep = () => {}) {
+export async function generateFastVideo(project, { url, topic, style, look, format, lengthS, notes, demo, media = [] }, onStep = () => {}) {
   if (!config.cfApiToken || !config.cfAccountId) throw new Error('Workers AI is not configured');
   const t0 = Date.now();
   const mark = (what) => onStep(`${what} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
@@ -1232,16 +1260,18 @@ export async function generateFastVideo(project, { url, topic, style, look, form
       mark(`recorded ${steps.length} steps in the real app`);
     } catch (e) { onStep(`app walkthrough failed (${e.message})`); }
   }
+  const uploads = media.length ? await importMedia(media, dir, rel, onStep) : [];
+  if (uploads.length) mark(`imported ${uploads.length} of your photos/clips`);
   const brandFontCss = site?.headingFont ? googleFontCss(site.headingFont) : Promise.resolve(null);
 
   // 2. write (the model sees the screenshots)
-  const images = site?.shots?.length ? await Promise.all(site.shots.map((s) => thumbDataUrl(join(dir, s.path)).catch(() => null))) : [];
+  const images = await Promise.all([...(site?.shots || []), ...uploads].map((s) => thumbDataUrl(join(dir, s.path)).catch(() => null)));
   const fixedStyle = STYLES[look] ? look : null;
   const rng = rngFrom(randomInt(2 ** 31));
   const direction = pick(rng, DIRECTIONS);
   const hook = pick(rng, HOOKS);
   onStep(`direction: ${direction}; hook: ${hook}`);
-  const script = await writeScript({ site, topic, kind: style, look: fixedStyle, lengthS, notes, direction, hook }, images.filter(Boolean));
+  const script = await writeScript({ site, topic, kind: style, look: fixedStyle, lengthS, notes, direction, hook, uploads }, images.filter(Boolean));
   const scenes = (Array.isArray(script.scenes) ? script.scenes : []).filter((s) => s && str(s.narration, 400)).slice(0, 30);
   if (scenes.length < 2) throw new Error('the writer produced too few scenes — please try again');
   mark(`outlined ${scenes.length} scenes`);
@@ -1261,7 +1291,7 @@ export async function generateFastVideo(project, { url, topic, style, look, form
     accent: HEX.test(script.palette?.accent) ? script.palette.accent : toHex(site?.ctaColor) || '#4f7cff',
     palette: script.palette || {}, musicMood: MUSIC_MOODS.includes(script.music_mood) ? script.music_mood : null,
     site: site ? { url: site.url, title: site.title, description: site.description, text: str(site.text, 2500), colors: site.colors, logo: site.logo || null, logoTone: site.logoTone, headingFont: site.headingFont, shots: site.shots || [], mobile: site.mobile || null, customerLogos: site.customerLogos || [] } : null,
-    fontCss: null, nextId: 1, revision: 0, music: null,
+    fontCss: null, nextId: 1, revision: 0, music: null, media: uploads,
     scenes: [],
   };
   source.scenes = scenes.map((spec) => ({ id: source.nextId++, spec }));
@@ -1301,7 +1331,10 @@ async function prepareScene(project, source, sc, { revoice = false, repicture = 
       sc.audio = { file, dur: mp3Seconds(buf), timed: await wordTimes(buf) };
     })());
   }
-  if (s.image && typeof s.image === 'string' && (repicture || sc.picture === undefined)) {
+  const m = (source.media || []).find((x) => x.n === Number(s.media));
+  if (m) { sc.picture = m.path; sc.clip = m.video || null; }
+  else if (sc.clip) sc.clip = null;
+  if (!m && s.image && typeof s.image === 'string' && (repicture || sc.picture === undefined)) {
     jobs.push((async () => {
       const file = `${REL}/pic_${tag}.jpg`;
       try { sc.picture = (await makePicture(str(s.image, 600), source.styleId, source.format, join(dir, file))) ? file : null; } catch { sc.picture = null; }
@@ -1408,7 +1441,12 @@ async function assemble(project, source) {
     }
     // A picture sits behind text-led scenes; otherwise the pack's background.
     const behind = sc.picture && ['hero', 'kinetic', 'quote', 'stat', 'stats', 'cta'].includes(layer.kind);
-    const background = behind
+    // The customer's own clip plays behind the scene (muted under the voice-over).
+    const clipBehind = sc.clip && (behind || layer.kind === 'visual');
+    if (clipBehind && layer.kind === 'visual') layer.props.image = null;
+    const background = clipBehind
+      ? { type: 'video', src: sc.clip, fit: 'cover', playback_rate: 1, loop: true, freeze_last: false, trim_start_s: 0, trim_end_s: null }
+      : behind
       ? { type: 'template', kind: 'backdrop', props: { image: sc.picture } }
       : pack.shader
         ? { type: 'shader', kind: pack.shader, intensity: 0.7 }
@@ -1689,7 +1727,7 @@ export async function saveFastSource(project) {
   const prefix = sourcePrefix(project);
   const dir = join(assetSnapshotDir(project.id), 'assets', 'fast');
   const files = (await readdir(dir)).filter((f) => !f.endsWith('.thumb.jpg'));
-  const type = (f) => ({ mp3: 'audio/mpeg', jpg: 'image/jpeg', png: 'image/png', svg: 'image/svg+xml', json: 'application/json' })[f.split('.').pop()] || 'application/octet-stream';
+  const type = (f) => ({ mp3: 'audio/mpeg', mp4: 'video/mp4', jpg: 'image/jpeg', png: 'image/png', svg: 'image/svg+xml', json: 'application/json' })[f.split('.').pop()] || 'application/octet-stream';
   const up = async (path, body, contentType) => {
     const { error } = await bucket.upload(path, body, { contentType, upsert: true });
     if (error) throw new Error(`${path}: ${error.message}`);

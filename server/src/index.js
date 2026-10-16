@@ -38,6 +38,13 @@ const upload = multer({
   fileFilter: (_req, file, cb) => cb(null, /^(video|image)\//.test(file.mimetype)),
 });
 
+// Fast mode: up to 12 photos/clips of the customer's own to build the video from.
+const fastUpload = multer({
+  dest: UPLOADS_DIR,
+  limits: { fileSize: 200 * 1024 * 1024, files: 12 },
+  fileFilter: (_req, file, cb) => cb(null, /^(video|image)\//.test(file.mimetype)),
+});
+
 const app = express();
 // Allow configured origins plus any localhost / 127.0.0.1 origin (any port).
 app.use(cors({
@@ -162,13 +169,16 @@ async function landingQuota(user) {
 
 // Fast mode: one model call → template-based video that plays in the browser
 // within seconds; the MP4 renders in the background. Input: a URL or a topic.
-app.post('/api/fast', requireAuth, async (req, res) => {
+app.post('/api/fast', requireAuth, fastUpload.array('media', 12), async (req, res) => {
   if (persistenceEnabled && req.user.id === 'anon') {
     return res.status(401).json({ error: 'Sign in to save video projects' });
   }
   const b = req.body || {};
+  // Multipart sends nested fields as JSON strings.
+  if (typeof b.demo === 'string') { try { b.demo = JSON.parse(b.demo); } catch { b.demo = null; } }
+  const media = (req.files || []).map((f) => ({ path: f.path, name: f.originalname, type: f.mimetype }));
   let url = null;
-  const topic = String(b.topic || '').trim().slice(0, 1000);
+  const topic = String(b.topic || (media.length && !b.url ? 'A short promo video made from these photos and clips' : '')).trim().slice(0, 1000);
   if (b.url) {
     try { url = validateLandingUrl(b.url); }
     catch (e) { return res.status(400).json({ error: e.message }); }
@@ -199,7 +209,7 @@ app.post('/api/fast', requireAuth, async (req, res) => {
   await updateProject(p.id, { status: 'running', stage: 'writing', progress: 10 });
   let ir;
   try {
-    ir = await generateFastVideo(p, { url, topic, style, look: String(b.look || ''), format, lengthS, notes: String(b.notes || '').slice(0, 1000), demo }, log);
+    ir = await generateFastVideo(p, { url, topic, style, look: String(b.look || ''), format, lengthS, notes: String(b.notes || '').slice(0, 1000), demo, media }, log);
   } catch (e) {
     await updateProject(p.id, { status: 'failed', error: String(e.message || e) });
     return res.status(502).json({ error: String(e.message || e) });

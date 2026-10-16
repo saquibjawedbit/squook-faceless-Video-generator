@@ -235,3 +235,6 @@ textarea.fx-field { resize: vertical; line-height: 1.45; }
 .fx-demo-toggle:hover { color: var(--ink); }
 .fx-demo-grid { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
 .fx-demo-grid p { margin: 0 0 2px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+.fx-files { width: min(680px, 100%); display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.fx-file { display: inline-flex; align-items: center; gap: 6px; background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: 4px 6px 4px 11px; font-size: 12.5px; color: var(--muted); }
+.fx-file button { border: 0; background: var(--bubble); color: var(--muted); width: 18px; height: 18px; border-radius: 50%; cursor: pointer; line-height: 1; padding: 0; }
