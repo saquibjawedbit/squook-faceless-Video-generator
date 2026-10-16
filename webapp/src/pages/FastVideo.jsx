@@ -2,26 +2,39 @@ import { useEffect, useRef, useState } from 'react';
 import { Player } from '@remotion/player';
 import { prefetch } from 'remotion';
 import { MainVideo } from '@renderer/MainVideo';
-import Box from '../lib/Box.jsx';
-import { css } from '../lib/css.js';
 import { navigate, currentQuery } from '../lib/router.js';
 import FastEditor from './FastEditor.jsx';
-import { apiBase, createFastVideo, getIR, getProject, getPlaybackUrl, rerenderFastVideo } from '../lib/api.js';
+import './fast.css';
+import {
+  apiBase, createFastVideo, getIR, getProject, getPlaybackUrl, rerenderFastVideo,
+  getFastEditable, editFastVideo, followUpFastVideo,
+} from '../lib/api.js';
 
 /**
  * Fast mode (`#/fast`, `#/fast?id=…`): paste a link or type a topic, and the
  * video plays here in seconds — the browser renders the scene templates live
- * from the IR. The MP4 is rendered on the server in the background and the
- * download button appears when it's ready.
+ * from the IR. Laid out as a studio: a chat on the left for asking for
+ * changes (plus a manual Edit tab), the video on a canvas on the right.
+ * The MP4 is rendered on the server in the background.
  */
 
-const mono = "'JetBrains Mono',monospace";
-const grotesk = "'Schibsted Grotesk',sans-serif";
-const ASPECT = { '16:9': '16 / 9', '9:16': '9 / 16', '1:1': '1 / 1' };
+const ASPECT = { '16:9': 16 / 9, '9:16': 9 / 16, '1:1': 1 };
 const LENGTHS = { promo: [15, 60, 30], explainer: [30, 180, 90] };
 const LOOKS = [['', 'Auto style'], ['clean', 'Clean'], ['bold', 'Bold'], ['tech', 'Tech'], ['playful', 'Playful'], ['corporate', 'Corporate'], ['editorial', 'Editorial']];
+const EXAMPLES = ['https://linear.app', 'How UPI payments work', 'Why sleep matters for students', 'https://notion.so'];
+const SUGGEST = ['Make it shorter', 'Calmer music', 'Punchier opening', 'End with “Book a demo”'];
+// The server doesn't report stages, so the wait shows what it is usually doing by then.
+const STAGES = [[0, 'Reading the page'], [9, 'Writing the script'], [20, 'Recording the voice and making pictures'], [34, 'Checking every scene'], [55, 'Almost there']];
+const stageAt = (s) => STAGES.filter(([t]) => s >= t).pop()[1];
 
-const chip = (on) => `border-radius:10px;padding:8px 14px;font-size:13px;cursor:pointer;border:1px solid ${on ? 'var(--accent)' : 'rgba(255,255,255,0.14)'};background:${on ? 'rgba(255,107,53,0.12)' : 'transparent'};color:${on ? '#F4F3F0' : 'rgba(244,243,240,0.7)'}`;
+const Arrow = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>
+);
+const Logo = () => <span className="fx-logo">S</span>;
+const Dots = () => <span className="fx-dots"><i /><i /><i /></span>;
+
+const loadChat = (id) => { try { return JSON.parse(localStorage.getItem(`fx-chat-${id}`)) || null; } catch { return null; } };
+const saveChat = (id, msgs) => { try { localStorage.setItem(`fx-chat-${id}`, JSON.stringify(msgs.slice(-60))); } catch { /* private mode */ } };
 
 export default function FastVideo() {
   const [id, setId] = useState(currentQuery().get('id'));
@@ -30,14 +43,22 @@ export default function FastVideo() {
   const [format, setFormat] = useState('16:9');
   const [duration, setDuration] = useState(30);
   const [look, setLook] = useState('');
-  const [busy, setBusy] = useState(false);
+  const [making, setMaking] = useState(false);
   const [elapsed, setElapsed] = useState(0);
-  const [took, setTook] = useState(null);
   const [error, setError] = useState(null);
   const [ir, setIr] = useState(null);
   const [project, setProject] = useState(null);
   const [mp4, setMp4] = useState(null);
+  const [editable, setEditable] = useState(null);
+  const [chat, setChat] = useState(() => (id && loadChat(id)) || []);
+  const [msg, setMsg] = useState('');
+  const [busy, setBusy] = useState('');   // what an edit is doing right now
+  const [tab, setTab] = useState('chat');
+  const [selected, setSelected] = useState(null); // scene index
+  const [playing, setPlaying] = useState(0);      // scene index under the playhead
   const started = useRef(0);
+  const playerRef = useRef(null);
+  const scrollRef = useRef(null);
 
   // Media in the IR is served from the project's snapshot. Set during render,
   // not in an effect: the Player resolves asset URLs on its first render.
@@ -46,8 +67,30 @@ export default function FastVideo() {
 
   // Opened from a link: load the saved IR.
   useEffect(() => {
-    if (id && !ir) getIR(id).then(setIr).catch((e) => setError(String(e.message || e)));
+    if (id && !ir && !making) getIR(id).then(setIr).catch((e) => setError(String(e.message || e)));
+  }, [id, ir, making]);
+
+  // The editable recipe (videos made before editing existed have none).
+  useEffect(() => {
+    if (!id || making) return undefined;
+    let alive = true;
+    getFastEditable(id).then((d) => alive && setEditable(d)).catch(() => alive && setEditable(false));
+    return () => { alive = false; };
+  }, [id, making]);
+
+  // Greet with a summary the first time a video is opened here.
+  useEffect(() => {
+    if (!id || !ir) return;
+    setChat((c) => {
+      if (c.some((m) => m.role === 'ai')) return c;
+      const m = ir.metadata;
+      const took = started.current ? ` in ${Math.round((Date.now() - started.current) / 1000)}s` : '';
+      return [...c, { role: 'ai', text: `Here's your first cut${took}: **${m.title}**, ${Math.round(m.total_duration_seconds)} seconds, ${ir.scenes.length} scenes${m.style ? `, ${m.style} style` : ''}.\n\nTell me what to change, like the wording, music, voice or a scene. Or click a scene under the video to edit it yourself.` }];
+    });
   }, [id, ir]);
+
+  useEffect(() => { if (id) saveChat(id, chat); }, [id, chat]);
+  useEffect(() => { scrollRef.current?.scrollTo({ top: 1e6, behavior: 'smooth' }); }, [chat, busy, making, tab]);
 
   // Load every picture/sound up front so scenes never flash blank while an
   // image is still downloading (the Player uses the prefetched copies).
@@ -64,6 +107,20 @@ export default function FastVideo() {
     return () => handles.forEach((h) => h.free());
   }, [id, ir]);
 
+  // Highlight the scene under the playhead.
+  useEffect(() => {
+    const p = playerRef.current;
+    if (!p || !ir) return undefined;
+    const onFrame = (e) => {
+      const f = e.detail.frame;
+      let i = 0;
+      ir.scenes.forEach((s, k) => { if (f >= s.start_frame) i = k; });
+      setPlaying(i);
+    };
+    p.addEventListener('frameupdate', onFrame);
+    return () => p.removeEventListener('frameupdate', onFrame);
+  }, [ir]);
+
   const [poll, setPoll] = useState(0);
   const autoRetried = useRef(false);
   const renderAgain = async (quality) => {
@@ -73,7 +130,7 @@ export default function FastVideo() {
 
   // Poll for the background MP4.
   useEffect(() => {
-    if (!id) return undefined;
+    if (!id || making) return undefined;
     let alive = true;
     let timer;
     const tick = async () => {
@@ -84,8 +141,7 @@ export default function FastVideo() {
         if (p.status === 'done') {
           setMp4(await getPlaybackUrl(id));
           getIR(id).then(setIr).catch(() => {}); // picks up which edit the MP4 now matches
-        }
-        else if (p.status === 'failed' && /server restart/i.test(p.error || '') && !autoRetried.current) {
+        } else if (p.status === 'failed' && /server restart/i.test(p.error || '') && !autoRetried.current) {
           // A deploy/restart cut the MP4 off: render it again without asking.
           autoRetried.current = true;
           renderAgain();
@@ -94,128 +150,207 @@ export default function FastVideo() {
     };
     tick();
     return () => { alive = false; clearTimeout(timer); };
-  }, [id, poll]);
+  }, [id, poll, making]);
 
   useEffect(() => {
-    if (!busy) return undefined;
-    const t = setInterval(() => setElapsed(Math.round((Date.now() - started.current) / 1000)), 250);
+    if (!making && !busy) return undefined;
+    const t0 = Date.now();
+    const base = making ? started.current : t0;
+    setElapsed(Math.round((t0 - base) / 1000));
+    const t = setInterval(() => setElapsed(Math.round((Date.now() - base) / 1000)), 250);
     return () => clearInterval(t);
-  }, [busy]);
+  }, [making, busy]);
 
   const pickStyle = (s) => { setStyle(s); setDuration(LENGTHS[s][2]); };
 
-  const make = async () => {
-    const text = input.trim();
-    if (!text) return;
+  const make = async (text = input.trim()) => {
+    if (!text || making) return;
     const isUrl = /^(https?:\/\/)?[\w-]+(\.[\w-]+)+(\/\S*)?$/i.test(text);
-    setBusy(true); setError(null); setId(null); setIr(null); setMp4(null); setProject(null); setTook(null);
-    started.current = Date.now(); setElapsed(0);
+    setMaking(true); setError(null); setId(null); setIr(null); setMp4(null); setProject(null); setEditable(null);
+    setSelected(null); setTab('chat'); setChat([{ role: 'user', text }]);
+    started.current = Date.now();
     try {
       const r = await createFastVideo({ ...(isUrl ? { url: text } : { topic: text }), style, look, format, duration });
-      setTook(((Date.now() - started.current) / 1000).toFixed(1));
       setId(r.project.id);
       setIr(r.ir);
       window.history.replaceState(null, '', `#/fast?id=${r.project.id}`);
     } catch (e) {
-      setError(String(e.message || e));
+      setChat((c) => [...c, { role: 'err', text: `Sorry, that didn't work: ${String(e.message || e)}` }]);
     } finally {
-      setBusy(false);
+      setMaking(false);
     }
   };
 
-  const [min, max] = LENGTHS[style];
-  const fileName = (ir?.metadata?.title || 'squook-video').replace(/[^\w-]+/g, '_') + '.mp4';
-  const downloadHref = mp4 && mp4 + (mp4.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(fileName);
-  const fmt = ir ? `${ir.metadata.width}x${ir.metadata.height}` : '';
-  const aspect = ir ? (ir.metadata.width > ir.metadata.height ? '16 / 9' : ir.metadata.width < ir.metadata.height ? '9 / 16' : '1 / 1') : ASPECT[format];
+  const newVideo = () => {
+    setId(null); setIr(null); setMp4(null); setProject(null); setEditable(null); setChat([]); setError(null);
+    setSelected(null); setInput(''); started.current = 0;
+    window.history.replaceState(null, '', '#/fast');
+  };
 
-  return (
-    <div style={css('max-width:1100px;margin:0 auto;padding:40px 32px 80px')}>
-      <Box t="a" href="#/app" onClick={(e) => { e.preventDefault(); navigate('app'); }} s="font-family:'JetBrains Mono',monospace;font-size:11.5px;letter-spacing:0.12em;color:rgba(244,243,240,0.55);text-decoration:none" sh="color:#F4F3F0">← BACK TO HOME</Box>
-      <div style={{ fontFamily: mono, fontSize: 11, letterSpacing: '0.16em', color: 'var(--accent)', marginTop: 18 }}>FAST MODE</div>
-      <h1 style={{ margin: '8px 0 18px', fontFamily: grotesk, fontWeight: 800, fontSize: 'clamp(26px,3.4vw,38px)', letterSpacing: '-0.02em', lineHeight: 1.1 }}>
-        A video in seconds, from a link or a topic.
-      </h1>
+  // Edits — from the chat or the Edit tab — all come back as a new IR + recipe.
+  const applied = (out) => { setEditable(out.editable); setIr(out.ir); };
+  const send = async (ops, what = 'Updating the video') => {
+    setBusy(what);
+    try {
+      const out = await editFastVideo(id, ops);
+      applied(out);
+      setChat((c) => [...c, { role: 'note', text: out.done?.length ? `Edited: ${out.done.join(', ')}` : 'Nothing changed' }]);
+      return true;
+    } catch (e) {
+      setChat((c) => [...c, { role: 'err', text: String(e.message || e) }]);
+      return false;
+    } finally { setBusy(''); }
+  };
+  const ask = async (text = msg.trim()) => {
+    if (!text || busy) return;
+    if (!editable) {
+      setChat((c) => [...c, { role: 'user', text }, { role: 'err', text: "This video was made before editing existed, so I can't change it. Make it again and you'll be able to edit it." }]);
+      return;
+    }
+    setMsg('');
+    setChat((c) => [...c, { role: 'user', text }]);
+    setBusy('Working on it');
+    try {
+      const out = await followUpFastVideo(id, text);
+      applied(out);
+      setChat((c) => [...c, { role: 'ai', text: out.reply || (out.done?.length ? `Done: ${out.done.join(', ')}.` : 'I couldn’t find anything to change for that. Try saying which scene, or what it should say.') }]);
+    } catch (e) {
+      setChat((c) => [...c, { role: 'err', text: String(e.message || e) }]);
+    } finally { setBusy(''); }
+  };
 
-      <div style={css('border:1px solid rgba(255,255,255,0.12);border-radius:16px;padding:16px;background:rgba(255,255,255,0.03)')}>
-        <textarea
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) make(); }}
-          placeholder="https://yourproduct.com — or a topic, e.g. “How UPI payments work”"
-          rows={2}
-          style={css('width:100%;resize:vertical;background:transparent;border:0;outline:0;color:#F4F3F0;font-size:16px;font-family:inherit')}
-        />
-        <div style={css('display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:12px')}>
-          <button type="button" style={css(chip(style === 'promo'))} onClick={() => pickStyle('promo')}>Promo</button>
-          <button type="button" style={css(chip(style === 'explainer'))} onClick={() => pickStyle('explainer')}>Explainer</button>
-          <span style={{ width: 8 }} />
-          {['16:9', '9:16', '1:1'].map((f) => (
-            <button key={f} type="button" style={css(chip(format === f))} onClick={() => setFormat(f)}>{f}</button>
-          ))}
-          <select value={look} onChange={(e) => setLook(e.target.value)}
-            style={css('border-radius:10px;padding:8px 12px;font-size:13px;background:#16161a;color:#F4F3F0;border:1px solid rgba(255,255,255,0.14)')}>
-            {LOOKS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-          </select>
-          <label style={css('display:flex;align-items:center;gap:8px;font-family:' + mono + ';font-size:12px;color:rgba(244,243,240,0.7)')}>
-            <input type="range" min={min} max={max} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
-            {duration}s
-          </label>
-          <span style={{ flex: 1 }} />
-          <button type="button" disabled={busy || !input.trim()} onClick={make}
-            style={css(`border:0;border-radius:12px;padding:12px 20px;font-size:14.5px;font-weight:600;background:var(--accent);color:#0B0B0E;cursor:pointer;opacity:${busy || !input.trim() ? 0.5 : 1}`)}>
-            {busy ? `Making… ${elapsed}s` : 'Make video →'}
-          </button>
+  const selectScene = (i) => {
+    setSelected(i);
+    const s = ir?.scenes?.[i];
+    if (s) { playerRef.current?.seekTo(s.start_frame); }
+  };
+  const openScene = (i) => { selectScene(i); setTab('edit'); };
+
+  // ——— Start screen ———
+  if (!id && !making) {
+    const [min, max] = LENGTHS[style];
+    return (
+      <div className="fx fx-start">
+        <div className="fx-start-top">
+          <a className="fx-brand" href="#/app" onClick={(e) => { e.preventDefault(); navigate('app'); }}><Logo /> Squook</a>
+        </div>
+        <div className="fx-start-main">
+          <h1 className="serif">What should we make?</h1>
+          <p className="sub">Paste a link to your product, or describe a topic. You'll see the video in under a minute.</p>
+          <div className="fx-composer">
+            <textarea
+              autoFocus rows={3} value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); make(); } }}
+              placeholder="https://yourproduct.com, or “How UPI payments work”"
+            />
+            <div className="fx-composer-row">
+              <div className="fx-seg">
+                <button type="button" className={style === 'promo' ? 'on' : ''} onClick={() => pickStyle('promo')}>Promo</button>
+                <button type="button" className={style === 'explainer' ? 'on' : ''} onClick={() => pickStyle('explainer')}>Explainer</button>
+              </div>
+              <div className="fx-seg">
+                {[['16:9', 'Wide'], ['9:16', 'Tall'], ['1:1', 'Square']].map(([f, l]) => (
+                  <button key={f} type="button" title={f} className={format === f ? 'on' : ''} onClick={() => setFormat(f)}>{l}</button>
+                ))}
+              </div>
+              <select className="fx-mini-select" value={look} onChange={(e) => setLook(e.target.value)}>
+                {LOOKS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
+              </select>
+              <label className="fx-length">
+                <input type="range" min={min} max={max} step={5} value={duration} onChange={(e) => setDuration(Number(e.target.value))} />
+                {duration}s
+              </label>
+              <span style={{ flex: 1 }} />
+              <button type="button" className="fx-send" disabled={!input.trim()} onClick={() => make()} aria-label="Make video"><Arrow /></button>
+            </div>
+          </div>
+          <div className="fx-examples">
+            {EXAMPLES.map((x) => <button key={x} type="button" className="fx-chip" onClick={() => setInput(x)}>{x.replace(/^https:\/\//, '')}</button>)}
+          </div>
+          {error ? <p style={{ color: 'var(--danger)', marginTop: 16 }}>{error}</p> : null}
         </div>
       </div>
+    );
+  }
 
-      {error && <p style={{ color: '#ff8a7a', fontSize: 14, marginTop: 14 }}>{error}</p>}
+  // ——— Studio ———
+  const ar = ir ? ir.metadata.width / ir.metadata.height : ASPECT[format];
+  const fileName = (ir?.metadata?.title || 'squook-video').replace(/[^\w-]+/g, '_') + '.mp4';
+  const downloadHref = mp4 && mp4 + (mp4.includes('?') ? '&' : '?') + 'download=' + encodeURIComponent(fileName);
+  const stale = mp4 && ir && (ir.metadata.revision || 0) !== (ir.metadata.rendered_revision ?? (ir.metadata.revision || 0));
+  const pct = project?.progress > 60 ? Math.round(((project.progress - 60) / 39) * 100) : 0;
+  const lines = editable?.scenes?.map((s) => s.spec.narration) || [];
+  const active = selected ?? playing;
 
-      {ir && (
-        <>
-          <div style={css('display:flex;align-items:flex-end;justify-content:space-between;gap:20px;flex-wrap:wrap;margin:28px 0 16px')}>
-            <div>
-              <h2 style={{ margin: 0, fontFamily: grotesk, fontWeight: 700, fontSize: 24 }}>{ir.metadata.title}</h2>
-              <div style={{ fontFamily: mono, fontSize: 12, color: 'rgba(244,243,240,0.45)', marginTop: 6 }}>
-                {Math.round(ir.metadata.total_duration_seconds)}s · {ir.scenes.length} scenes · {ir.metadata.style ? `${ir.metadata.style} style · ` : ''}{fmt}{took ? ` · ready in ${took}s` : ''}
+  let exportArea;
+  if (!ir) exportArea = null;
+  else if (stale) exportArea = <><span className="fx-pill hide-sm">Edits not in the MP4 yet</span><button type="button" className="fx-btn accent" onClick={() => renderAgain()}>Update MP4</button></>;
+  else if (mp4) exportArea = (
+    <>
+      <span className="fx-pill ok hide-sm"><span className="dot" />MP4 ready{project?.quality === 'hd' ? ' · full HD' : ' · 720p'}</span>
+      {project?.quality !== 'hd' ? <button type="button" className="fx-btn ghost hide-sm" onClick={() => renderAgain('hd')} title="Full resolution with every effect. Takes a few minutes longer.">Export full HD</button> : null}
+      <a className="fx-btn primary" href={downloadHref} download={fileName}>Download</a>
+    </>
+  );
+  else if (project?.status === 'failed') exportArea = <><span className="fx-pill hide-sm">MP4 failed</span><button type="button" className="fx-btn" onClick={() => renderAgain()}>Try MP4 again</button></>;
+  else exportArea = <span className="fx-pill"><span className="dot" />Preparing MP4{pct ? ` · ${pct}%` : '…'}</span>;
+
+  return (
+    <div className="fx fx-studio">
+      <header className="fx-top">
+        <a className="fx-brand" href="#/app" onClick={(e) => { e.preventDefault(); navigate('app'); }}><Logo /><span className="hide-sm">Squook</span></a>
+        <span className="fx-crumb">/</span>
+        <span className="fx-title">{ir?.metadata?.title || 'New video'}</span>
+        {ir ? <span className="fx-pill hide-sm">{Math.round(ir.metadata.total_duration_seconds)}s · {ir.scenes.length} scenes</span> : null}
+        <span style={{ flex: 1 }} />
+        {exportArea}
+        <button type="button" className="fx-btn ghost" onClick={newVideo} disabled={making}>New video</button>
+      </header>
+
+      <aside className="fx-side">
+        <div className="fx-tabs">
+          <button type="button" className={`fx-tab ${tab === 'chat' ? 'on' : ''}`} onClick={() => setTab('chat')}>Chat</button>
+          <button type="button" className={`fx-tab ${tab === 'edit' ? 'on' : ''}`} onClick={() => setTab('edit')} disabled={!ir}>Edit scenes</button>
+        </div>
+
+        {tab === 'chat' ? (
+          <>
+            <div className="fx-scroll" ref={scrollRef}>
+              {chat.map((m, i) => <Message key={i} m={m} />)}
+              {making ? <div className="fx-msg ai"><Logo /><div className="fx-thinking"><Dots />{stageAt(elapsed)}… {elapsed}s</div></div> : null}
+              {busy ? <div className="fx-msg ai"><Logo /><div className="fx-thinking"><Dots />{busy}… {elapsed}s</div></div> : null}
+            </div>
+            <div className="fx-chatbox">
+              {ir && !busy && editable ? (
+                <div className="fx-suggest">
+                  {SUGGEST.map((s) => <button key={s} type="button" className="fx-chip" onClick={() => ask(s)}>{s}</button>)}
+                </div>
+              ) : null}
+              <div className="fx-input">
+                <textarea
+                  rows={1} value={msg} disabled={!ir}
+                  onChange={(e) => { setMsg(e.target.value); e.target.style.height = 'auto'; e.target.style.height = `${e.target.scrollHeight}px`; }}
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); ask(); } }}
+                  placeholder={ir ? 'Ask for a change…' : 'Your video is on its way…'}
+                />
+                <button type="button" className="fx-send" disabled={!msg.trim() || Boolean(busy) || !ir} onClick={() => ask()} aria-label="Send"><Arrow /></button>
               </div>
             </div>
-            {mp4 && (ir.metadata.revision || 0) !== (ir.metadata.rendered_revision ?? (ir.metadata.revision || 0)) ? (
-              <div style={css('display:flex;gap:10px;align-items:center;flex-wrap:wrap')}>
-                <span style={{ fontFamily: mono, fontSize: 12, color: 'rgba(244,243,240,0.6)' }}>Your edits aren’t in the MP4 yet</span>
-                <button type="button" onClick={() => renderAgain()} style={css('border-radius:12px;padding:12px 18px;font-size:14px;font-weight:600;border:0;cursor:pointer;background:var(--accent);color:#0B0B0E')}>Update MP4</button>
-              </div>
-            ) : mp4 ? (
-              <div style={css('display:flex;gap:10px;align-items:center;flex-wrap:wrap')}>
-                {project?.quality !== 'hd' ? (
-                  <button type="button" onClick={() => renderAgain('hd')} title="Full resolution with every effect — takes a few minutes longer"
-                    style={css('border-radius:12px;padding:12px 16px;font-size:13.5px;font-weight:600;cursor:pointer;background:transparent;color:#F4F3F0;border:1px solid rgba(255,255,255,0.2)')}>
-                    Export full HD
-                  </button>
-                ) : null}
-                <Box t="a" href={downloadHref} download={fileName} s="display:inline-flex;align-items:center;gap:9px;border-radius:12px;padding:12px 20px;font-size:14.5px;font-weight:600;background:var(--accent);color:#0B0B0E;text-decoration:none" sh="filter:brightness(1.1)">
-                  Download MP4{project?.quality === 'hd' ? ' (full HD)' : project?.quality === '720p' ? ' (720p)' : ''}
-                </Box>
-              </div>
-            ) : (
-              <span style={{ fontFamily: mono, fontSize: 12, color: 'rgba(244,243,240,0.55)' }}>
-                {project?.status === 'failed' ? (
-                  <>
-                    {project.error}{' '}
-                    <button type="button" onClick={() => renderAgain()} style={css('margin-left:8px;border-radius:10px;padding:8px 14px;font-size:13px;font-weight:600;border:0;cursor:pointer;background:var(--accent);color:#0B0B0E')}>Render MP4 again</button>
-                  </>
-                ) : `MP4 rendering in the background… ${project?.progress > 60 ? Math.round(((project.progress - 60) / 39) * 100) + '%' : ''}`}
-              </span>
-            )}
-          </div>
-          {ir.metadata.credits ? (
-            <div style={{ fontFamily: mono, fontSize: 11.5, color: 'rgba(244,243,240,0.5)', margin: '-6px 0 14px' }}>
-              {ir.metadata.credits} — keep this credit in your video's description.
-            </div>
-          ) : null}
-          <div style={{ display: 'flex', justifyContent: 'center' }}>
-            <div style={{ width: aspect === '9 / 16' ? 'min(100%, 420px)' : '100%', aspectRatio: aspect, borderRadius: 18, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.1)', background: '#000' }}>
+          </>
+        ) : (
+          <FastEditor
+            data={editable} busy={busy} selected={selected} onSelect={selectScene} send={send}
+          />
+        )}
+      </aside>
+
+      <main className="fx-canvas">
+        <div className="fx-stage">
+          <div className="fx-frame" style={{ '--ar': ar }}>
+            {ir ? (
               <Player
+                ref={playerRef}
                 key={`${id}-${ir.metadata.revision || 0}`}
                 component={MainVideo}
                 inputProps={{ ir }}
@@ -231,11 +366,35 @@ export default function FastVideo() {
                 numberOfSharedAudioTags={24}
                 acknowledgeRemotionLicense
               />
-            </div>
+            ) : (
+              <div className="fx-skeleton">{making ? `${stageAt(elapsed)}…` : error || 'Loading…'}</div>
+            )}
           </div>
-          {id ? <FastEditor key={id} id={id} onIr={setIr} /> : null}
-        </>
-      )}
+        </div>
+        {ir ? (
+          <div className="fx-strip">
+            {ir.scenes.map((s, i) => (
+              <button key={i} type="button" className={`fx-thumb ${active === i ? 'on' : ''}`} onClick={() => openScene(i)}>
+                <div className="t1"><span>Scene {i + 1}</span><span>{Math.round(s.duration_frames / ir.metadata.fps)}s</span></div>
+                <div className="t2">{lines[i] || s.template || ''}</div>
+              </button>
+            ))}
+          </div>
+        ) : null}
+        {ir?.metadata?.credits ? <div className="fx-credit">{ir.metadata.credits}. Keep this credit in your video's description.</div> : null}
+      </main>
     </div>
   );
+}
+
+// Bold (**x**) and line breaks only — replies are short.
+function Message({ m }) {
+  if (m.role === 'user') return <div className="fx-msg user"><div>{m.text}</div></div>;
+  if (m.role === 'note') return <div className="fx-msg note">{m.text}</div>;
+  const parts = m.text.split(/\n\n/).map((p, i) => (
+    <p key={i} style={{ margin: i ? '8px 0 0' : 0 }}>
+      {p.split(/(\*\*[^*]+\*\*)/).map((t, k) => (t.startsWith('**') ? <strong key={k}>{t.slice(2, -2)}</strong> : t))}
+    </p>
+  ));
+  return <div className={`fx-msg ai ${m.role === 'err' ? 'err' : ''}`}><Logo /><div>{parts}</div></div>;
 }

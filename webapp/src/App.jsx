@@ -15,6 +15,8 @@ export default function App() {
   // The editor is a self-contained, full-viewport surface with its own
   // vignette + grain overlays, so it renders without the site Atmosphere.
   if (route === 'editor') return <AuthGate><SquookEditor /></AuthGate>;
+  // Fast mode is a light, full-viewport studio of its own.
+  if (route === 'fast') return <AuthGate><FastVideo /></AuthGate>;
 
   let page;
   if (route === 'pricing') page = <Pricing />;
@@ -24,7 +26,6 @@ export default function App() {
   else if (route === 'app') page = <AuthGate><SquookHome /></AuthGate>;
   // Landing-page videos (HyperFrames) open here — no editable timeline.
   else if (route === 'watch') page = <AuthGate><WatchVideo /></AuthGate>;
-  else if (route === 'fast') page = <AuthGate><FastVideo /></AuthGate>;
   else page = <Landing />;
 
   return (
