@@ -64,6 +64,7 @@ export default function FastVideo() {
   }, [id, ir]);
 
   const [poll, setPoll] = useState(0);
+  const autoRetried = useRef(false);
   const renderAgain = async () => {
     try { setProject(await rerenderFastVideo(id)); setPoll((n) => n + 1); }
     catch (e) { setError(String(e.message || e)); }
@@ -80,7 +81,11 @@ export default function FastVideo() {
         if (!alive) return;
         setProject(p);
         if (p.status === 'done') setMp4(await getPlaybackUrl(id));
-        else if (p.status !== 'failed') timer = setTimeout(tick, 3000);
+        else if (p.status === 'failed' && /server restart/i.test(p.error || '') && !autoRetried.current) {
+          // A deploy/restart cut the MP4 off: render it again without asking.
+          autoRetried.current = true;
+          renderAgain();
+        } else if (p.status !== 'failed') timer = setTimeout(tick, 3000);
       } catch { timer = setTimeout(tick, 5000); }
     };
     tick();

@@ -365,7 +365,8 @@ async function googleFontCss(family) {
 // Small JPEG for the vision model (keeps the request light and fast).
 async function thumbDataUrl(file) {
   const out = `${file}.thumb.jpg`;
-  await run('ffmpeg', ['-v', 'error', '-y', '-i', file, '-vf', 'scale=900:-2', '-q:v', '6', out]);
+  // Small is enough to recognise the sections, and image tokens are the slow part of the call.
+  await run('ffmpeg', ['-v', 'error', '-y', '-i', file, '-vf', 'scale=560:-2', '-q:v', '7', out]);
   return `data:image/jpeg;base64,${(await readFile(out)).toString('base64')}`;
 }
 
