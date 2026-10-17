@@ -1754,8 +1754,13 @@ export async function applyEdits(project, ops, onStep = () => {}) {
       case 'narration': if (sc && str(o.text, 400)) { sc.spec.narration = str(o.text, 400); revoice.add(sc.id); if (DETAIL_KINDS.has(sc.spec.template)) redetail.add(sc.id); done.push(`scene ${o.scene}: new line`); } break;
       case 'layout': if (sc && ['left', 'right', 'center'].includes(o.value)) { sc.spec.layout = o.value; done.push(`scene ${o.scene}: layout`); } break;
       case 'template': if (sc && EDIT_TEMPLATES.includes(o.template)) { sc.spec = { template: o.template, narration: sc.spec.narration, title: sc.spec.title, layout: sc.spec.layout, image: sc.spec.image, shot: sc.spec.shot }; redetail.add(sc.id); done.push(`scene ${o.scene}: now ${o.template}`); } break;
-      case 'picture': if (sc && str(o.description, 600)) { sc.spec.image = str(o.description, 600); repicture.add(sc.id); done.push(`scene ${o.scene}: new picture`); } break;
-      case 'remove_picture': if (sc) { sc.picture = null; delete sc.spec.image; if (sc.spec.template === 'visual') sc.spec.template = 'kinetic'; done.push(`scene ${o.scene}: picture removed`); } break;
+      case 'picture': if (sc && str(o.description, 600)) {
+        // A new picture replaces any stock footage, upload or animation on the scene.
+        sc.spec.image = str(o.description, 600); delete sc.spec.stock; delete sc.spec.media; delete sc.spec.animate;
+        sc.clip = null; sc.clipFrom = null; sc.stockFor = null;
+        repicture.add(sc.id); done.push(`scene ${o.scene}: new picture`);
+      } break;
+      case 'remove_picture': if (sc) { sc.picture = null; sc.clip = null; sc.clipFrom = null; delete sc.spec.image; delete sc.spec.stock; delete sc.spec.media; if (sc.spec.template === 'visual') sc.spec.template = 'kinetic'; done.push(`scene ${o.scene}: picture removed`); } break;
       case 'remake': if (sc) writes.push({ sc, instruction: o.instruction, label: `scene ${o.scene} remade` }); break;
       case 'add':
         if (o._after !== undefined && source.scenes.length < 30) {
