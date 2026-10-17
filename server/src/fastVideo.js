@@ -1143,6 +1143,12 @@ async function fetchTo(url, dest) {
 // Writers sometimes name a scene's list after its template ("icons": [...])
 // instead of "items"; treat those the same so the scene still builds.
 function fixItems(s) {
+  // …or nest a scene's fields under its template name ({ formula: { expr, parts } }).
+  const inner = s && s[s.template];
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+    for (const [k, v] of Object.entries(inner)) if (s[k] === undefined || k === 'title') s[k] = v;
+    delete s[s.template];
+  }
   if (s && !Array.isArray(s.items)) for (const k of ['icons', 'stats', 'steps', 'bars', 'features', 'points']) if (Array.isArray(s[k]) && typeof s[k][0] === 'object') { s.items = s[k]; break; }
   return s;
 }
