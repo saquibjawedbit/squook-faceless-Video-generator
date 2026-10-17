@@ -17,6 +17,8 @@ import {Logos} from './Logos';
 import {Screen} from './Screen';
 import {Backdrop} from './Backdrop';
 import {Visual} from './Visual';
+import {Formula} from './Formula';
+import {Graph} from './Graph';
 
 /**
  * Scene templates. Every template receives the same props:
@@ -42,6 +44,8 @@ import {Visual} from './Visual';
  *   logos        { title?, logos: string[] }
  *   visual       { image, title?, caption?, move?: 'push'|'pull'|'pan_left'|'pan_right' }  full-bleed AI picture  layout: left | center | right
  *   backdrop     { kind?: 'gradient'|'dots'|'grid'|'solid' }  the pack's background (first layer)
+ *   formula      { title?, expr: "V = I × R", parts: [{ sym, label, unit? }], note? }  symbols light up on their cues
+ *   graph        { title?, x_label, y_label, points: [{ x, y }], note?, highlight? }  x–y line that draws itself
  *   screen       { image, img_w, img_h, title?, focus: [{ box: [x,y,w,h] (0–1), at (s), action: 'zoom'|'highlight'|'click', label? }] }
  */
 export type TemplateProps = {
@@ -56,7 +60,7 @@ const KINDS: Record<string, React.FC<TemplateProps>> = {
   hero: Hero, cta: Cta, stat: Stat, stats: Stats, icons: Icons, chart: Chart,
   steps: Steps, chat: Chat, split: Split, before_after: BeforeAfter, compare: Compare,
   quote: Quote, kinetic: Kinetic, phone: Phone, logos: Logos, screen: Screen,
-  visual: Visual,
+  visual: Visual, formula: Formula, graph: Graph,
   backdrop: ({p}) => <Backdrop kind={p.kind} image={p.image} />,
 };
 

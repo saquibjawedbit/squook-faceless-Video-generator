@@ -81,7 +81,7 @@ export const STYLES = {
   corporate: { transition: 'crossfade', mood: 'corporate', shader: null, sfx: 0.15, desc: 'navy, calm, trustworthy; B2B, finance, enterprise, health' },
   editorial: { transition: 'wipe', mood: 'warm', shader: null, sfx: 0.15, desc: 'cream paper, serif type, magazine feel; content, culture, explainers' },
 };
-const TEMPLATE_KINDS = ['visual', 'hero', 'cta', 'stat', 'stats', 'icons', 'chart', 'steps', 'chat', 'split', 'before_after', 'compare', 'quote', 'kinetic', 'phone', 'logos', 'screen', 'motion'];
+const TEMPLATE_KINDS = ['visual', 'hero', 'cta', 'stat', 'stats', 'icons', 'chart', 'steps', 'chat', 'split', 'before_after', 'compare', 'quote', 'kinetic', 'phone', 'logos', 'screen', 'motion', 'formula', 'graph'];
 
 // ── 1. read the site ─────────────────────────────────────────────────────────
 
@@ -775,6 +775,8 @@ const TEMPLATE_GUIDE = `Scene templates ("template" field) and their fields — 
 - "before_after": before:{label, items:[3 short pains]}, after:{label, items:[3 short gains]}.
 - "compare": us vs the old way. columns:[us, them], rows:[{label, a: true|false|short text, b: …}] (3–5 rows). A tick (true) must always mean GOOD: phrase every row as a benefit (e.g. "No card machine needed": us true, them false), never as a cost.
 - "quote": a testimonial or punchy statement. text (≤22 words), author, role. Only real quotes from the page, or none.
+- "formula": an equation, big and centred, each symbol lighting up with its meaning as it's spoken. expr (e.g. "V = I × R", symbols separated by spaces), parts: [{sym ("V"), label ("Voltage"), unit ("volt", optional), cue}] (2–4), title (optional), note (optional, ≤10 words). Use for EVERY formula or equation — never "stat".
+- "graph": an x–y line graph that draws itself. title, x_label, y_label (with units), points: [{x, y}] (3–6 real values), highlight (index of a point to label), note (optional). Use for relationships between two quantities (e.g. V–I graph); bars are for comparing categories.
 - "kinetic": big bold words. lines: 2–4 lines (≤4 words each), with cues.
 - "logos": customer logos wall. title. Only if customer logos exist.
 - "motion": one custom animated diagram you design: shapes (≤20) of {kind:"circle"|"ring"|"dot"|"rect"|"line"|"text", x,y (0–100 % of frame), r, w, h, x2, y2, text (≤4 words), fill/stroke ("accent"|"accent2"|"text"), keyframes:[{t (s), x,y,scale,opacity,rotate}]}. Use at most once, only when a process/flow is best drawn.
@@ -942,7 +944,7 @@ Reply with ONLY this JSON, no prose:
 }
 
 // Templates whose details are written in parallel after the outline.
-const DETAIL_KINDS = new Set(['stat', 'stats', 'icons', 'chart', 'steps', 'chat', 'split', 'before_after', 'compare', 'quote', 'kinetic', 'screen', 'motion']);
+const DETAIL_KINDS = new Set(['stat', 'stats', 'icons', 'chart', 'steps', 'chat', 'split', 'before_after', 'compare', 'quote', 'kinetic', 'screen', 'motion', 'formula', 'graph']);
 const guideLine = (kind) => (TEMPLATE_GUIDE.split('\n').find((l) => l.startsWith(`- "${kind}"`)) || '');
 
 function detailPrompt(scene, { site, topic, title }) {
@@ -1170,6 +1172,17 @@ function buildTemplate(s, ctx) {
     }
     case 'hero': return T('hero', { title: str(s.title, 70), subtitle: str(s.subtitle, 110), eyebrow: str(s.eyebrow, 30), logo: site?.logo || null });
     case 'cta': return T('cta', { title: str(s.title, 70), subtitle: str(s.subtitle, 110), button: str(s.button || 'Get started', 24), url: str(s.url || (site ? new URL(site.url).hostname.replace(/^www\./, '') : ''), 60), logo: site?.logo || null });
+    case 'formula': {
+      const parts = arr(s.parts || s.items, 4).map((it) => ({ sym: str(it?.sym || it?.symbol, 8), label: str(it?.label, 30), unit: str(it?.unit, 20), cue: it?.cue })).filter((it) => it.sym && it.label);
+      const expr = str(s.expr || s.formula || s.title, 40);
+      if (!expr) return null;
+      return T('formula', { title: s.expr ? str(s.title, 50) : '', expr, parts: parts.map(({ cue, ...x }) => x), note: str(s.note || s.subtitle, 80) }, cues(parts));
+    }
+    case 'graph': {
+      const points = arr(s.points || s.items, 8).map((q) => ({ x: num(q?.x), y: num(q?.y) })).filter((q) => q.x !== null && q.y !== null);
+      if (points.length < 2) return null;
+      return T('graph', { title: str(s.title, 50), x_label: str(s.x_label || s.xLabel, 30), y_label: str(s.y_label || s.yLabel, 30), points, note: str(s.note || s.subtitle, 90), ...(Number.isInteger(s.highlight) ? { highlight: s.highlight } : {}) });
+    }
     case 'stat': {
       const n = num(s.number);
       if (n === null) return null;
