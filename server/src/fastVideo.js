@@ -927,7 +927,8 @@ Rules:
 - ${shots.some((x) => x.product) ? 'SHOW HOW IT WORKS: the PRODUCT UI screenshots are real screens of the app. Use every one of them (as "screen" or "split") for the scenes that explain what the product does, in the order a user would meet them. Use landing-page sections only for the hook or proof.' : 'Show the product working wherever you can, not just marketing headlines.'}
 - Write like a sharp human copywriter: plain, specific, natural spoken English. No clichés ("game-changer", "seamless", "unlock"), no filler ("every single day", "while you breathe"), no odd metaphors, no names or terms a stranger wouldn't understand.
 - ${stockReady() ? 'Use "stock" (real footage) on 1–3 scenes about people, places or everyday moments.' : 'No stock footage library is connected: never use "stock".'}
-${reel ? `- REEL RULES: every scene must SHOW something real — mostly "visual" scenes with "stock", "media" or "image"; hero/kinetic/stat/cta only WITH a picture behind them; never a scene that is text on a plain background. If the subject is food, a product or a place, show it in close-up at least twice. Titles ≤4 words, big and punchy.\n` : ''}${lang === 'hinglish' ? '- LANGUAGE: write every narration in natural Hinglish — Hindi and English mixed the way people in North India actually talk (e.g. "Is weekend ghar pe hi enjoy karo, order WhatsApp pe!"), in Roman script, never Devanagari. Keep English words for brand and product names. On-screen titles: short Hinglish or English.\n' : lang === 'en-IN' ? '- LANGUAGE: simple Indian English, as an Indian brand would say it; Indian names and words are fine.\n' : ''}- On-screen text must support the voice-over, not repeat it word for word.
+${reel ? `- REEL RULES: every scene must SHOW something real — mostly "visual" scenes with "stock", "media" or "image"; hero/kinetic/stat/cta only WITH a picture behind them; never a scene that is text on a plain background. If the subject is food, a product or a place, show it in close-up at least twice. Titles ≤4 words, big and punchy.\n` : ''}${lang === 'hinglish' ? '- LANGUAGE: write every narration in natural Hinglish — Hindi and English mixed the way people in North India actually talk (e.g. "Is weekend ghar pe hi enjoy karo, order WhatsApp pe!"), in Roman script, never Devanagari. Keep English words for brand and product names. On-screen titles: short Hinglish or English.\n' : lang === 'en-IN' ? '- LANGUAGE: simple Indian English, as an Indian brand would say it; Indian names and words are fine.\n' : ''}- Never invent specifics that the brief or page doesn't give (menu items, what a dish contains, counts, features, prices, timings, addresses). If you don't know a detail, stay general.
+- On-screen text must support the voice-over, not repeat it word for word.
 - Numbers: never invent statistics, results or customer claims. Use only numbers printed on the website${site ? '' : ' (there is none: use only well-known public facts, or label a number clearly as an example, e.g. "say, 3 wrong items a day")'}. No fake quotes or testimonials.
 - Every "cue" must be a single word that appears in that scene's narration.
 - ${styleLine}
@@ -953,7 +954,7 @@ Template: ${guideLine(scene.template)}
 Narration (spoken over this scene): "${scene.narration}"
 On-screen title already chosen: "${scene.title || ''}"
 
-Rules: on-screen copy supports the narration, short and concrete. Every "cue" is ONE word that appears in the narration, in the order items should appear. Numbers: only figures from the page or well-known facts; "number" is exactly the digits shown before the suffix (12 billion → 12 with suffix "B"). Never invent statistics or testimonials. No emojis.
+Rules: on-screen copy supports the narration, short and concrete. Every "cue" is ONE word that appears in the narration, in the order items should appear. Numbers: only figures from the page or well-known facts; "number" is exactly the digits shown before the suffix (12 billion → 12 with suffix "B"). Never invent statistics or testimonials. Never invent specifics the brief/page doesn't give (menu items, dish contents, counts, features, prices, timings, addresses) — keep such lines general instead. No emojis.
 Reply with ONLY a JSON object of this template's fields (not the template name or narration).`;
 }
 
@@ -1002,14 +1003,14 @@ const LOOK = {
   clean: 'bright, airy, soft natural daylight, minimal clean composition, premium editorial photography',
   bold: 'high contrast, dramatic lighting, deep shadows, bold cinematic photography',
   tech: 'dark moody scene with subtle cool neon accents, futuristic, cinematic photography',
-  playful: 'vibrant colours, cheerful, playful 3D illustration style, soft shadows',
+  playful: 'vibrant colours, cheerful, bright natural light, real photograph with soft shadows',
   corporate: 'professional, natural window light, calm, high-end corporate photography',
   editorial: 'film photography, warm tones, grain, magazine documentary style',
 };
 
 async function makePicture(prompt, styleId, format, dest) {
   const [w, h] = format === '9:16' ? [768, 1344] : format === '1:1' ? [1024, 1024] : [1344, 768];
-  const full = `${prompt}. ${LOOK[styleId] || LOOK.tech}. No text, no words, no letters, no logos, no watermark.`;
+  const full = `${prompt}. ${LOOK[styleId] || LOOK.tech}. Photorealistic photograph — not a cartoon, not a 3D render, not an illustration. No text, no words, no letters, no logos, no watermark.`;
   for (let attempt = 0; attempt < 2; attempt++) {
     const r = await fetch(`${CF_BASE()}/run/@cf/leonardo/lucid-origin`, {
       method: 'POST', headers: cfHeaders(), signal: AbortSignal.timeout(60_000),
