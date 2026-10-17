@@ -136,7 +136,8 @@ def make_video(topic, notes, fmt, seconds, label):
     title = res.get("ir", {}).get("metadata", {}).get("title") or topic
     print(f"[{label}] project {pid}: '{title}'", flush=True)
     wait_done(pid, label)
-    if fmt == "16:9":  # lessons go out in 1080p
+    # 720p: a 1080p lesson (4-6 min) is over the 50 MB storage file limit.
+    if fmt == "16:9" and os.getenv("SQUOOK_HD"):
         squook("POST", f"/api/fast/{pid}/render", {"quality": "hd"})
         time.sleep(20)
         wait_done(pid, label + " HD", "hd")
