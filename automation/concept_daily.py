@@ -139,7 +139,7 @@ def make_video(topic, notes, fmt, seconds, label):
     if fmt == "16:9":  # lessons go out in 1080p
         squook("POST", f"/api/fast/{pid}/render", {"quality": "hd"})
         time.sleep(20)
-        wait_done(pid, label + " HD")
+        wait_done(pid, label + " HD", "hd")
     url = squook("GET", f"/api/projects/{pid}/url")["url"]
     out = Path(tempfile.mkdtemp()) / f"{label}.mp4"
     out.write_bytes(http("GET", url, timeout=600, raw=True))
@@ -147,9 +147,10 @@ def make_video(topic, notes, fmt, seconds, label):
     return pid, title, out
 
 
-def wait_done(pid, label, limit_s=3600):
+def wait_done(pid, label, quality="standard", limit_s=3600):
     start = time.time()
     last = None
+    retries = 0
     while time.time() - start < limit_s:
         p = squook("GET", f"/api/projects/{pid}")
         st = (p.get("status"), p.get("stage"), p.get("progress"))
@@ -158,6 +159,15 @@ def wait_done(pid, label, limit_s=3600):
             last = st
         if p.get("status") == "done":
             return p
+        if p.get("status") == "failed" and "interrupted" in str(p.get("error")) and retries < 3:
+            retries += 1  # a deploy restarted Squook mid-render: render again
+            print(f"[{label}] render interrupted by a restart, retrying ({retries}/3)", flush=True)
+            time.sleep(60)
+            try:
+                squook("POST", f"/api/fast/{pid}/render", {"quality": quality})
+            except RuntimeError as e:
+                print(f"[{label}] retry request failed: {e}", flush=True)
+            continue
         if p.get("status") == "failed":
             raise RuntimeError(f"{label} failed in Squook: {p.get('error')}; log: {(p.get('log') or [])[-5:]}")
         time.sleep(30)
