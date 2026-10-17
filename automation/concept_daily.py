@@ -271,6 +271,8 @@ def iso_utc(t):
 
 def publish_times(now=None):
     now = (now or dt.datetime.now(IST)).astimezone(IST)
+    if os.getenv("PUBLISH_TODAY"):  # test run: lesson in 15 min, Short 30 min later
+        return iso_utc(now + dt.timedelta(minutes=15)), iso_utc(now + dt.timedelta(minutes=45))
     lesson = now.replace(hour=17, minute=0, second=0, microsecond=0)
     if lesson <= now + dt.timedelta(minutes=20):
         lesson += dt.timedelta(days=1)

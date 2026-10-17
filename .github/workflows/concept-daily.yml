@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'run = make + upload, dry = make only, check = YouTube key check'
+        description: 'run = make + upload, today = make + publish within the hour, dry = make only, check = key check'
         default: run
 
 permissions:
@@ -38,6 +38,8 @@ jobs:
 
       - name: Make and upload today's lesson + Short
         if: ${{ github.event_name == 'schedule' || inputs.mode != 'check' }}
+        env:
+          PUBLISH_TODAY: ${{ inputs.mode == 'today' && '1' || '' }}
         run: python3 automation/concept_daily.py run ${{ inputs.mode == 'dry' && '--dry' || '' }}
 
       - name: Save progress
