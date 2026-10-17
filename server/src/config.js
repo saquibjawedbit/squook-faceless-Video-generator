@@ -69,6 +69,9 @@ export const config = {
   // Comma-separated emails with no per-user daily limit (the founder's test account).
   landingUnlimitedEmails: (process.env.LANDING_UNLIMITED_EMAILS || '')
     .split(',').map((s) => s.trim().toLowerCase()).filter(Boolean),
+  // Server-to-server key for the YouTube automation; acts as this user id.
+  automationKey: process.env.AUTOMATION_KEY || '',
+  automationUserId: process.env.AUTOMATION_USER_ID || '',
   // LANDING_ONLY=true → only the landing-page feature is live; the prompt
   // pipeline routes (need Ollama + GPU) answer 403.
   landingOnly: String(process.env.LANDING_ONLY).toLowerCase() === 'true',

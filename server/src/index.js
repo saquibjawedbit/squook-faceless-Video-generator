@@ -198,7 +198,8 @@ app.post('/api/fast', requireAuth, fastUpload.array('media', 12), async (req, re
   }
   const style = b.style === 'explainer' ? 'explainer' : 'promo';
   const format = ['16:9', '9:16', '1:1'].includes(b.format) ? b.format : '16:9';
-  const lengthS = Math.max(15, Math.min(180, Math.round(Number(b.duration) || 30)));
+  // Owners may make full lessons (up to 7 min); everyone else 3 min.
+  const lengthS = Math.max(15, Math.min(isOwnerAdmin(req.user) ? 420 : 180, Math.round(Number(b.duration) || 30)));
   const p = await createProject({
     userId: req.user.id, prompt: url || topic,
     title: url ? new URL(url).hostname.replace(/^www\./, '') : topic.slice(0, 60),

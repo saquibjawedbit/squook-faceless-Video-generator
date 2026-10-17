@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { timingSafeEqual } from 'node:crypto';
 import { config, authEnabled } from './config.js';
 
 // A server client used purely to validate a caller's access token. getUser()
@@ -19,7 +20,17 @@ function bearer(req) {
 
 // Express middleware. Attaches req.user = { id, email }. If Supabase isn't
 // configured, or ALLOW_ANON=true and no token is sent, falls back to a dev user.
+function automationUser(req) {
+  const key = req.headers['x-automation-key'];
+  if (!config.automationKey || !config.automationUserId || typeof key !== 'string') return null;
+  const a = Buffer.from(key), b = Buffer.from(config.automationKey);
+  if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
+  return { id: config.automationUserId, email: config.landingUnlimitedEmails[0] || 'automation@local' };
+}
+
 export async function requireAuth(req, res, next) {
+  const auto = automationUser(req);
+  if (auto) { req.user = auto; return next(); }
   const token = bearer(req);
 
   // A production server without Supabase config must fail closed — otherwise a

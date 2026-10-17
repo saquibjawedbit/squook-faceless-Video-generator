@@ -1,0 +1,57 @@
+# Concept Samjho: one Class 10 Hinglish lesson + one Short every day.
+# Runs 11:30 IST; the lesson goes live 17:00 IST, the Short next day 08:00 IST.
+# Scheduled runs only fire from the default branch, so this file also lives on
+# master; it checks out the app branch for the script and its progress files.
+name: Concept Samjho daily
+
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'run = make + upload, dry = make only, check = YouTube key check'
+        default: run
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency: concept-daily
+
+jobs:
+  daily:
+    runs-on: ubuntu-latest
+    timeout-minutes: 170
+    env:
+      SQUOOK_AUTOMATION_KEY: ${{ secrets.SQUOOK_AUTOMATION_KEY }}
+      YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+      YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+      YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feat/landing-page-video
+
+      - name: YouTube key check
+        run: python3 automation/concept_daily.py check
+
+      - name: Make and upload today's lesson + Short
+        if: ${{ github.event_name == 'schedule' || inputs.mode != 'check' }}
+        run: python3 automation/concept_daily.py run ${{ inputs.mode == 'dry' && '--dry' || '' }}
+
+      - name: Save progress
+        if: always()
+        run: |
+          git config user.name concept-samjho-bot
+          git config user.email actions@users.noreply.github.com
+          git add automation/concept-state.json automation/concept-history.json 2>/dev/null || true
+          git diff --cached --quiet || { git commit -m "Concept Samjho: daily progress [skip ci]" && git push; }
+
+      - name: Open an issue (emails you) if anything failed
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh issue create --title "Concept Samjho daily run failed ($(date -u +%F))" \
+            --body "The daily run failed: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}. If the YouTube key check failed, run automation/youtube_consent.py again and update YT_REFRESH_TOKEN."

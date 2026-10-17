@@ -1,0 +1,440 @@
+[
+ {
+  "subject": "Science",
+  "chapter": "Chemical Reactions and Equations",
+  "topic": "Chemical reaction kya hota hai: signs aur examples",
+  "short": "Chemical reaction pehchanne ke 4 signs"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Real Numbers",
+  "topic": "Fundamental Theorem of Arithmetic aur prime factorisation",
+  "short": "Prime factorisation ki fast trick"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Chemical Reactions and Equations",
+  "topic": "Chemical equation balance karna step by step",
+  "short": "Equation balance karne ki trick"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Real Numbers",
+  "topic": "HCF aur LCM prime factorisation se",
+  "short": "HCF x LCM = product, kab lagta hai"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Chemical Reactions and Equations",
+  "topic": "Combination aur decomposition reactions",
+  "short": "Combination vs decomposition, ek line mein"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Real Numbers",
+  "topic": "Irrational numbers: root 2 irrational hai, proof",
+  "short": "Proof by contradiction ka idea"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Chemical Reactions and Equations",
+  "topic": "Displacement aur double displacement reactions",
+  "short": "Reactivity series yaad karne ki trick"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Polynomials",
+  "topic": "Polynomial ke zeroes ka geometrical meaning",
+  "short": "Graph kitni baar x-axis kaatega"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Chemical Reactions and Equations",
+  "topic": "Oxidation aur reduction (redox), corrosion aur rancidity",
+  "short": "OIL RIG: oxidation-reduction ki trick"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Polynomials",
+  "topic": "Zeroes aur coefficients ka relation",
+  "short": "alpha + beta = -b/a"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Acids, Bases and Salts",
+  "topic": "Acids aur bases: properties aur indicators",
+  "short": "Litmus test: acid ya base, 3 second mein"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Pair of Linear Equations in Two Variables",
+  "topic": "Graphical method aur consistency",
+  "short": "Ek, anant ya koi solution nahi: ratio trick"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Acids, Bases and Salts",
+  "topic": "pH scale aur roz ki zindagi mein pH",
+  "short": "pH scale: 0 se 14 ka matlab"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Pair of Linear Equations in Two Variables",
+  "topic": "Substitution aur elimination method",
+  "short": "Elimination method fast"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Acids, Bases and Salts",
+  "topic": "Important salts: baking soda, washing soda, bleaching powder, plaster of Paris",
+  "short": "4 salts ke formula yaad karne ki trick"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Quadratic Equations",
+  "topic": "Quadratic equation aur factorisation method",
+  "short": "Middle term split karne ki trick"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Metals and Non-metals",
+  "topic": "Metals aur non-metals ki properties",
+  "short": "Metal vs non-metal: 5 differences"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Quadratic Equations",
+  "topic": "Quadratic formula aur nature of roots",
+  "short": "Discriminant se roots ka nature"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Metals and Non-metals",
+  "topic": "Reactivity series aur metals ki reactions",
+  "short": "Reactivity series ki mnemonic"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Arithmetic Progressions",
+  "topic": "AP aur nth term",
+  "short": "nth term formula: a + (n-1)d"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Metals and Non-metals",
+  "topic": "Ionic compounds kaise bante hain",
+  "short": "NaCl kaise banta hai, electron transfer"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Arithmetic Progressions",
+  "topic": "Sum of first n terms of an AP",
+  "short": "Sum formula ki trick"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Metals and Non-metals",
+  "topic": "Metallurgy: ore se metal tak, aur corrosion",
+  "short": "Roasting vs calcination"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Triangles",
+  "topic": "Similar triangles aur Basic Proportionality Theorem",
+  "short": "BPT ek diagram mein"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Carbon and its Compounds",
+  "topic": "Covalent bond aur carbon ki versatility",
+  "short": "Carbon 4 bond kyun banata hai"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Triangles",
+  "topic": "Similarity criteria: AAA, SSS, SAS",
+  "short": "Similarity ke 3 rules"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Carbon and its Compounds",
+  "topic": "Hydrocarbons, functional groups aur homologous series",
+  "short": "Functional groups pehchanne ki trick"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Coordinate Geometry",
+  "topic": "Distance formula",
+  "short": "Distance formula, Pythagoras se"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Carbon and its Compounds",
+  "topic": "Nomenclature: organic compounds ke naam",
+  "short": "IUPAC naam: meth, eth, prop, but"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Coordinate Geometry",
+  "topic": "Section formula aur midpoint",
+  "short": "Section formula ki trick"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Carbon and its Compounds",
+  "topic": "Ethanol, ethanoic acid aur soaps-detergents",
+  "short": "Soap micelle kaise kaam karta hai"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Introduction to Trigonometry",
+  "topic": "Trigonometric ratios: sin, cos, tan",
+  "short": "Some People Have... trig ratios ki trick"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Life Processes",
+  "topic": "Nutrition: autotrophic aur photosynthesis",
+  "short": "Photosynthesis equation 30 second mein"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Introduction to Trigonometry",
+  "topic": "Standard angles ki values 0 se 90 degree",
+  "short": "Trig table 30 second mein"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Life Processes",
+  "topic": "Human digestive system",
+  "short": "Digestion ka safar: mouth se intestine tak"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Introduction to Trigonometry",
+  "topic": "Trigonometric identities",
+  "short": "sin²θ + cos²θ = 1 aur baaki do"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Life Processes",
+  "topic": "Respiration: aerobic aur anaerobic",
+  "short": "Aerobic vs anaerobic: ATP ka hisaab"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Some Applications of Trigonometry",
+  "topic": "Heights and distances: angle of elevation aur depression",
+  "short": "Elevation vs depression"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Life Processes",
+  "topic": "Human heart aur blood circulation",
+  "short": "Double circulation ki trick"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Circles",
+  "topic": "Tangent to a circle aur uski properties",
+  "short": "Tangent radius pe perpendicular kyun"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Life Processes",
+  "topic": "Transportation in plants aur excretion",
+  "short": "Xylem vs phloem, ek line mein"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Areas Related to Circles",
+  "topic": "Sector aur segment ka area",
+  "short": "Sector area formula"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Control and Coordination",
+  "topic": "Nervous system, neuron aur reflex action",
+  "short": "Reflex arc 30 second mein"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Surface Areas and Volumes",
+  "topic": "Combination of solids: surface area",
+  "short": "Kaunsa surface area jodna hai"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Control and Coordination",
+  "topic": "Human brain ke parts aur kaam",
+  "short": "Brain ke 3 parts yaad karo"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Surface Areas and Volumes",
+  "topic": "Combination of solids: volume",
+  "short": "Sabhi volume formulas ek saath"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Control and Coordination",
+  "topic": "Plant hormones aur human endocrine glands",
+  "short": "Hormones aur glands ki list ki trick"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Statistics",
+  "topic": "Mean of grouped data: direct, assumed mean, step deviation",
+  "short": "Assumed mean method fast"
+ },
+ {
+  "subject": "Science",
+  "chapter": "How do Organisms Reproduce?",
+  "topic": "Asexual reproduction ke tareeke",
+  "short": "Fission, budding, fragmentation: farq"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Statistics",
+  "topic": "Mode aur median of grouped data",
+  "short": "Median formula ki trick"
+ },
+ {
+  "subject": "Science",
+  "chapter": "How do Organisms Reproduce?",
+  "topic": "Sexual reproduction in flowering plants",
+  "short": "Flower ke parts aur pollination"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Probability",
+  "topic": "Probability ka basic idea aur simple events",
+  "short": "Probability = favourable / total"
+ },
+ {
+  "subject": "Science",
+  "chapter": "How do Organisms Reproduce?",
+  "topic": "Human reproductive system aur reproductive health",
+  "short": "Reproductive health: key facts"
+ },
+ {
+  "subject": "Maths",
+  "chapter": "Probability",
+  "topic": "Cards, dice aur coins ke questions",
+  "short": "52 cards ka breakdown"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Heredity",
+  "topic": "Mendel ke experiments aur laws of inheritance",
+  "short": "Monohybrid cross ka 3:1 ratio"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Heredity",
+  "topic": "Sex determination in humans",
+  "short": "XX vs XY: beta ya beti kaise tay hota hai"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Light: Reflection and Refraction",
+  "topic": "Reflection of light aur plane mirror",
+  "short": "Reflection ke 2 laws"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Light: Reflection and Refraction",
+  "topic": "Spherical mirrors: concave aur convex, ray diagrams",
+  "short": "Concave mirror ke 6 cases ki trick"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Light: Reflection and Refraction",
+  "topic": "Mirror formula aur magnification, numericals",
+  "short": "Sign convention ki trick"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Light: Reflection and Refraction",
+  "topic": "Refraction, refractive index aur Snell's law",
+  "short": "Refractive index ka formula"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Light: Reflection and Refraction",
+  "topic": "Lenses, lens formula aur power of lens",
+  "short": "Power of lens: dioptre ka matlab"
+ },
+ {
+  "subject": "Science",
+  "chapter": "The Human Eye and the Colourful World",
+  "topic": "Human eye aur power of accommodation",
+  "short": "Eye ke parts 30 second mein"
+ },
+ {
+  "subject": "Science",
+  "chapter": "The Human Eye and the Colourful World",
+  "topic": "Defects of vision: myopia, hypermetropia, presbyopia",
+  "short": "Myopia vs hypermetropia: kaunsa lens"
+ },
+ {
+  "subject": "Science",
+  "chapter": "The Human Eye and the Colourful World",
+  "topic": "Prism se dispersion, rainbow aur scattering",
+  "short": "Aasmaan neela kyun hota hai"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Electricity",
+  "topic": "Electric current, potential difference aur circuit",
+  "short": "Current aur voltage ka farq"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Electricity",
+  "topic": "Ohm's law aur resistance",
+  "short": "V = IR, ek trick se"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Electricity",
+  "topic": "Resistors in series aur parallel",
+  "short": "Series vs parallel formula"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Electricity",
+  "topic": "Heating effect of current aur electric power",
+  "short": "P = VI aur kWh ka hisaab"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Magnetic Effects of Electric Current",
+  "topic": "Magnetic field lines aur current ka magnetic effect",
+  "short": "Right-hand thumb rule"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Magnetic Effects of Electric Current",
+  "topic": "Force on conductor aur Fleming's left-hand rule",
+  "short": "Fleming's left-hand rule 30 second mein"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Magnetic Effects of Electric Current",
+  "topic": "Domestic electric circuits aur safety",
+  "short": "Fuse aur earthing kyun zaroori hai"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Our Environment",
+  "topic": "Ecosystem, food chain aur food web",
+  "short": "10 percent energy law"
+ },
+ {
+  "subject": "Science",
+  "chapter": "Our Environment",
+  "topic": "Ozone layer aur waste management",
+  "short": "Ozone layer ka chhed: kaise aur kyun"
+ }
+]
