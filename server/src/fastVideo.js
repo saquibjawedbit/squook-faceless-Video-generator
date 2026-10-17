@@ -1716,6 +1716,7 @@ async function assemble(project, source) {
 //   {op:'layout', scene, value}            left | right | center
 //   {op:'template', scene, template}       switch scene type (details re-written)
 //   {op:'picture', scene, description}     new AI picture   {op:'remove_picture', scene}
+//   {op:'media', scene, n}                 show customer upload n on the scene
 //   {op:'remake', scene, instruction?}     AI rewrites the scene
 //   {op:'add', after, instruction}         AI writes a new scene after `after` (0 = first)
 //   {op:'remove', scene}  {op:'move', scene, to}
@@ -1781,6 +1782,15 @@ export async function applyEdits(project, ops, onStep = () => {}) {
         sc.spec.image = str(o.description, 600); delete sc.spec.stock; delete sc.spec.media; delete sc.spec.animate;
         sc.clip = null; sc.clipFrom = null; sc.stockFor = null;
         repicture.add(sc.id); done.push(`scene ${o.scene}: new picture`);
+      } break;
+      case 'media': { // show one of the customer's uploads on this scene
+        const m = (source.media || []).find((x) => x.n === Number(o.n));
+        if (sc && m) {
+          sc.spec.media = m.n; delete sc.spec.image; delete sc.spec.stock; delete sc.spec.animate;
+          sc.stockFor = null;
+          if (!['visual', 'hero', 'kinetic', 'quote', 'stat', 'stats', 'cta'].includes(sc.spec.template)) { sc.spec.template = 'visual'; redetail.add(sc.id); }
+          done.push(`scene ${o.scene}: upload ${m.n}`);
+        }
       } break;
       case 'remove_picture': if (sc) { sc.picture = null; sc.clip = null; sc.clipFrom = null; delete sc.spec.image; delete sc.spec.stock; delete sc.spec.media; if (sc.spec.template === 'visual') sc.spec.template = 'kinetic'; done.push(`scene ${o.scene}: picture removed`); } break;
       case 'remake': if (sc) writes.push({ sc, instruction: o.instruction, label: `scene ${o.scene} remade` }); break;
