@@ -13,7 +13,7 @@
 //      the spoken words, with a music bed and sound effects — the browser plays
 //      it immediately via @remotion/player; the MP4 renders in the background.
 import { execFile } from 'node:child_process';
-import { mkdir, writeFile, copyFile, readdir, readFile, access } from 'node:fs/promises';
+import { mkdir, writeFile, copyFile, readdir, readFile, access, unlink } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { promisify } from 'node:util';
@@ -818,6 +818,7 @@ async function toClip(src, dir, base) {
   const mp4 = `${base}.mp4`, jpg = `${base}.jpg`;
   await run('ffmpeg', ['-v', 'error', '-y', '-i', src, '-t', '20', '-an', '-vf', "scale='if(gt(iw,ih),min(1920,iw),-2)':'if(gt(iw,ih),-2,min(1920,ih))'", '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '23', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', join(dir, mp4)]);
   await run('ffmpeg', ['-v', 'error', '-y', '-ss', '0.5', '-i', join(dir, mp4), '-frames:v', '1', '-q:v', '3', join(dir, jpg)]);
+  if (src.endsWith('.src')) await unlink(src).catch(() => {}); // the raw download is no longer needed
   return { mp4, jpg };
 }
 
@@ -1061,7 +1062,9 @@ async function speakIndian(text, speaker, lang) {
   const tmp = join(ARTIFACTS_DIR, `tts_${Date.now()}_${Math.random().toString(36).slice(2)}`);
   await writeFile(`${tmp}.wav`, wav);
   await run('ffmpeg', ['-v', 'error', '-y', '-i', `${tmp}.wav`, '-ac', '1', '-ar', '24000', '-c:a', 'libmp3lame', '-b:a', '48k', `${tmp}.mp3`]);
-  return readFile(`${tmp}.mp3`);
+  const mp3 = await readFile(`${tmp}.mp3`);
+  await Promise.all([unlink(`${tmp}.wav`), unlink(`${tmp}.mp3`)].map((x) => x.catch(() => {})));
+  return mp3;
 }
 
 // Constant-bitrate MP3 (Aura returns 48 kbps): duration from size.
@@ -1896,18 +1899,23 @@ export async function saveFastSource(project) {
   const bucket = admin.storage.from(config.storageBucket);
   const prefix = sourcePrefix(project);
   const dir = join(assetSnapshotDir(project.id), 'assets', 'fast');
-  const files = (await readdir(dir)).filter((f) => !f.endsWith('.thumb.jpg'));
+  const files = (await readdir(dir)).filter((f) => !/\.(thumb\.jpg|src|wav)$/.test(f));
   const type = (f) => ({ mp3: 'audio/mpeg', mp4: 'video/mp4', jpg: 'image/jpeg', png: 'image/png', svg: 'image/svg+xml', json: 'application/json' })[f.split('.').pop()] || 'application/octet-stream';
   const up = async (path, body, contentType) => {
     const { error } = await bucket.upload(path, body, { contentType, upsert: true });
     if (error) throw new Error(`${path}: ${error.message}`);
   };
-  // Small parallel batches keep it quick without hammering Storage.
-  for (let i = 0; i < files.length; i += 6) {
-    await Promise.all(files.slice(i, i + 6).map(async (f) => up(`${prefix}/assets/fast/${f}`, await readFile(join(dir, f)), type(f))));
-  }
+  // The recipe first: with it a video can always be rebuilt, even if a file fails.
   await up(`${prefix}/ir.json`, await readFile(irSnapshotPath(project.id)), 'application/json');
   try { await up(`${prefix}/source.json`, await readFile(sourcePath(project.id)), 'application/json'); } catch { /* older videos have no recipe */ }
+  // Small parallel batches keep it quick without hammering Storage; one bad file never stops the rest.
+  const failed = [];
+  for (let i = 0; i < files.length; i += 6) {
+    await Promise.all(files.slice(i, i + 6).map(async (f) => {
+      try { await up(`${prefix}/assets/fast/${f}`, await readFile(join(dir, f)), type(f)); } catch (e) { failed.push(`${f} (${String(e.message).slice(0, 60)})`); }
+    }));
+  }
+  if (failed.length) throw new Error(`some files were not backed up: ${failed.join(', ')}`);
 }
 
 const restoring = new Map();
